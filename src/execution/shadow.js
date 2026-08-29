@@ -218,9 +218,10 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         || recTick.t - previous.t >= 1) recTicks.push(recTick);
     }
     const clGapPct = (clGap != null && openChainlink) ? (clGap / openChainlink) * 100 : null;
-    const got = curStrat.step(w, { t: tInto, up, down, bzPrice, clPrice, openBinance: w.openBinance,
+    const strategyTick = { t: tInto, up, down, bzPrice, clPrice, openBinance: w.openBinance,
       binanceAtMs,
-      openChainlink, bzGap, bzGapPct, clGap, clGapPct }, P, dtMs, nowMs);
+      openChainlink, bzGap, bzGapPct, clGap, clGapPct };
+    const got = curStrat.step(w, strategyTick, P, dtMs, nowMs);
     // Per-tick cadence and gate diagnostics. Guarded so it has no hot-path cost
     // when verbose logging is disabled.
     if (verboseOn && w.vDiag) {
@@ -311,6 +312,17 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
             p.makerShares = 0;
             p.makerCost = 0;
           };
+          const cancel = curStrat.shouldCancelResting?.(w, r, strategyTick, P, nowMs);
+          if (cancel?.cancel) {
+            r.cancelReason = cancel.reason;
+            r.cancelCap = cancel.currentCap ?? null;
+            flushMakerAccrual();
+            try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
+              slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
+              note: `simulated GTC canceled: ${cancel.reason}${cancel.currentCap == null ? "" : ` (cap ${cancel.currentCap})`}`,
+              ts: nowMs }); } catch {}
+            continue;
+          }
           if (nowMs > p.expiresMs || !(p.remaining > 1e-9)) {
             flushMakerAccrual();
             try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
@@ -322,9 +334,11 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
           const askNow = arrivalBook?.bestAsk;
           let fill = null;
           if (askNow != null && askNow < r.limitPx - 1e-9) {
-            fill = walkVisibleAsks(arrivalBook, p.remaining, r.limitPx, { allowBbaFallback: false });
-          } else if (askNow != null && Math.abs(askNow - r.limitPx) <= 1e-9) {
-            const cumulative = makerTouchFill({ askNow, limit: r.limitPx, filled: p.touchFilled,
+            const crossed = walkVisibleAsks(arrivalBook, p.remaining, r.limitPx, { allowBbaFallback: false });
+            if (crossed.shares > 1e-9) fill = { shares: crossed.shares,
+              cost: crossed.shares * r.limitPx, avgPx: r.limitPx };
+          } else if (arrivalBook?.bestBid != null && r.limitPx >= arrivalBook.bestBid - 1e-9) {
+            const cumulative = makerTouchFill({ askNow: r.limitPx, limit: r.limitPx, filled: p.touchFilled,
               target: p.touchTarget, dtMs: Math.max(0, nowMs - p.lastMs),
               touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
               fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
@@ -511,6 +525,11 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       w.helpme.cells?.clear?.();
       w.helpme.execSide?.clear?.();
     }
+    if (w.wallet3048) {
+      w.wallet3048.history = [];
+      w.wallet3048.bookTrace = { Up: [], Down: [] };
+      w.wallet3048.pending?.clear?.();
+    }
     const ab = {
       slug, windowStart: w.windowStart, winSide, status: "resolved", ts: Math.floor(Date.now() / 1000),
       sim: { pnl: r2(pnl), winSh: r2(winSh), upShares: r2(w.upShares), downShares: r2(w.downShares),
@@ -582,7 +601,14 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const requested = getStrategy(obj.STRATEGY || curStrat.NAME || DEFAULT_STRATEGY);
     const changed = requested.NAME !== curStrat.NAME;
     const allowed = new Set(Object.keys(requested.STRAT));
-    const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)));
+    // Persisted snapshots from an older wallet reconstruction contain every
+    // then-default W3048_* value. Do not let those stale values silently pin a
+    // newly versioned specification. Generic operator controls remain valid;
+    // a same-version explicit strategy snapshot is still honored.
+    const walletSpecMismatch = requested.NAME === "wallet3048"
+      && Number(obj.W3048_SPEC_VERSION) !== Number(requested.STRAT.W3048_SPEC_VERSION);
+    const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)
+      && !(walletSpecMismatch && (key.startsWith("W3048_") || key === "LIMIT"))));
     const nextLiveParams = { ...(changed ? {} : liveParams), ...clean, STRATEGY: requested.NAME };
     const nextStrat = requested;
     const nextMerged = { ...nextStrat.STRAT, ...nextLiveParams,

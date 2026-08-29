@@ -19,7 +19,7 @@ best-supported description is:
 > **A pre-signed, signal-skewed, cross-and-rest limit-order ladder that begins with
 > the side favored by fast Binance information, subsequently accumulates both legs
 > when their economics are attractive, and deliberately retains bounded directional
-> inventory when the estimated edge is stronger than the value of a complete hedge.**
+> inventory when the estimated edge is stronger than the value of completing the pair.**
 
 It is not well described as any one of the following in isolation:
 
@@ -42,14 +42,17 @@ directional component was about **−$693.82**. The main profit engine in this s
 was therefore pair accumulation; directional selection improved execution and
 inventory construction, but did not itself produce the aggregate profit.
 
-The strongest detected initial-entry signal is **short-horizon Binance momentum**, in
-particular Binance's move relative to the slower Chainlink 60-second TWAP. The first
-side agreed with prior 5-second Binance momentum in **66.7%** of 105 synchronized,
-non-tied entries, and with the Binance-minus-Chainlink relative lead in **63.8%**.
-This is much stronger than its agreement with Chainlink's own 5-second momentum
-(**45.7%**) or its final winner accuracy (**54.3%**). That pattern says the signal is
-primarily a short-lived price-discovery/execution signal, not a high-confidence
-forecast of settlement five minutes later.
+The strongest defensible upstream source is **ultra-short Binance momentum**, not a
+long Chainlink or CLOB EMA. An initial block-time join suggested 5-second Binance
+momentum and Binance-minus-Chainlink relative lead. A later timing audit showed that
+the public activity time is the Polygon block time, about 2.5 seconds after the
+off-chain match in a clean L2 subset, so block-time CLOB measurements contained the
+wallet's own execution. After locating exact pre-fill depth drops and using only the
+preceding frame, 0.5-second Binance momentum agreed with the first taker side in
+**68.2% (15/22)** of nonzero observations; the latest distinct Binance update agreed
+in **60.0% (33/55)**. Pre-fill CLOB EMA was near chance and Chainlink EMA was weak or
+opposite. This points to a fast Binance trigger, possibly smoothed or confirmed by
+other microstructure features, rather than one proven standalone EMA formula.
 
 The wallet also has an important latency architecture. Exact V2 order decoding found
 that **149 of 164 first-entry fill rows (90.9%)** used orders signed before their
@@ -63,6 +66,118 @@ submission, aggressive limits, price improvement, and possible cross-and-rest
 behavior. It does **not** prove that the wallet is always first among orders already
 at the same price. The available historical order books contain aggregate depth, not
 order IDs or FIFO rank.
+
+### 1.1 Fresh re-research update (2026-08-30)
+
+The wallet was re-examined after the initial report using a moving latest-5,500-row
+activity sample, the Orbscan profile/trade views, current BAPI snapshots and native
+L2, and fresh V2 calldata decoding.
+
+Orbscan's live profile reported approximately:
+
+- **$311,244.94 total PnL**;
+- **$3.93 million total profit** and **−$3.62 million total loss**;
+- **50.12% win rate** across **20,335 markets**;
+- average size per market **$428.71**;
+- **700,590 executions** shown in its trade view.
+
+The near-50% win rate across more than 20,000 markets is powerful independent support
+for pair accumulation as the core. A strategy earning this PnL through winner
+prediction alone would need a materially better-than-random market win rate, while a
+pair accumulator can profit regardless of which outcome wins.
+
+The fresh BTC-only sample covered about 9.4 hours and produced:
+
+| Fresh metric | Result |
+|---|---:|
+| BTC markets with both outcomes bought | 109 |
+| Final average-price sum below 1 | 80/109 (73.4%) |
+| Mean / median average-price sum | 0.9372 / 0.9375 |
+| FIFO-matched pair shares | 45,885.1 |
+| Average FIFO pair cost | 0.9306 |
+| Gross FIFO pair edge | $3,186.38 |
+| FIFO pair shares formed at combined cost >=1 | 16,309.5 (35.5%) |
+| Later shares bought below that side's prior average | 49,214.4 / 104,626.7 (47.0%) |
+
+For 104 synchronized settled markets in that rolling sample:
+
+- gross PnL was **+$3,019.67** before complete fee/rebate accounting;
+- FIFO pair component was **+$2,840.80**;
+- residual directional component was **+$178.87**;
+- the final majority-inventory side won only **47.1%**.
+
+The paired component again explains nearly all profit, while the directional residual
+was small. The fresh sample also refines two hypotheses:
+
+1. **“It always buys below its current average” is false as a literal fill rule.**
+   Only 47.0% of eligible later share volume was below the same side's prior average.
+   The bot's economic test is more likely marginal pair cost plus inventory value,
+   not a simple comparison with one global average.
+2. **“It never forms an above-$1 marginal pair” is also false.** 35.5% of
+   FIFO-matched shares had a combined acquisition cost at or above $1. Such purchases
+   can still reduce outcome risk, complete inventory acquired under a different
+   accounting convention, or reflect signal/risk decisions. The aggregate cheap
+   pairs more than offset them.
+
+Fresh exact role decoding over 1,254 recent BTC fill rows found:
+
+| Role | Rows | Filled shares |
+|---|---:|---:|
+| Maker | 820 | 13,481.44 |
+| Taker | 434 | 16,714.24 |
+
+Maker fills were more numerous, but taker fills were larger: **55.4% of filled share
+volume was taker**, with **$243.25** of decoded taker fees. First entry remains more
+aggressive than the full accumulation stream. The best description is therefore
+“taker for urgency, maker for patience,” while allowing either role throughout.
+
+The current BTC five-minute market queried through the public CLOB metadata had
+`itode: true`. Under current Polymarket documentation this activates a **250-ms taker
+delay**: a marketable order is held, revalidated, then matched or placed on the book.
+This strengthens the cross-and-rest interpretation and means speed comparisons must
+include the venue's delay, not just network submission time.
+
+#### Corrected EMA/source test
+
+The first EMA scan joined signals at public activity time and found a 2–3 second CLOB
+EMA associated with the first side in roughly 72–76% of observations. That result was
+not causal: activity time exactly matched Polygon block time, while identifiable L2
+depth drops occurred earlier.
+
+For 57 exact taker-entry markets where a cumulative ask-depth drop matched the decoded
+fill size within 8%, the inferred match-to-block lag was:
+
+- median **2.494 seconds**;
+- p10 **1.399 seconds**;
+- p90 **4.167 seconds**.
+
+Signals recomputed from the frame immediately **before** the candidate fill gave:
+
+| Strictly pre-fill signal | First-side agreement | Coverage |
+|---|---:|---:|
+| Binance 0.5-second momentum | **68.2%** | 15/22 |
+| Binance latest distinct price update | **60.0%** | 33/55 |
+| Best Binance time-based EMA (0.25s) | 56.0% | 28/50 |
+| Best CLOB EMA (1s) | 53.6% | 30/56 |
+| Best CLOB momentum (2s) | 55.3% | 21/38 |
+| Best Chainlink EMA | 39.6% | 21/53 |
+
+The 0.5-second result has limited coverage and a wide statistical interval, so it is
+evidence rather than proof of the exact rule. Nevertheless, the source ranking is
+clearer:
+
+```text
+most likely upstream trigger: sub-second Binance price change
+secondary filters: spread/depth, current Polymarket price, inventory economics
+settlement anchor: Chainlink 60s TWAP/open reference
+not supported as primary trigger: Chainlink EMA or a 2-3s CLOB EMA
+```
+
+An EMA can still be present inside the private implementation—for noise filtering,
+volatility, fair value, or cancel/reprice logic—but the evidence does not identify
+“EMA” as the core source. The more specific supported claim is that the bot reacts to
+the latest fast Binance update before the slower Chainlink TWAP and Polymarket book
+fully adjust.
 
 ## 2. Evidence hierarchy
 
@@ -145,6 +260,13 @@ observable through settlement. This is why its denominator differs from the broa
 125-resolved-market summary.
 
 ## 4. Binary-market accounting
+
+The observed strategy is buy-only in the studied fills: it does not show a
+conventional sell-based stop, futures hedge, or external BTC hedge. This report uses
+**pair completion** for buying the opposite Polymarket outcome. Economically that
+purchase reduces outcome exposure, but operationally it is part of the same pair-
+accumulation strategy, consistent with the user's terminology that the bot “does not
+hedge.”
 
 Let:
 
@@ -240,9 +362,9 @@ been the taker against stale asks. The exact role data therefore replaces the ea
 
 ## 6. Reconstructed signal
 
-### 6.1 Measured signal agreements
+### 6.1 Initial block-time signal agreements
 
-For 105 non-tied, causally synchronized first acquisitions:
+For 105 non-tied first acquisitions, the initial as-of join produced:
 
 | Comparison | First side agreement |
 |---|---:|
@@ -257,7 +379,10 @@ For 105 non-tied, causally synchronized first acquisitions:
 When the first side followed the relative lead, that side eventually won **58.2%**
 of markets (`n=67`). When it opposed the relative lead, it won **47.4%** (`n=38`).
 This conditional difference is suggestive but is not a clean causal estimate because
-the wallet chooses whether and when to enter.
+the wallet chooses whether and when to enter. More importantly, these were causal
+relative to the **public block timestamp**, not the earlier off-chain match. The fresh
+depth-drop audit in Section 1.1 supersedes this table for source attribution. It
+retains value as a description of the market state around on-chain settlement.
 
 ### 6.2 Most likely information chain
 
@@ -266,7 +391,7 @@ The best-supported information flow is:
 ```text
 Binance spot/aggregate trades move
               ↓
-short Binance momentum and Binance-vs-Chainlink lead become nonzero
+sub-second Binance momentum becomes nonzero
               ↓
 Polymarket CLOB and Chainlink TWAP have not fully incorporated the move
               ↓
@@ -278,16 +403,17 @@ later fills add the complement or reinforce the residual position
 ```
 
 Because settlement is based on the specified Chainlink reference, Binance is useful
-as a fast price-discovery feed, while Chainlink is the relevant anchor. The relative
-lead is more meaningful than the raw dollar difference because both feeds should be
-normalized to a common starting reference.
+as a fast price-discovery feed, while Chainlink is the relevant anchor. Relative lead
+and distance-to-open remain plausible confirmation/fair-value features, but the
+strictly pre-fill sample did not reproduce relative lead as the strongest first-side
+classifier.
 
 ### 6.3 Candidate feature definitions
 
 A reasonable reconstruction uses log returns:
 
 ```text
-momentum_5s(t) = log(B(t) / B(t-5s))
+momentum_fast(t) = log(B(t) / B(t-delta)), delta approximately 0.25-1.0s
 
 binance_displacement(t) = log(B(t) / B(open))
 chainlink_displacement(t) = log(C(t) / C(open))
@@ -312,7 +438,7 @@ One practical probability model is:
 ```text
 P(UP | x) = sigmoid(
     beta0
-  + beta1 * z(momentum_5s)
+  + beta1 * z(momentum_fast)
   + beta2 * z(relative_lead)
   + beta3 * z(chainlink_distance_to_open)
   + beta4 * z(CLOB_microprice_signal)
@@ -321,8 +447,10 @@ P(UP | x) = sigmoid(
 )
 ```
 
-The detected agreements suggest `beta1` and `beta2` are important. They do not reveal
-the target's exact coefficients, nonlinearities, or thresholds.
+The corrected timing evidence makes `beta1` the best-supported directional term.
+`beta2` remains economically sensible but is not reliably identified in the clean
+pre-fill subset. None of the tests reveal the target's exact coefficients,
+nonlinearities, or thresholds.
 
 ### 6.4 How the weights should be estimated
 
@@ -462,6 +590,37 @@ The refined hypothesis is:
 > **The bot wins races through precomputation, rapid selection/submission, and
 > aggressive price levels. It may often appear first because it creates or improves
 > the best price, not because it defeats FIFO at the same price.**
+
+### 8.5 Cancel cheap orders and remove expensive orders?
+
+This is plausible in spirit but cannot be verified literally from Orbscan or the
+public activity API. Orbscan's `#open` tab shows **open positions**, not open CLOB
+orders. Filled transactions do not reveal canceled orders, and cancellation is an
+off-chain CLOB action unless a separate order-event archive captured it.
+
+There is evidence that the bot sometimes leaves or reuses residual intent:
+
+- partially filled original orders are common;
+- exact signed orders were observed filling repeatedly;
+- some exact signed orders appeared in both taker and maker roles.
+
+But the fresh path analysis does not support “current side average” as the sole
+cancel threshold: only 47.0% of eligible later share volume filled below its side's
+prior average. A better reconstruction is:
+
+```text
+currentEconomicCap(side)
+    = min(signalFairValueCap,
+          marginalPairCompletionCap when applicable,
+          inventory/risk cap)
+
+keep or re-submit bid if orderPrice <= currentEconomicCap
+cancel/reprice if orderPrice > currentEconomicCap
+```
+
+The cap can rise or fall as Binance moves, opposite lots fill, and inventory changes.
+Consequently, an order above the historical average can remain rational, while a
+nominally cheap order below the average can be canceled after its signal expires.
 
 ## 9. How it likely chooses the order price
 
@@ -610,7 +769,7 @@ seconds, but complementary accumulation may remain economical for minutes.
 
 ## 12. Risk management before the round ends
 
-### 12.1 The wallet does not fully hedge every round
+### 12.1 The wallet does not fully pair every round
 
 In 123 complete resolved markets:
 
@@ -821,10 +980,12 @@ larger intended parent.
 
 ### Which signal does it use?
 
-Most likely fast Binance momentum plus Binance's normalized lead over Chainlink,
-conditioned on CLOB price, Chainlink/open distance, time, volatility, and inventory.
-The signal is better interpreted as a short-term stale-price/entry signal than as a
-standalone settlement predictor.
+Most likely sub-second Binance momentum, conditioned on CLOB price/depth,
+Chainlink/open distance, time, volatility, and inventory economics. A Binance-versus-
+Chainlink lead remains a plausible fair-value feature, but it weakened after exact
+pre-fill timing correction. The evidence does not identify a single EMA as the
+primary source. The signal is better interpreted as a short-term stale-price/entry
+signal than as a standalone settlement predictor.
 
 ### How should signal weights be determined?
 
@@ -903,6 +1064,10 @@ The workspace contains the analysis scripts used for this reconstruction:
 - `analyze_wallet_v2_orders.py` — exact V2 signed-order, maker/taker, size, timestamp,
   and fee decoding;
 - `analyze_wallet_risk.py` — intraround inventory and marginal risk analysis.
+- `research_wallet_fresh.py` — rolling latest-sample FIFO pair economics, settlement
+  decomposition, and exploratory EMA sensitivity;
+- `analyze_wallet_prefill_signal.py` — exact-taker L2 depth-drop alignment and
+  strictly pre-fill Binance/Chainlink/CLOB signal tests.
 
 The supplied external BAPI guide is:
 
@@ -910,6 +1075,7 @@ The supplied external BAPI guide is:
 
 ## 18. Primary technical references
 
+- [Orbscan wallet profile and aggregate statistics](https://orbscan.com/profile/0x3048d65321be3497164cdfc2996f94f98a2e7537)
 - [Polymarket user activity API](https://docs.polymarket.com/api-reference/core/get-user-activity)
 - [Polymarket market-making overview](https://docs.polymarket.com/trading/market-making)
 - [Polymarket order lifecycle and maker/taker semantics](https://docs.polymarket.com/concepts/order-lifecycle)
@@ -920,6 +1086,7 @@ The supplied external BAPI guide is:
 - [Official CTF Exchange V2 repository](https://github.com/Polymarket/ctf-exchange-v2)
 - [Official V2 signed-order struct](https://github.com/Polymarket/ctf-exchange-v2/blob/main/src/exchange/libraries/Structs.sol)
 - [Example BTC five-minute market rules](https://polymarket.com/event/btc-updown-5m-1785779100)
+- [Polymarket Chainlink TWAP feed documentation](https://docs.polymarket.com/market-data/chainlink-twap)
 - [Binance Spot REST market-data documentation](https://developers.binance.com/en/docs/binance-spot-api-docs/rest-api/market-data-endpoints)
 
 ---

@@ -51,3 +51,21 @@ test("runtime strategy selection switches parameter schemas without leaking over
   assert.equal(helpme.LATENCY_MS, 520);
   assert.equal("W3048_SMALL_SIZE" in helpme, false);
 });
+
+test("an older persisted wallet snapshot cannot pin superseded strategy defaults", () => {
+  const shadow = createShadow();
+  shadow.setParams({ STRATEGY: "wallet3048", LATENCY_MS: 250,
+    LIMIT: 0.89, W3048_MIN_PRICE: 0.12, W3048_MAX_PRICE: 0.89,
+    W3048_MOMENTUM_LOOKBACK_MS: 5000 });
+  const migrated = shadow.getParams();
+  assert.equal(migrated.W3048_SPEC_VERSION, 2);
+  assert.equal(migrated.W3048_MIN_PRICE, 0.01);
+  assert.equal(migrated.W3048_MAX_PRICE, 0.99);
+  assert.equal(migrated.W3048_MOMENTUM_LOOKBACK_MS, 500);
+  assert.equal(migrated.LIMIT, 0.99);
+  assert.equal(migrated.LATENCY_MS, 250, "operator latency remains a valid generic override");
+
+  shadow.setParams({ STRATEGY: "wallet3048", W3048_SPEC_VERSION: 2,
+    W3048_MOMENTUM_LOOKBACK_MS: 750 });
+  assert.equal(shadow.getParams().W3048_MOMENTUM_LOOKBACK_MS, 750);
+});

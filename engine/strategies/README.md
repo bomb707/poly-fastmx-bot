@@ -17,6 +17,7 @@ A strategy is an ES module exporting:
 | `injectRealFill(state, fill)` | – | real-live: book an on-chain fill into `state` |
 | `applyManualHedge(state, side, shares, px)` | – | real-live: settle operator-placed hedges |
 | `clearLivePending(state, oid)` | – | real-live: release a pending-order guard on reject/cancel |
+| `shouldCancelResting(state, rec, tk, P, clockMs)` | – | sim/live-shadow: re-evaluate a resting order against current strategy economics |
 
 Omitted optional hooks fall back to no-ops. A strategy is a **pure decision function** — it returns intended
 fills and never places real orders or touches the DB; the execution layer handles sim vs real (`P.LIVE_FILLS`).
@@ -42,6 +43,7 @@ That's it — it's instantly available to backtest, live-sim, and real-live.
 - `lockstep.js` — Lockstep adapter over `../strategy.js` (the implementation stays there, live-critical & unchanged)
 - `gap_predictor.js` — imported Gap Predictor profile (linear completed-round gap lock + taker hedge with a
   fee-inclusive 0.03/share profit floor)
-- `wallet3048.js` — selectable implementation of `TARGET_WALLET_STRATEGY_ANALYSIS.md`: CLOB L2 release pressure,
-  exact-ask 50/150-share prebuilt rungs, FIFO pair diagnostics, repeated inventory crossings, and bounded residual risk
+- `wallet3048.js` — selectable implementation of `TARGET_WALLET_STRATEGY_ANALYSIS.md`: causal 0.5-second Binance-led
+  fair value, prebuilt 50/150-share cross-and-rest rungs, enforced FIFO lot caps, economic cancel/reprice, partial fills,
+  time-varying inventory/worst-case limits, and the final-30-second cancellation cutoff
 - `_template.js` — skeleton to copy

@@ -68,6 +68,18 @@ export function simulateFills(d, params) {
       bestBid: nested?.bestBid ?? bidField ?? bids[0]?.[0] ?? null,
       asks, bids, depthKnown: asks.length > 0 && bids.length > 0 };
   };
+  const strategyTickAt = (tk) => {
+    const up = bookAt(tk, "Up"), down = bookAt(tk, "Down");
+    const bz = tk.bz != null ? tk.bz : null, cl = tk.cl != null ? tk.cl : null;
+    const bzGap = (bz != null && openBz != null) ? bz - openBz : null;
+    const clGap = (cl != null && openCl != null) ? cl - openCl : null;
+    return { t: tk.t, up, down, bzPrice: bz, clPrice: cl,
+      binanceAtMs: tk.binanceAtMs ?? tk.bzAtMs ?? tk.ms ?? null,
+      openBinance: openBz, openChainlink: openCl,
+      bzGap, bzGapPct: (bzGap != null && openBz) ? bzGap / openBz * 100 : null,
+      clGap, clGapPct: (clGap != null && openCl) ? clGap / openCl * 100 : null,
+      winHour, winDay };
+  };
   const applyInventory = (f) => {
     state.upShares = +state.upShares || 0; state.downShares = +state.downShares || 0;
     state.upCost = +state.upCost || 0; state.downCost = +state.downCost || 0; state.cost = +state.cost || 0;
@@ -112,14 +124,29 @@ export function simulateFills(d, params) {
           flushMakerAccrual(p, Math.min(throughT, p.expiresT));
           continue;
         }
+        const cancel = strat.shouldCancelResting?.(state, p.rec,
+          strategyTickAt(currentTick), P, currentTick.t * 1000);
+        if (cancel?.cancel) {
+          p.rec.cancelReason = cancel.reason;
+          p.rec.cancelCap = cancel.currentCap ?? null;
+          flushMakerAccrual(p, throughT);
+          continue;
+        }
         const atBook = bookAt(currentTick, p.rec.side);
         const dtMs = Math.max(0, (throughT - p.lastT) * 1000);
         p.lastT = throughT;
         let match = null;
         if (atBook.bestAsk != null && atBook.bestAsk < p.rec.limitPx - 1e-9) {
-          match = walkVisibleAsks(atBook, p.remaining, p.rec.limitPx, { allowBbaFallback: false });
-        } else if (atBook.bestAsk != null && Math.abs(atBook.bestAsk - p.rec.limitPx) <= 1e-9) {
-          const cumulative = makerTouchFill({ askNow: atBook.bestAsk, limit: p.rec.limitPx,
+          const crossed = walkVisibleAsks(atBook, p.remaining, p.rec.limitPx, { allowBbaFallback: false });
+          // The order was already resting. A later sell that crosses it trades
+          // at the resting maker's price, not at a newly observed lower ask.
+          if (crossed.shares > 1e-9) match = { shares: crossed.shares,
+            cost: crossed.shares * p.rec.limitPx, avgPx: p.rec.limitPx };
+        } else if (atBook.bestBid != null && p.rec.limitPx >= atBook.bestBid - 1e-9) {
+          // A resting buy is filled by sell flow at the bid. The historical L2
+          // feed has no order IDs/trades, so accrue a conservative queue credit
+          // only while this rung is at or better than the public best bid.
+          const cumulative = makerTouchFill({ askNow: p.rec.limitPx, limit: p.rec.limitPx,
             filled: p.touchFilled, target: p.touchTarget, dtMs,
             touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
             fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
@@ -188,19 +215,9 @@ export function simulateFills(d, params) {
     // STALE: a gap > staleMs means the book was stale through it. Live would not trade on the
     // just-reconnected tick → skip it (prevT is already advanced, so only this one tick is skipped).
     if (gapMs > staleMs) continue;
-    const up = bookAt(tk, "Up"), down = bookAt(tk, "Down");
-    const bz = tk.bz != null ? tk.bz : null;
-    const bzGap = (bz != null && openBz != null) ? bz - openBz : null;
-    const bzGapPct = (bzGap != null && openBz) ? (bzGap / openBz) * 100 : null;
     const dtMs = gapMs > 0 ? Math.max(1, gapMs) : REF_MS;
     // The strategy derives its deterministic clock from window time.
-    const cl = tk.cl != null ? tk.cl : null;
-    const clGap = (cl != null && openCl != null) ? cl - openCl : null;
-    const clGapPct = (clGap != null && openCl) ? clGap / openCl * 100 : null;
-    const got = strat.step(state, { t: tk.t, up, down, bzPrice: bz, clPrice: cl,
-      openBinance: openBz,
-      openChainlink: openCl, bzGap, bzGapPct, clGap, clGapPct,
-      winHour, winDay }, P, dtMs);
+    const got = strat.step(state, strategyTickAt(tk), P, dtMs, tk.t * 1000);
     for (const f of got) {
       const ai = arrivalIndex[i];
       pending.push({ rec: f, dueT: tk.t + latSec, arrivalTick: bk[ai] });
