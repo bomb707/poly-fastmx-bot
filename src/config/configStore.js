@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STRAT } from "../../engine/strategies/helpme.js";
+import { STRAT as WALLET3048_STRAT } from "../../engine/strategies/wallet3048.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FILE = process.env.RUNTIME_CONFIG_FILE || path.resolve(HERE, "..", "..", "data", "runtime-config.json");
@@ -23,7 +24,7 @@ const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigSessStopInput",
   "sigBinanceCountertrendLookbackInput", "sigBinanceCountertrendMinInput", "sigBinanceGapAgreeOn",
   "sigHedgeOn", "sigReversalOn",
   "sigStartInput", "sigStopInput", "sigBaseOrderInput", "sigReleaseCooldownInput", "verboseInput"]);
-const SHADOW_KEYS = new Set(Object.keys(STRAT));
+const SHADOW_KEYS = new Set([...Object.keys(STRAT), ...Object.keys(WALLET3048_STRAT)]);
 
 function sanitizeStore(value) {
   const src = value && typeof value === "object" ? value : {};

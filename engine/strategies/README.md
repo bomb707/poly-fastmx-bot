@@ -1,6 +1,6 @@
 # Strategies
 
-The bot runs **one strategy at a time**, selected by the `STRATEGY` config field (default `"lockstep"`). Every
+The bot runs **one strategy at a time**, selected by the `STRATEGY` config field (default `"helpme"`). Every
 execution path — backtest (`engine/simrun.js`), live-sim and real-live (`src/execution/shadow.js`) — dispatches
 through the registry here, so a strategy works everywhere the moment it's registered.
 
@@ -42,4 +42,6 @@ That's it — it's instantly available to backtest, live-sim, and real-live.
 - `lockstep.js` — Lockstep adapter over `../strategy.js` (the implementation stays there, live-critical & unchanged)
 - `gap_predictor.js` — imported Gap Predictor profile (linear completed-round gap lock + taker hedge with a
   fee-inclusive 0.03/share profit floor)
+- `wallet3048.js` — selectable implementation of `TARGET_WALLET_STRATEGY_ANALYSIS.md`: CLOB L2 release pressure,
+  exact-ask 50/150-share prebuilt rungs, FIFO pair diagnostics, repeated inventory crossings, and bounded residual risk
 - `_template.js` — skeleton to copy

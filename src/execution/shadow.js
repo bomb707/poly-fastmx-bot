@@ -6,7 +6,7 @@ import { config } from "../config/config.js";
 import { fillFee, isFeeFill } from "../../engine/fees.js";
 import { DEFAULT_STRATEGY, getStrategy } from "../../engine/strategies/index.js";
 import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim — apply a merge record to the live ledger
-import { walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
+import { makerTouchFill, walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
 import { isRunning } from "./botState.js";
 import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
@@ -142,7 +142,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   function cfgStamp() {
     const P = mergedP;
     return {
-      strategy: DEFAULT_STRATEGY,
+      strategy: curStrat.NAME,
       latencyMs: P.LATENCY_MS || 0,
       baseOrderShares: P.H_BASE_ORDER_SH,
       cooldownMs: P.H_COOLDOWN_MS,
@@ -172,6 +172,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       limit: P.LIMIT,
       apiVer: config.backtestApiVersion,
       mode: config.executionMode,
+      params: { ...P },
     };
   }
 
@@ -264,6 +265,15 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
           midLookbackMs: rec.signal?.midLookbackMs ?? null,
           binanceLookbackMs: rec.signal?.binanceLookbackMs ?? null,
           capDepth: rec.signal?.capDepth ?? null,
+          releaseMode: rec.signal?.releaseMode ?? null,
+          executableRunMs: rec.signal?.executableRunMs ?? null,
+          askDepth1: rec.signal?.askDepth1 ?? null,
+          askDepth3: rec.signal?.askDepth3 ?? null,
+          depthImbalance: rec.signal?.depthImbalance ?? null,
+          depletion1: rec.signal?.depletion1 ?? null,
+          pairCost: rec.signal?.pairCost ?? null,
+          projectedWorstCase: rec.signal?.projectedWorstCase ?? null,
+          projectedLean: rec.signal?.projectedLean ?? null,
           budgetUsd: rec.budgetUsd ?? null, minimumShares: rec.minimumShares ?? rec.shares,
           decPx: r2(rec.effPx), dtMs: Math.round(dtMs) });
       }
@@ -276,15 +286,65 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         reason: rec.reason, tInto: rec.tInto, reqShares: rec.shares, decPx: rec.effPx,
         limitPx: rec.limitPx, budgetUsd: rec.budgetUsd ?? null,
         mode: (config.executionMode === "live" ? "live" : "sim"), simLatencyMs: (P.LATENCY_MS || 0), ts: nowMs }); } catch {} }
-      if (simLat > 0 && rec.exec === "marketable") (w.pendingFills = w.pendingFills || []).push(
+      if (rec.exec === "marketable") (w.pendingFills = w.pendingFills || []).push(
         { rec, dueMs: nowMs + simLat, dueTInto: rec.tInto + simLat / 1000, upA: up.bestAsk, dnA: down.bestAsk,
-          upBook: up, dnBook: down, decPx0: rec.effPx });  // snapshot decision book + decision px, track fwd
+          upBook: up, dnBook: down, decPx0: rec.effPx,
+          template: { ...rec, signal: rec.signal ? { ...rec.signal } : undefined } });  // snapshot decision book + decision px, track fwd
       else bookFill(w, rec);
     }
     // resolve deferred fills now due → fill at the CURRENT (delayed) ask, capped at the order's limit.
     if (w.pendingFills && w.pendingFills.length) {
       const keep = [];
       for (const p of w.pendingFills) {
+        if (p.phase === "resting") {
+          const r = p.rec;
+          const flushMakerAccrual = () => {
+            if (!(p.makerShares > 1e-9)) return;
+            const out = { ...p.template, signal: p.template.signal ? { ...p.template.signal } : undefined,
+              decidedT: p.template.tInto, placedT: p.template.tInto,
+              tInto: p.makerLastTInto ?? tInto,
+              requestedShares: p.makerStartRemaining, shares: +p.makerShares.toFixed(4),
+              effPx: +(p.makerCost / p.makerShares).toFixed(4), usdc: +p.makerCost.toFixed(4),
+              status: p.remaining > 1e-9 ? "partial" : "full", filledLate: true,
+              maker: true, taker: false, exec: "resting", kind: "maker", ts: p.makerLastMs ?? nowMs };
+            bookFill(w, out);
+            p.makerShares = 0;
+            p.makerCost = 0;
+          };
+          if (nowMs > p.expiresMs || !(p.remaining > 1e-9)) {
+            flushMakerAccrual();
+            try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
+              slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
+              note: "simulated GTC remainder canceled/repriced after timeout", ts: nowMs }); } catch {}
+            continue;
+          }
+          const arrivalBook = r.side === "Up" ? up : down;
+          const askNow = arrivalBook?.bestAsk;
+          let fill = null;
+          if (askNow != null && askNow < r.limitPx - 1e-9) {
+            fill = walkVisibleAsks(arrivalBook, p.remaining, r.limitPx, { allowBbaFallback: false });
+          } else if (askNow != null && Math.abs(askNow - r.limitPx) <= 1e-9) {
+            const cumulative = makerTouchFill({ askNow, limit: r.limitPx, filled: p.touchFilled,
+              target: p.touchTarget, dtMs: Math.max(0, nowMs - p.lastMs),
+              touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
+              fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
+            const delta = Math.max(0, cumulative - p.touchFilled);
+            p.touchFilled = cumulative;
+            if (delta > 1e-9) fill = { shares: Math.min(delta, p.remaining),
+              cost: Math.min(delta, p.remaining) * r.limitPx, avgPx: r.limitPx };
+          }
+          p.lastMs = nowMs;
+          if (fill?.shares > 1e-9) {
+            p.makerShares = (p.makerShares || 0) + fill.shares;
+            p.makerCost = (p.makerCost || 0) + fill.cost;
+            p.makerLastMs = nowMs;
+            p.makerLastTInto = tInto;
+            p.remaining -= fill.shares;
+          }
+          if (p.remaining > 1e-9) keep.push(p);
+          else flushMakerAccrual();
+          continue;
+        }
         if (nowMs >= p.dueMs) {
           const r = p.rec;
           // Fill EXACTLY at decision+LATENCY — do NOT wait for the next tick. Price against the book AS OF the
@@ -322,12 +382,25 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
           else if (verboseOn) verbose("shadow.no_fill", { slug, leg: r.leg, side: r.side,
             decidedT: r2(r.decidedT), arrivalT: r2(r.tInto), decPx: r2(p.decPx0), cap: r2(r.limitPx),
             arrivalAsk: r2(px0), reason: px0 == null ? "no-ask" : "outside-cap-or-no-depth", latencyMs: simLat });
-          if (fill.shares > 0) bookFill(w, r);
-          else {
+           if (fill.shares > 0) bookFill(w, r);
+           else {
             try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
               slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
               note: px0 == null ? "no ask at simulated match time" : `ask/depth outside cap ${r.limitPx}`,
               ts: nowMs }); } catch {}
+           }
+          const shareRemainder = fixedUsd ? 0 : Math.max(0, requestedShares - fill.shares);
+          if (String(r.orderType || "").toUpperCase() === "GTC" && shareRemainder > 1e-9) {
+            p.phase = "resting";
+            p.remaining = shareRemainder;
+            p.touchTarget = shareRemainder;
+            p.touchFilled = 0;
+            p.makerStartRemaining = shareRemainder;
+            p.makerShares = 0;
+            p.makerCost = 0;
+            p.lastMs = p.dueMs;
+            p.expiresMs = p.dueMs + Math.max(0, Number(r.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0));
+            keep.push(p);
           }
         } else { if (up.bestAsk != null) p.upA = up.bestAsk; if (down.bestAsk != null) p.dnA = down.bestAsk;
           p.upBook = up; p.dnBook = down; keep.push(p); }   // track full book fwd to the deadline
@@ -390,7 +463,10 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const w = windows.get(slug);
     if (!w || w.settled) return null;
     // flush any still-deferred (latency) fills at their last price so they're counted in settlement
-    if (w.pendingFills && w.pendingFills.length) { for (const p of w.pendingFills) bookFill(w, p.rec); w.pendingFills = []; }
+    if (w.pendingFills && w.pendingFills.length) {
+      for (const p of w.pendingFills) if (p.phase !== "resting") bookFill(w, p.rec);
+      w.pendingFills = [];
+    }
     w.winSide = winSide;
     w.settled = true;
     const winSh = winSide === "Up" ? w.upShares : w.downShares;
@@ -474,7 +550,10 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     if (!w || w.settled || w.pendingRecorded) return;
     // Record EVERY closed window as pending — including 0-fill windows — so the history shows a ⏳ pending row
     // the instant a window ends, then flips to the winner on settle (mirrors settle(), which records all windows).
-    if (w.pendingFills && w.pendingFills.length) { for (const p of w.pendingFills) bookFill(w, p.rec); w.pendingFills = []; }
+    if (w.pendingFills && w.pendingFills.length) {
+      for (const p of w.pendingFills) if (p.phase !== "resting") bookFill(w, p.rec);
+      w.pendingFills = [];
+    }
     w.pendingRecorded = true;
     const ab = {
       slug, windowStart: w.windowStart, winSide: null, status: "pending", ts: Math.floor(Date.now() / 1000),
@@ -500,12 +579,14 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   }
 
   function setParams(obj) { if (obj && typeof obj === "object") {
-    const allowed = new Set(Object.keys(curStrat.STRAT));
+    const requested = getStrategy(obj.STRATEGY || curStrat.NAME || DEFAULT_STRATEGY);
+    const changed = requested.NAME !== curStrat.NAME;
+    const allowed = new Set(Object.keys(requested.STRAT));
     const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)));
-    const nextLiveParams = { ...liveParams, ...clean, STRATEGY: DEFAULT_STRATEGY };
-    const nextStrat = getStrategy(DEFAULT_STRATEGY);
+    const nextLiveParams = { ...(changed ? {} : liveParams), ...clean, STRATEGY: requested.NAME };
+    const nextStrat = requested;
     const nextMerged = { ...nextStrat.STRAT, ...nextLiveParams,
-      STRATEGY: DEFAULT_STRATEGY, LIVE_FILLS: false };
+      STRATEGY: nextStrat.NAME, LIVE_FILLS: false };
     nextStrat.validateParams?.(nextMerged);
     liveParams = nextLiveParams;
     curStrat = nextStrat;
@@ -564,8 +645,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   function liveStatus() {
     const w = activeSlug ? windows.get(activeSlug) : null;
     if (!w || w.settled) return null;
-    if (w.helpmeStatus) return { strategy: DEFAULT_STRATEGY, ...w.helpmeStatus };
-    return { strategy: DEFAULT_STRATEGY, gate: w.gateReason || null };
+    if (w.helpmeStatus && curStrat.NAME === "helpme") return { strategy: curStrat.NAME, ...w.helpmeStatus };
+    return { strategy: curStrat.NAME, gate: w.gateReason || null };
   }
   return { tick, settle, prune, recordPending, hydrateWindow, windows, setParams, getParams,
     recordRealFill, cancelLivePending, resetBreaker, breakerState,

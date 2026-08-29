@@ -33,3 +33,21 @@ test("mid-window hydration restores fills and the cooldown clock", () => {
   assert.equal(w.fills.length, 1);
   assert.equal(w.cost, 5.68);
 });
+
+test("runtime strategy selection switches parameter schemas without leaking overrides", () => {
+  const shadow = createShadow();
+  shadow.setParams({ STRATEGY: "wallet3048", LATENCY_MS: 250 });
+  const wallet = shadow.getParams();
+  assert.equal(wallet.STRATEGY, "wallet3048");
+  assert.equal(wallet.W3048_SMALL_SIZE, 50);
+  assert.equal(wallet.W3048_LARGE_SIZE, 150);
+  assert.equal(wallet.LATENCY_MS, 250);
+  assert.equal("H_BASE_ORDER_SH" in wallet, false);
+
+  shadow.setParams({ STRATEGY: "helpme" });
+  const helpme = shadow.getParams();
+  assert.equal(helpme.STRATEGY, "helpme");
+  assert.equal(helpme.H_BASE_ORDER_SH, 7);
+  assert.equal(helpme.LATENCY_MS, 520);
+  assert.equal("W3048_SMALL_SIZE" in helpme, false);
+});

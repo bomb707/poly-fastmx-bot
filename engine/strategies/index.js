@@ -1,7 +1,6 @@
 // engine/strategies/index.js — the strategy REGISTRY.
 //
-// Helpme intentionally exposes ONE active strategy. Legacy modules remain in the copied repository only as
-// research artifacts; they cannot be selected by the runtime or dashboard.
+// Registered strategies are selectable by every replay and live-simulation path.
 // shadow.js (live-sim + real-live) dispatch every per-tick decision + live-fill hook through getStrategy(), so a
 // strategy is available to ALL execution paths the moment it's registered here.
 //
@@ -10,6 +9,7 @@
 //   2. Import it below and call register(<mod>).
 //   3. Add its NAME/LABEL to the UI strategy dropdown (public/index.html) if you want to pick it from the dashboard.
 import * as helpme from "./helpme.js";
+import * as wallet3048 from "./wallet3048.js";
 
 const REG = Object.create(null);
 export function register(mod) {
@@ -17,6 +17,7 @@ export function register(mod) {
   REG[mod.NAME] = mod;
 }
 register(helpme);
+register(wallet3048);
 
 export const DEFAULT_STRATEGY = "helpme";
 

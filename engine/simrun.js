@@ -2,7 +2,7 @@
 // Pure ESM.
 import { fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
-import { stampLatencyDisplay, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
+import { makerTouchFill, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
 
 // NOTE (browser-safe): this module is dynamically imported by the dashboard and
 // must not import Node-only modules.
@@ -76,9 +76,70 @@ export function simulateFills(d, params) {
     state.cost += f.usdc;
     (state.fills = state.fills || []).push(f);
   };
-  const resolveDue = (throughT) => {
-    while (pending.length && pending[0].dueT <= throughT + 1e-9) {
-      const p = pending.shift(), f = p.rec, at = p.arrivalTick;
+  const emitMatch = (p, match, fillT, maker = false) => {
+      const f = p.hasFill ? { ...p.template, signal: p.template.signal ? { ...p.template.signal } : undefined } : p.rec;
+      const requested = p.remainingBefore ?? p.requestedShares;
+      f.decidedT = p.decisionT;
+      f.placedT = p.decisionT;
+      f.tInto = fillT;
+      f.requestedShares = requested;
+      f.shares = +match.shares.toFixed(4);
+      f.effPx = +match.avgPx.toFixed(4);
+      f.usdc = +match.cost.toFixed(4);
+      f.status = match.shares + 1e-9 < requested ? "partial" : "full";
+      f.filledLate = fillT > p.decisionT + 1e-9;
+      if (maker) { f.maker = true; f.taker = false; f.exec = "resting"; f.kind = "maker"; }
+      applyInventory(f);
+      fills.push(f);
+      p.hasFill = true;
+      return f;
+  };
+  const flushMakerAccrual = (p, fallbackT) => {
+    if (!(p.makerShares > 1e-9)) return null;
+    const shares = p.makerShares;
+    const cost = p.makerCost;
+    p.remainingBefore = p.makerStartRemaining;
+    const out = emitMatch(p, { shares, cost, avgPx: cost / shares }, p.makerLastT ?? fallbackT, true);
+    p.makerShares = 0;
+    p.makerCost = 0;
+    return out;
+  };
+  const resolveDue = (throughT, currentTick = null) => {
+    const keep = [];
+    for (const p of pending) {
+      if (p.phase === "resting") {
+        if (!currentTick || throughT > p.expiresT + 1e-9 || !(p.remaining > 1e-9)) {
+          flushMakerAccrual(p, Math.min(throughT, p.expiresT));
+          continue;
+        }
+        const atBook = bookAt(currentTick, p.rec.side);
+        const dtMs = Math.max(0, (throughT - p.lastT) * 1000);
+        p.lastT = throughT;
+        let match = null;
+        if (atBook.bestAsk != null && atBook.bestAsk < p.rec.limitPx - 1e-9) {
+          match = walkVisibleAsks(atBook, p.remaining, p.rec.limitPx, { allowBbaFallback: false });
+        } else if (atBook.bestAsk != null && Math.abs(atBook.bestAsk - p.rec.limitPx) <= 1e-9) {
+          const cumulative = makerTouchFill({ askNow: atBook.bestAsk, limit: p.rec.limitPx,
+            filled: p.touchFilled, target: p.touchTarget, dtMs,
+            touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
+            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
+          const delta = Math.max(0, cumulative - p.touchFilled);
+          p.touchFilled = cumulative;
+          if (delta > 1e-9) match = { shares: Math.min(delta, p.remaining),
+            cost: Math.min(delta, p.remaining) * p.rec.limitPx, avgPx: p.rec.limitPx };
+        }
+        if (match?.shares > 1e-9) {
+          p.makerShares = (p.makerShares || 0) + match.shares;
+          p.makerCost = (p.makerCost || 0) + match.cost;
+          p.makerLastT = throughT;
+          p.remaining -= match.shares;
+        }
+        if (p.remaining > 1e-9) keep.push(p);
+        else flushMakerAccrual(p, throughT);
+        continue;
+      }
+      if (p.dueT > throughT + 1e-9) { keep.push(p); continue; }
+      const f = p.rec, at = p.arrivalTick;
       const arrivalBook = bookAt(at, f.side);
       const fixedUsd = f.amountMode === "usd"
         || (f.budgetUsd != null && Number.isFinite(+f.budgetUsd));
@@ -87,30 +148,41 @@ export function simulateFills(d, params) {
       const match = fixedUsd
         ? walkVisibleBudget(arrivalBook, requestedBudgetUsd, f.limitPx, { allowBbaFallback: false })
         : walkVisibleAsks(arrivalBook, requestedShares, f.limitPx, { allowBbaFallback: false });
-      stampLatencyDisplay(f, p.dueT);
-      f.requestedShares = requestedShares;
+      p.requestedShares = requestedShares;
+      p.decisionT = f.tInto;
+      p.template = { ...f, signal: f.signal ? { ...f.signal } : undefined };
       if (fixedUsd) f.requestedBudgetUsd = requestedBudgetUsd;
-      if (!(match.shares > 0)) continue;
-      f.shares = +match.shares.toFixed(4);
-      f.effPx = +match.avgPx.toFixed(4);
-      f.usdc = +match.cost.toFixed(4);
-      f.status = fixedUsd
-        ? (match.cost + 1e-9 < requestedBudgetUsd ? "partial" : "full")
-        : (match.shares + 1e-9 < f.requestedShares ? "partial" : "full");
-      f.filledLate = latSec > 0;
-      if (at.bz != null) {
-        f.bz = at.bz;
-        if (openBz != null) { f.bzGap = at.bz - openBz; f.bzGapPct = openBz ? (f.bzGap / openBz) * 100 : null; }
+      if (match.shares > 0) {
+        const out = emitMatch(p, match, p.dueT, false);
+        out.status = fixedUsd
+          ? (match.cost + 1e-9 < requestedBudgetUsd ? "partial" : "full")
+          : (match.shares + 1e-9 < requestedShares ? "partial" : "full");
+        if (at.bz != null) {
+          out.bz = at.bz;
+          if (openBz != null) { out.bzGap = at.bz - openBz; out.bzGapPct = openBz ? (out.bzGap / openBz) * 100 : null; }
+        }
+        if (at.cl != null) out.cl = at.cl;
       }
-      if (at.cl != null) f.cl = at.cl;
-      applyInventory(f);
-      fills.push(f);
+      const shareRemainder = fixedUsd ? 0 : Math.max(0, requestedShares - match.shares);
+      if (String(f.orderType || "").toUpperCase() === "GTC" && shareRemainder > 1e-9 && currentTick) {
+        p.phase = "resting";
+        p.remaining = shareRemainder;
+        p.touchTarget = shareRemainder;
+        p.touchFilled = 0;
+        p.makerStartRemaining = shareRemainder;
+        p.makerShares = 0;
+        p.makerCost = 0;
+        p.lastT = p.dueT;
+        p.expiresT = p.dueT + Math.max(0, Number(f.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0)) / 1000;
+        keep.push(p);
+      }
     }
+    pending.splice(0, pending.length, ...keep);
   };
   let prevT = null;
   for (let i = 0; i < bk.length; i++) {
     const tk = bk[i];
-    resolveDue(tk.t);
+    resolveDue(tk.t, tk);
     const gapMs = prevT != null ? (tk.t - prevT) * 1000 : 0;
     prevT = tk.t;
     // STALE: a gap > staleMs means the book was stale through it. Live would not trade on the
@@ -123,15 +195,17 @@ export function simulateFills(d, params) {
     const dtMs = gapMs > 0 ? Math.max(1, gapMs) : REF_MS;
     // The strategy derives its deterministic clock from window time.
     const cl = tk.cl != null ? tk.cl : null;
+    const clGap = (cl != null && openCl != null) ? cl - openCl : null;
+    const clGapPct = (clGap != null && openCl) ? clGap / openCl * 100 : null;
     const got = strat.step(state, { t: tk.t, up, down, bzPrice: bz, clPrice: cl,
       openBinance: openBz,
-      openChainlink: openCl, bzGap, bzGapPct,
+      openChainlink: openCl, bzGap, bzGapPct, clGap, clGapPct,
       winHour, winDay }, P, dtMs);
     for (const f of got) {
       const ai = arrivalIndex[i];
       pending.push({ rec: f, dueT: tk.t + latSec, arrivalTick: bk[ai] });
     }
-    resolveDue(tk.t);   // latency=0 intents match on the decision frame
+    resolveDue(tk.t, tk);   // latency=0 intents match on the decision frame
   }
   resolveDue(Infinity);
   return fills.sort((a, b) => a.tInto - b.tInto);

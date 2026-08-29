@@ -23,9 +23,10 @@ function run(ticks, overrides = {}) {
   return { state, fills };
 }
 
-test("Gap Predictor remains a research artifact and cannot be runtime-selected", () => {
+test("Gap Predictor remains a research artifact while wallet3048 is runtime-selectable", () => {
   assert.equal(getStrategy("gap_predictor"), helpme);
-  assert.deepEqual(listStrategies(), [{ name: "helpme", label: "FastMX · dual momentum + Binance trend regime" }]);
+  assert.deepEqual(listStrategies().map((row) => row.name), ["helpme", "wallet3048"]);
+  assert.equal(getStrategy("wallet3048").NAME, "wallet3048");
   // Its extracted defaults stay testable in isolation for reproducible research.
   assert.equal(gapPredictor.STRAT.L_VOL_ROUNDS, 6);
   assert.equal(gapPredictor.STRAT.L_VOL_MODE, "max");
