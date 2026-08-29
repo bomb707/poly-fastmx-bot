@@ -1,0 +1,17 @@
+[
+  {
+    "name": "p88_e10_t15_maker130_shortlist",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.88,
+    "pairCostCap": 0.88,
+    "orderSize": 5,
+    "minOrderShares": 5,
+    "exposureCap": 10,
+    "targetMakerLatencyMs": 130,
+    "pauseMakerAboveLatencyMs": 0,
+    "takerLatencyMs": 520,
+    "unpairedTimeoutS": 15,
+    "minTimeS": 5,
+    "maxTimeS": 255
+  }
+]

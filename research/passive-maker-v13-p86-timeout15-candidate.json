@@ -1,0 +1,3 @@
+[
+  { "name": "p86_e10_t15_dust260_latency2800", "signalMode": "twoSided", "pairQuoteCap": 0.86, "pairCostCap": 0.86, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "ttlMs": 3000, "targetMakerLatencyMs": 2733, "pauseMakerAboveLatencyMs": 2800, "takerLatencyMs": 520, "unpairedTimeoutS": 15, "dustCompleteS": 260, "dustLockMinProfit": 0, "minTimeS": 5, "maxTimeS": 255 }
+]

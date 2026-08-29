@@ -1,0 +1,1985 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-26T15:15:52.638Z",
+  "target": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "market": "BTC up/down 5m",
+  "timing": "features observed 520ms before inferred match; chronological splits only",
+  "definition": "direction match means selecting the same token as each non-simultaneous target action; confidence coverage is the fraction of target actions for which the model emits a side",
+  "samples": {
+    "fit": 2750,
+    "validation": 1076,
+    "development": 3826,
+    "holdout": 2186,
+    "externalAug26": 72,
+    "holdoutRoles": {
+      "flat": 909,
+      "entry/topup": 629,
+      "hedge": 648
+    },
+    "nativeForwardV2": {
+      "startMs": 1787388900000,
+      "fit": 702,
+      "validationAug24": 509,
+      "holdoutAug25": 620,
+      "externalAug26": 72
+    }
+  },
+  "featureNames": [
+    "ask",
+    "spread",
+    "pairAsk",
+    "askDepth1",
+    "bidDepth1",
+    "askDepth3",
+    "bidDepth3",
+    "topDepthImbalance",
+    "depth3Imbalance",
+    "micropriceBias",
+    "orientedInventory",
+    "isHedge",
+    "fifoPairCost",
+    "sinceSameSideFireS",
+    "sideAskTickMove",
+    "sideBidTickMove",
+    "sideAskMove100ms",
+    "sideBidMove100ms",
+    "askDepth3Change100ms",
+    "bidDepth3Change100ms",
+    "bzMove100ms",
+    "clMove100ms",
+    "sideAskMove250ms",
+    "sideBidMove250ms",
+    "askDepth3Change250ms",
+    "bidDepth3Change250ms",
+    "bzMove250ms",
+    "clMove250ms",
+    "sideAskMove500ms",
+    "sideBidMove500ms",
+    "askDepth3Change500ms",
+    "bidDepth3Change500ms",
+    "bzMove500ms",
+    "clMove500ms",
+    "sideAskMove1",
+    "sideBidMove1",
+    "askDepth3Change1",
+    "bidDepth3Change1",
+    "bzMove1",
+    "clMove1",
+    "sideAskMove3",
+    "sideBidMove3",
+    "askDepth3Change3",
+    "bidDepth3Change3",
+    "bzMove3",
+    "clMove3",
+    "sideAskMove5",
+    "sideBidMove5",
+    "askDepth3Change5",
+    "bidDepth3Change5",
+    "bzMove5",
+    "clMove5",
+    "sideAskAccel500ms",
+    "sideBidAccel500ms",
+    "bzAccel500ms",
+    "bzGap",
+    "clGap"
+  ],
+  "selection": {
+    "logistic": [
+      {
+        "l2": 0.001,
+        "validationAccuracy": 0.747212
+      },
+      {
+        "l2": 0,
+        "validationAccuracy": 0.743494
+      },
+      {
+        "l2": 0.0001,
+        "validationAccuracy": 0.741636
+      },
+      {
+        "l2": 0.01,
+        "validationAccuracy": 0.740706
+      },
+      {
+        "l2": 0.1,
+        "validationAccuracy": 0.737918
+      },
+      {
+        "l2": 1,
+        "validationAccuracy": 0.725836
+      }
+    ],
+    "marketLogistic": [
+      {
+        "l2": 0.001,
+        "validationAccuracy": 0.736989
+      },
+      {
+        "l2": 0.01,
+        "validationAccuracy": 0.736989
+      },
+      {
+        "l2": 0.0001,
+        "validationAccuracy": 0.736059
+      },
+      {
+        "l2": 0,
+        "validationAccuracy": 0.73513
+      },
+      {
+        "l2": 0.1,
+        "validationAccuracy": 0.734201
+      },
+      {
+        "l2": 1,
+        "validationAccuracy": 0.730483
+      }
+    ],
+    "forest": [
+      {
+        "config": {
+          "trees": 42,
+          "maxDepth": 7,
+          "minLeaf": 24,
+          "featureTrials": 8,
+          "thresholdTrials": 5
+        },
+        "validationAccuracy": 0.723978
+      },
+      {
+        "config": {
+          "trees": 48,
+          "maxDepth": 9,
+          "minLeaf": 14,
+          "featureTrials": 8,
+          "thresholdTrials": 6
+        },
+        "validationAccuracy": 0.723978
+      },
+      {
+        "config": {
+          "trees": 36,
+          "maxDepth": 5,
+          "minLeaf": 40,
+          "featureTrials": 7,
+          "thresholdTrials": 5
+        },
+        "validationAccuracy": 0.717472
+      }
+    ]
+  },
+  "ablations": {
+    "clobPrice": {
+      "fields": [
+        "ask",
+        "spread",
+        "sideAskTickMove",
+        "sideBidTickMove",
+        "sideAskMove100ms",
+        "sideBidMove100ms",
+        "sideAskMove250ms",
+        "sideBidMove250ms",
+        "sideAskMove500ms",
+        "sideBidMove500ms",
+        "sideAskMove1",
+        "sideBidMove1",
+        "sideAskMove3",
+        "sideBidMove3",
+        "sideAskMove5",
+        "sideBidMove5",
+        "sideAskAccel500ms",
+        "sideBidAccel500ms"
+      ],
+      "validationAccuracy": 0.722119,
+      "holdoutAccuracy": 0.772644,
+      "externalAug26Accuracy": 0.819444
+    },
+    "orderBook": {
+      "fields": [
+        "askDepth1",
+        "bidDepth1",
+        "askDepth3",
+        "bidDepth3",
+        "topDepthImbalance",
+        "depth3Imbalance",
+        "micropriceBias",
+        "askDepth3Change100ms",
+        "bidDepth3Change100ms",
+        "askDepth3Change250ms",
+        "bidDepth3Change250ms",
+        "askDepth3Change500ms",
+        "bidDepth3Change500ms",
+        "askDepth3Change1",
+        "bidDepth3Change1",
+        "askDepth3Change3",
+        "bidDepth3Change3",
+        "askDepth3Change5",
+        "bidDepth3Change5"
+      ],
+      "validationAccuracy": 0.618959,
+      "holdoutAccuracy": 0.606587,
+      "externalAug26Accuracy": 0.555556
+    },
+    "binance": {
+      "fields": [
+        "bzMove100ms",
+        "bzMove250ms",
+        "bzMove500ms",
+        "bzMove1",
+        "bzMove3",
+        "bzMove5",
+        "bzAccel500ms",
+        "bzGap"
+      ],
+      "validationAccuracy": 0.680297,
+      "holdoutAccuracy": 0.722781,
+      "externalAug26Accuracy": 0.791667
+    },
+    "chainlink": {
+      "fields": [
+        "clMove100ms",
+        "clMove250ms",
+        "clMove500ms",
+        "clMove1",
+        "clMove3",
+        "clMove5",
+        "clGap"
+      ],
+      "validationAccuracy": 0.601301,
+      "holdoutAccuracy": 0.615965,
+      "externalAug26Accuracy": 0.791667
+    },
+    "externalPrice": {
+      "fields": [
+        "bzMove100ms",
+        "clMove100ms",
+        "bzMove250ms",
+        "clMove250ms",
+        "bzMove500ms",
+        "clMove500ms",
+        "bzMove1",
+        "clMove1",
+        "bzMove3",
+        "clMove3",
+        "bzMove5",
+        "clMove5",
+        "bzAccel500ms",
+        "bzGap",
+        "clGap"
+      ],
+      "validationAccuracy": 0.677509,
+      "holdoutAccuracy": 0.73925,
+      "externalAug26Accuracy": 0.875
+    },
+    "inventory": {
+      "fields": [
+        "orientedInventory",
+        "isHedge",
+        "fifoPairCost",
+        "sinceSameSideFireS"
+      ],
+      "validationAccuracy": 0.565985,
+      "holdoutAccuracy": 0.574565,
+      "externalAug26Accuracy": 0.645833
+    }
+  },
+  "marketOnlyLogistic": {
+    "selectedL2": 0.001,
+    "deployableModel": {
+      "trainedBefore": "2026-08-21T00:00:00.000Z",
+      "confidenceCalibratedOn": "2026-08-21",
+      "formula": "score(side)=sum(weight[field]*feature(side)/divisor[field]); choose Up if score(Up)-score(Down)>0; emit only when abs(score(Up)-score(Down))>=threshold",
+      "threshold": 2.18535561,
+      "fields": [
+        {
+          "field": "ask",
+          "divisor": 0.566469130989,
+          "weight": 0.892541019444,
+          "candidateCoefficient": 1.575621636938
+        },
+        {
+          "field": "spread",
+          "divisor": 1e-9,
+          "weight": 1.11472e-7,
+          "candidateCoefficient": 111.472110682725
+        },
+        {
+          "field": "pairAsk",
+          "divisor": 1e-9,
+          "weight": 0,
+          "candidateCoefficient": 0
+        },
+        {
+          "field": "askDepth1",
+          "divisor": 424.831469734058,
+          "weight": -0.055480631179,
+          "candidateCoefficient": -0.000130594448
+        },
+        {
+          "field": "bidDepth1",
+          "divisor": 424.831469734058,
+          "weight": 0.055480631179,
+          "candidateCoefficient": 0.000130594448
+        },
+        {
+          "field": "askDepth3",
+          "divisor": 1178.348057398029,
+          "weight": -0.064643995602,
+          "candidateCoefficient": -0.000054859848
+        },
+        {
+          "field": "bidDepth3",
+          "divisor": 1178.348057398029,
+          "weight": 0.064643995602,
+          "candidateCoefficient": 0.000054859848
+        },
+        {
+          "field": "topDepthImbalance",
+          "divisor": 1.254679635928,
+          "weight": 0.012153856211,
+          "candidateCoefficient": 0.009686820335
+        },
+        {
+          "field": "depth3Imbalance",
+          "divisor": 0.894171126828,
+          "weight": 0.348148515804,
+          "candidateCoefficient": 0.389353341165
+        },
+        {
+          "field": "micropriceBias",
+          "divisor": 0.01308171786,
+          "weight": 0.107657572984,
+          "candidateCoefficient": 8.229620462204
+        },
+        {
+          "field": "sideAskTickMove",
+          "divisor": 0.022635145641,
+          "weight": 0.055470553234,
+          "candidateCoefficient": 2.450638229338
+        },
+        {
+          "field": "sideBidTickMove",
+          "divisor": 0.022635145641,
+          "weight": 0.055470553234,
+          "candidateCoefficient": 2.450638229338
+        },
+        {
+          "field": "sideAskMove100ms",
+          "divisor": 0.039336649578,
+          "weight": 0.098094672133,
+          "candidateCoefficient": 2.493722093416
+        },
+        {
+          "field": "sideBidMove100ms",
+          "divisor": 0.039336649578,
+          "weight": 0.098094672133,
+          "candidateCoefficient": 2.493722093416
+        },
+        {
+          "field": "askDepth3Change100ms",
+          "divisor": 623.232304869672,
+          "weight": -0.067497141362,
+          "candidateCoefficient": -0.000108301737
+        },
+        {
+          "field": "bidDepth3Change100ms",
+          "divisor": 623.232304869672,
+          "weight": 0.067497141362,
+          "candidateCoefficient": 0.000108301737
+        },
+        {
+          "field": "bzMove100ms",
+          "divisor": 0.008376903122,
+          "weight": 0.297514173951,
+          "candidateCoefficient": 35.516009867924
+        },
+        {
+          "field": "clMove100ms",
+          "divisor": 0.007008581484,
+          "weight": -0.256164306698,
+          "candidateCoefficient": -36.550093238807
+        },
+        {
+          "field": "sideAskMove250ms",
+          "divisor": 0.064028899725,
+          "weight": -0.016159283017,
+          "candidateCoefficient": -0.252374835221
+        },
+        {
+          "field": "sideBidMove250ms",
+          "divisor": 0.064028899725,
+          "weight": -0.016159283017,
+          "candidateCoefficient": -0.252374835221
+        },
+        {
+          "field": "askDepth3Change250ms",
+          "divisor": 803.510623703327,
+          "weight": -0.035886692178,
+          "candidateCoefficient": -0.000044662374
+        },
+        {
+          "field": "bidDepth3Change250ms",
+          "divisor": 803.510623703327,
+          "weight": 0.035886692178,
+          "candidateCoefficient": 0.000044662374
+        },
+        {
+          "field": "bzMove250ms",
+          "divisor": 0.011361990322,
+          "weight": -0.084404117146,
+          "candidateCoefficient": -7.428638359779
+        },
+        {
+          "field": "clMove250ms",
+          "divisor": 0.007101288764,
+          "weight": 0.372948077268,
+          "candidateCoefficient": 52.51836527808
+        },
+        {
+          "field": "sideAskMove500ms",
+          "divisor": 0.095517823182,
+          "weight": 0.158804853433,
+          "candidateCoefficient": 1.662567761103
+        },
+        {
+          "field": "sideBidMove500ms",
+          "divisor": 0.095517823182,
+          "weight": 0.158804853433,
+          "candidateCoefficient": 1.662567761103
+        },
+        {
+          "field": "askDepth3Change500ms",
+          "divisor": 856.690979222476,
+          "weight": -0.029177451902,
+          "candidateCoefficient": -0.000034058316
+        },
+        {
+          "field": "bidDepth3Change500ms",
+          "divisor": 856.690979222476,
+          "weight": 0.029177451902,
+          "candidateCoefficient": 0.000034058316
+        },
+        {
+          "field": "bzMove500ms",
+          "divisor": 0.01649208626,
+          "weight": 0.19536780628,
+          "candidateCoefficient": 11.846154768042
+        },
+        {
+          "field": "clMove500ms",
+          "divisor": 0.009864205626,
+          "weight": -0.561140870684,
+          "candidateCoefficient": -56.886574747549
+        },
+        {
+          "field": "sideAskMove1",
+          "divisor": 0.132934046532,
+          "weight": 0.246833543292,
+          "candidateCoefficient": 1.856812078861
+        },
+        {
+          "field": "sideBidMove1",
+          "divisor": 0.132934046532,
+          "weight": 0.246833543292,
+          "candidateCoefficient": 1.856812078861
+        },
+        {
+          "field": "askDepth3Change1",
+          "divisor": 955.186151498727,
+          "weight": 0.041980032287,
+          "candidateCoefficient": 0.000043949582
+        },
+        {
+          "field": "bidDepth3Change1",
+          "divisor": 955.186151498727,
+          "weight": -0.041980032287,
+          "candidateCoefficient": -0.000043949582
+        },
+        {
+          "field": "bzMove1",
+          "divisor": 0.022157469877,
+          "weight": 0.284531280677,
+          "candidateCoefficient": 12.841325397781
+        },
+        {
+          "field": "clMove1",
+          "divisor": 0.010109438337,
+          "weight": 0.342092719005,
+          "candidateCoefficient": 33.838944123334
+        },
+        {
+          "field": "sideAskMove3",
+          "divisor": 0.201523099511,
+          "weight": 0.299353063395,
+          "candidateCoefficient": 1.485452854395
+        },
+        {
+          "field": "sideBidMove3",
+          "divisor": 0.201523099511,
+          "weight": 0.299353063395,
+          "candidateCoefficient": 1.485452854395
+        },
+        {
+          "field": "askDepth3Change3",
+          "divisor": 1118.94702646736,
+          "weight": 0.088051473063,
+          "candidateCoefficient": 0.000078691369
+        },
+        {
+          "field": "bidDepth3Change3",
+          "divisor": 1118.94702646736,
+          "weight": -0.088051473063,
+          "candidateCoefficient": -0.000078691369
+        },
+        {
+          "field": "bzMove3",
+          "divisor": 0.036875883531,
+          "weight": 0.060184193516,
+          "candidateCoefficient": 1.632074617677
+        },
+        {
+          "field": "clMove3",
+          "divisor": 0.013553829593,
+          "weight": -0.366588665671,
+          "candidateCoefficient": -27.046869900992
+        },
+        {
+          "field": "sideAskMove5",
+          "divisor": 0.240107131392,
+          "weight": 0.133239720286,
+          "candidateCoefficient": 0.554917796541
+        },
+        {
+          "field": "sideBidMove5",
+          "divisor": 0.240107131392,
+          "weight": 0.133239720286,
+          "candidateCoefficient": 0.554917796541
+        },
+        {
+          "field": "askDepth3Change5",
+          "divisor": 1173.367838328243,
+          "weight": 0.011292444321,
+          "candidateCoefficient": 0.000009623959
+        },
+        {
+          "field": "bidDepth3Change5",
+          "divisor": 1173.367838328243,
+          "weight": -0.011292444321,
+          "candidateCoefficient": -0.000009623959
+        },
+        {
+          "field": "bzMove5",
+          "divisor": 0.044764418149,
+          "weight": -0.074597853697,
+          "candidateCoefficient": -1.666454223733
+        },
+        {
+          "field": "clMove5",
+          "divisor": 0.016967232025,
+          "weight": 0.443427281735,
+          "candidateCoefficient": 26.134332405806
+        },
+        {
+          "field": "sideAskAccel500ms",
+          "divisor": 0.112148500578,
+          "weight": -0.069296311798,
+          "candidateCoefficient": -0.61789780016
+        },
+        {
+          "field": "sideBidAccel500ms",
+          "divisor": 0.112148500578,
+          "weight": -0.069296311798,
+          "candidateCoefficient": -0.61789780016
+        },
+        {
+          "field": "bzAccel500ms",
+          "divisor": 0.019080347759,
+          "weight": -0.014831743561,
+          "candidateCoefficient": -0.777330882469
+        },
+        {
+          "field": "bzGap",
+          "divisor": 0.153382241716,
+          "weight": -0.216968982243,
+          "candidateCoefficient": -1.414563901371
+        },
+        {
+          "field": "clGap",
+          "divisor": 0.126453772924,
+          "weight": 0.031205602422,
+          "candidateCoefficient": 0.24677478339
+        }
+      ]
+    },
+    "validationAccuracy": 0.736989,
+    "holdoutAccuracy": 0.800549,
+    "externalAug26Accuracy": 0.861111,
+    "holdoutByRole": {
+      "flat": {
+        "actions": 909,
+        "accuracy": 0.821782
+      },
+      "entry/topup": {
+        "actions": 629,
+        "accuracy": 0.834658
+      },
+      "hedge": {
+        "actions": 648,
+        "accuracy": 0.737654
+      }
+    },
+    "validationNinetyThreshold": {
+      "threshold": 2.18535561,
+      "coverage": 0.29461,
+      "precision": 0.902208
+    },
+    "holdoutAtValidationNinetyThreshold": {
+      "actions": 577,
+      "coverage": 0.263952,
+      "precision": 0.941075
+    },
+    "externalAtValidationNinetyThreshold": {
+      "actions": 15,
+      "coverage": 0.208333,
+      "precision": 0.933333
+    },
+    "holdoutConfidenceFrontier": [
+      {
+        "coverage": 0.099726,
+        "actions": 218,
+        "accuracy": 0.958716
+      },
+      {
+        "coverage": 0.199909,
+        "actions": 437,
+        "accuracy": 0.940503
+      },
+      {
+        "coverage": 0.299634,
+        "actions": 655,
+        "accuracy": 0.935878
+      },
+      {
+        "coverage": 0.399817,
+        "actions": 874,
+        "accuracy": 0.915332
+      },
+      {
+        "coverage": 0.5,
+        "actions": 1093,
+        "accuracy": 0.903934
+      },
+      {
+        "coverage": 0.599726,
+        "actions": 1311,
+        "accuracy": 0.887872
+      },
+      {
+        "coverage": 0.699909,
+        "actions": 1530,
+        "accuracy": 0.870588
+      },
+      {
+        "coverage": 0.799634,
+        "actions": 1748,
+        "accuracy": 0.84897
+      },
+      {
+        "coverage": 0.899817,
+        "actions": 1967,
+        "accuracy": 0.824098
+      },
+      {
+        "coverage": 1,
+        "actions": 2186,
+        "accuracy": 0.800549
+      }
+    ],
+    "externalConfidenceFrontier": [
+      {
+        "coverage": 0.097222,
+        "actions": 7,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.194444,
+        "actions": 14,
+        "accuracy": 0.928571
+      },
+      {
+        "coverage": 0.291667,
+        "actions": 21,
+        "accuracy": 0.952381
+      },
+      {
+        "coverage": 0.388889,
+        "actions": 28,
+        "accuracy": 0.928571
+      },
+      {
+        "coverage": 0.5,
+        "actions": 36,
+        "accuracy": 0.916667
+      },
+      {
+        "coverage": 0.597222,
+        "actions": 43,
+        "accuracy": 0.906977
+      },
+      {
+        "coverage": 0.694444,
+        "actions": 50,
+        "accuracy": 0.92
+      },
+      {
+        "coverage": 0.791667,
+        "actions": 57,
+        "accuracy": 0.912281
+      },
+      {
+        "coverage": 0.888889,
+        "actions": 64,
+        "accuracy": 0.890625
+      },
+      {
+        "coverage": 1,
+        "actions": 72,
+        "accuracy": 0.861111
+      }
+    ]
+  },
+  "nativeForwardV2MarketOnly": {
+    "selectedL2": 0.01,
+    "selection": [
+      {
+        "l2": 0.01,
+        "validationAccuracy": 0.81336
+      },
+      {
+        "l2": 0.001,
+        "validationAccuracy": 0.811395
+      },
+      {
+        "l2": 0,
+        "validationAccuracy": 0.80943
+      },
+      {
+        "l2": 0.0001,
+        "validationAccuracy": 0.80943
+      },
+      {
+        "l2": 0.1,
+        "validationAccuracy": 0.801572
+      },
+      {
+        "l2": 1,
+        "validationAccuracy": 0.777996
+      }
+    ],
+    "deployableModel": {
+      "trainedBefore": "2026-08-24T00:00:00.000Z",
+      "confidenceCalibratedOn": "2026-08-24",
+      "formula": "score(side)=sum(weight[field]*feature(side)/divisor[field]); choose Up if score(Up)-score(Down)>0; emit only when abs(score(Up)-score(Down))>=threshold",
+      "threshold": 1.86004668,
+      "fields": [
+        {
+          "field": "ask",
+          "divisor": 0.512882399898,
+          "weight": 0.607732564337,
+          "candidateCoefficient": 1.184935502675
+        },
+        {
+          "field": "spread",
+          "divisor": 1e-9,
+          "weight": 6.5755e-8,
+          "candidateCoefficient": 65.755265902192
+        },
+        {
+          "field": "pairAsk",
+          "divisor": 1e-9,
+          "weight": 0,
+          "candidateCoefficient": 0
+        },
+        {
+          "field": "askDepth1",
+          "divisor": 426.330153321072,
+          "weight": -0.010802938305,
+          "candidateCoefficient": -0.000025339372
+        },
+        {
+          "field": "bidDepth1",
+          "divisor": 426.330153321072,
+          "weight": 0.010802938305,
+          "candidateCoefficient": 0.000025339372
+        },
+        {
+          "field": "askDepth3",
+          "divisor": 946.394874567908,
+          "weight": -0.23150408145,
+          "candidateCoefficient": -0.000244616795
+        },
+        {
+          "field": "bidDepth3",
+          "divisor": 946.394874567908,
+          "weight": 0.23150408145,
+          "candidateCoefficient": 0.000244616795
+        },
+        {
+          "field": "topDepthImbalance",
+          "divisor": 1.277674581976,
+          "weight": 0.252420696726,
+          "candidateCoefficient": 0.197562587757
+        },
+        {
+          "field": "depth3Imbalance",
+          "divisor": 0.915157899312,
+          "weight": 0.288794278009,
+          "candidateCoefficient": 0.315567705011
+        },
+        {
+          "field": "micropriceBias",
+          "divisor": 0.011160894146,
+          "weight": -0.342279180802,
+          "candidateCoefficient": -30.667720374841
+        },
+        {
+          "field": "sideAskTickMove",
+          "divisor": 0.018829872611,
+          "weight": 0.053388421896,
+          "candidateCoefficient": 2.83530446527
+        },
+        {
+          "field": "sideBidTickMove",
+          "divisor": 0.018829872611,
+          "weight": 0.053388421896,
+          "candidateCoefficient": 2.83530446527
+        },
+        {
+          "field": "sideAskMove100ms",
+          "divisor": 0.028221877311,
+          "weight": -0.064739155025,
+          "candidateCoefficient": -2.293935102569
+        },
+        {
+          "field": "sideBidMove100ms",
+          "divisor": 0.028221877311,
+          "weight": -0.064739155025,
+          "candidateCoefficient": -2.293935102569
+        },
+        {
+          "field": "askDepth3Change100ms",
+          "divisor": 438.358683302265,
+          "weight": -0.011100014208,
+          "candidateCoefficient": -0.000025321762
+        },
+        {
+          "field": "bidDepth3Change100ms",
+          "divisor": 438.358683302265,
+          "weight": 0.011100014208,
+          "candidateCoefficient": 0.000025321762
+        },
+        {
+          "field": "bzMove100ms",
+          "divisor": 0.00421917639,
+          "weight": 0.385994749437,
+          "candidateCoefficient": 91.485805228666
+        },
+        {
+          "field": "clMove100ms",
+          "divisor": 0.000504007863,
+          "weight": -0.046168444208,
+          "candidateCoefficient": -91.602626843597
+        },
+        {
+          "field": "sideAskMove250ms",
+          "divisor": 0.057349605125,
+          "weight": 0.179030894951,
+          "candidateCoefficient": 3.121745904977
+        },
+        {
+          "field": "sideBidMove250ms",
+          "divisor": 0.057349605125,
+          "weight": 0.179030894951,
+          "candidateCoefficient": 3.121745904977
+        },
+        {
+          "field": "askDepth3Change250ms",
+          "divisor": 597.805089302416,
+          "weight": -0.060204387433,
+          "candidateCoefficient": -0.000100709058
+        },
+        {
+          "field": "bidDepth3Change250ms",
+          "divisor": 597.805089302416,
+          "weight": 0.060204387433,
+          "candidateCoefficient": 0.000100709058
+        },
+        {
+          "field": "bzMove250ms",
+          "divisor": 0.008310693174,
+          "weight": 0.208868061557,
+          "candidateCoefficient": 25.132447701614
+        },
+        {
+          "field": "clMove250ms",
+          "divisor": 0.000849670011,
+          "weight": -0.223108290357,
+          "candidateCoefficient": -262.582281921521
+        },
+        {
+          "field": "sideAskMove500ms",
+          "divisor": 0.089505582439,
+          "weight": 0.240749181832,
+          "candidateCoefficient": 2.689767222015
+        },
+        {
+          "field": "sideBidMove500ms",
+          "divisor": 0.089495236945,
+          "weight": 0.239806947057,
+          "candidateCoefficient": 2.67954983128
+        },
+        {
+          "field": "askDepth3Change500ms",
+          "divisor": 724.490124559366,
+          "weight": -0.128061739492,
+          "candidateCoefficient": -0.000176761194
+        },
+        {
+          "field": "bidDepth3Change500ms",
+          "divisor": 724.444990334432,
+          "weight": 0.128659922078,
+          "candidateCoefficient": 0.000177597918
+        },
+        {
+          "field": "bzMove500ms",
+          "divisor": 0.011544419924,
+          "weight": 0.146471332433,
+          "candidateCoefficient": 12.687630335092
+        },
+        {
+          "field": "clMove500ms",
+          "divisor": 0.001592703792,
+          "weight": -0.050906247692,
+          "candidateCoefficient": -31.962156400891
+        },
+        {
+          "field": "sideAskMove1",
+          "divisor": 0.123155369409,
+          "weight": 0.309251473336,
+          "candidateCoefficient": 2.511067725425
+        },
+        {
+          "field": "sideBidMove1",
+          "divisor": 0.123155369409,
+          "weight": 0.309251473336,
+          "candidateCoefficient": 2.511067725425
+        },
+        {
+          "field": "askDepth3Change1",
+          "divisor": 812.578564506148,
+          "weight": -0.034450602762,
+          "candidateCoefficient": -0.000042396642
+        },
+        {
+          "field": "bidDepth3Change1",
+          "divisor": 812.578564506148,
+          "weight": 0.034450602762,
+          "candidateCoefficient": 0.000042396642
+        },
+        {
+          "field": "bzMove1",
+          "divisor": 0.015967805504,
+          "weight": 0.408365311238,
+          "candidateCoefficient": 25.574291416283
+        },
+        {
+          "field": "clMove1",
+          "divisor": 0.00216274694,
+          "weight": 0.051327064299,
+          "candidateCoefficient": 23.732348589695
+        },
+        {
+          "field": "sideAskMove3",
+          "divisor": 0.184772463446,
+          "weight": 0.474494510871,
+          "candidateCoefficient": 2.567993639433
+        },
+        {
+          "field": "sideBidMove3",
+          "divisor": 0.184772463446,
+          "weight": 0.474494510871,
+          "candidateCoefficient": 2.567993639433
+        },
+        {
+          "field": "askDepth3Change3",
+          "divisor": 931.170512742428,
+          "weight": 0.115161215518,
+          "candidateCoefficient": 0.000123673606
+        },
+        {
+          "field": "bidDepth3Change3",
+          "divisor": 931.126908665147,
+          "weight": -0.116513393607,
+          "candidateCoefficient": -0.000125131593
+        },
+        {
+          "field": "bzMove3",
+          "divisor": 0.023775587856,
+          "weight": 0.243802917451,
+          "candidateCoefficient": 10.254338144153
+        },
+        {
+          "field": "clMove3",
+          "divisor": 0.005040595923,
+          "weight": -0.094112916136,
+          "candidateCoefficient": -18.670990012573
+        },
+        {
+          "field": "sideAskMove5",
+          "divisor": 0.231525308899,
+          "weight": 0.137505956609,
+          "candidateCoefficient": 0.593913284311
+        },
+        {
+          "field": "sideBidMove5",
+          "divisor": 0.231525308899,
+          "weight": 0.137505956609,
+          "candidateCoefficient": 0.593913284311
+        },
+        {
+          "field": "askDepth3Change5",
+          "divisor": 1049.026581825638,
+          "weight": 0.105049033142,
+          "candidateCoefficient": 0.000100139534
+        },
+        {
+          "field": "bidDepth3Change5",
+          "divisor": 1048.9878767727,
+          "weight": -0.106248373822,
+          "candidateCoefficient": -0.00010128656
+        },
+        {
+          "field": "bzMove5",
+          "divisor": 0.030072549599,
+          "weight": -0.041040265626,
+          "candidateCoefficient": -1.364708552252
+        },
+        {
+          "field": "clMove5",
+          "divisor": 0.007936045105,
+          "weight": 0.111044236857,
+          "candidateCoefficient": 13.992389834642
+        },
+        {
+          "field": "sideAskAccel500ms",
+          "divisor": 0.098191263443,
+          "weight": 0.051031184899,
+          "candidateCoefficient": 0.519712071217
+        },
+        {
+          "field": "sideBidAccel500ms",
+          "divisor": 0.098194164883,
+          "weight": 0.049261418656,
+          "candidateCoefficient": 0.501673584322
+        },
+        {
+          "field": "bzAccel500ms",
+          "divisor": 0.014950664327,
+          "weight": -0.209946818346,
+          "candidateCoefficient": -14.04264143452
+        },
+        {
+          "field": "bzGap",
+          "divisor": 0.094661207974,
+          "weight": 0.022437768797,
+          "candidateCoefficient": 0.237032352293
+        },
+        {
+          "field": "clGap",
+          "divisor": 0.073703944762,
+          "weight": 0.082344631165,
+          "candidateCoefficient": 1.117235060223
+        }
+      ]
+    },
+    "validationAccuracy": 0.81336,
+    "holdoutAccuracy": 0.767742,
+    "externalAug26Accuracy": 0.819444,
+    "holdoutByRole": {
+      "flat": {
+        "actions": 245,
+        "accuracy": 0.759184
+      },
+      "entry/topup": {
+        "actions": 179,
+        "accuracy": 0.837989
+      },
+      "hedge": {
+        "actions": 196,
+        "accuracy": 0.714286
+      }
+    },
+    "validationNinetyThreshold": {
+      "threshold": 1.86004668,
+      "coverage": 0.497053,
+      "precision": 0.901186
+    },
+    "holdoutAtValidationNinetyThreshold": {
+      "actions": 271,
+      "coverage": 0.437097,
+      "precision": 0.900369
+    },
+    "externalAtValidationNinetyThreshold": {
+      "actions": 25,
+      "coverage": 0.347222,
+      "precision": 0.96
+    },
+    "holdoutConfidenceFrontier": [
+      {
+        "coverage": 0.1,
+        "actions": 62,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.2,
+        "actions": 124,
+        "accuracy": 0.967742
+      },
+      {
+        "coverage": 0.3,
+        "actions": 186,
+        "accuracy": 0.935484
+      },
+      {
+        "coverage": 0.4,
+        "actions": 248,
+        "accuracy": 0.907258
+      },
+      {
+        "coverage": 0.5,
+        "actions": 310,
+        "accuracy": 0.890323
+      },
+      {
+        "coverage": 0.6,
+        "actions": 372,
+        "accuracy": 0.86828
+      },
+      {
+        "coverage": 0.7,
+        "actions": 434,
+        "accuracy": 0.83871
+      },
+      {
+        "coverage": 0.8,
+        "actions": 496,
+        "accuracy": 0.822581
+      },
+      {
+        "coverage": 0.9,
+        "actions": 558,
+        "accuracy": 0.795699
+      },
+      {
+        "coverage": 1,
+        "actions": 620,
+        "accuracy": 0.767742
+      }
+    ],
+    "externalConfidenceFrontier": [
+      {
+        "coverage": 0.097222,
+        "actions": 7,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.194444,
+        "actions": 14,
+        "accuracy": 0.928571
+      },
+      {
+        "coverage": 0.291667,
+        "actions": 21,
+        "accuracy": 0.952381
+      },
+      {
+        "coverage": 0.388889,
+        "actions": 28,
+        "accuracy": 0.964286
+      },
+      {
+        "coverage": 0.5,
+        "actions": 36,
+        "accuracy": 0.944444
+      },
+      {
+        "coverage": 0.597222,
+        "actions": 43,
+        "accuracy": 0.906977
+      },
+      {
+        "coverage": 0.694444,
+        "actions": 50,
+        "accuracy": 0.88
+      },
+      {
+        "coverage": 0.791667,
+        "actions": 57,
+        "accuracy": 0.842105
+      },
+      {
+        "coverage": 0.888889,
+        "actions": 64,
+        "accuracy": 0.8125
+      },
+      {
+        "coverage": 1,
+        "actions": 72,
+        "accuracy": 0.819444
+      }
+    ]
+  },
+  "logistic": {
+    "selectedL2": 0.001,
+    "topCoefficients": [
+      {
+        "field": "ask",
+        "standardizedWeight": 1.00450467,
+        "candidateCoefficient": 1.77327344
+      },
+      {
+        "field": "isHedge",
+        "standardizedWeight": 0.89115084,
+        "candidateCoefficient": 1.10518202
+      },
+      {
+        "field": "fifoPairCost",
+        "standardizedWeight": -0.70852555,
+        "candidateCoefficient": -0.81799414
+      },
+      {
+        "field": "clMove500ms",
+        "standardizedWeight": -0.55036758,
+        "candidateCoefficient": -55.79441518
+      },
+      {
+        "field": "clMove5",
+        "standardizedWeight": 0.36166088,
+        "candidateCoefficient": 21.31525517
+      },
+      {
+        "field": "depth3Imbalance",
+        "standardizedWeight": 0.33701848,
+        "candidateCoefficient": 0.37690602
+      },
+      {
+        "field": "clMove250ms",
+        "standardizedWeight": 0.33569957,
+        "candidateCoefficient": 47.27304899
+      },
+      {
+        "field": "clMove1",
+        "standardizedWeight": 0.33371202,
+        "candidateCoefficient": 33.00994636
+      },
+      {
+        "field": "sideAskMove3",
+        "standardizedWeight": 0.31212864,
+        "candidateCoefficient": 1.54884797
+      },
+      {
+        "field": "sideBidMove3",
+        "standardizedWeight": 0.31212864,
+        "candidateCoefficient": 1.54884797
+      },
+      {
+        "field": "bzMove100ms",
+        "standardizedWeight": 0.30340512,
+        "candidateCoefficient": 36.21924659
+      },
+      {
+        "field": "clMove3",
+        "standardizedWeight": -0.29534551,
+        "candidateCoefficient": -21.79055826
+      },
+      {
+        "field": "bzMove1",
+        "standardizedWeight": 0.28034089,
+        "candidateCoefficient": 12.65220698
+      },
+      {
+        "field": "sinceSameSideFireS",
+        "standardizedWeight": -0.24763656,
+        "candidateCoefficient": -0.00155108
+      },
+      {
+        "field": "sideAskMove1",
+        "standardizedWeight": 0.24160504,
+        "candidateCoefficient": 1.81748054
+      },
+      {
+        "field": "sideBidMove1",
+        "standardizedWeight": 0.24160504,
+        "candidateCoefficient": 1.81748054
+      },
+      {
+        "field": "orientedInventory",
+        "standardizedWeight": -0.23838889,
+        "candidateCoefficient": -0.00485906
+      },
+      {
+        "field": "clMove100ms",
+        "standardizedWeight": -0.20927923,
+        "candidateCoefficient": -29.86042679
+      },
+      {
+        "field": "bzGap",
+        "standardizedWeight": -0.19707422,
+        "candidateCoefficient": -1.2848568
+      },
+      {
+        "field": "bzMove500ms",
+        "standardizedWeight": 0.18901544,
+        "candidateCoefficient": 11.46097838
+      }
+    ],
+    "validationAccuracy": 0.747212,
+    "holdoutAccuracy": 0.804209,
+    "externalAug26Accuracy": 0.833333,
+    "holdoutByRole": {
+      "flat": {
+        "actions": 909,
+        "accuracy": 0.823982
+      },
+      "entry/topup": {
+        "actions": 629,
+        "accuracy": 0.82194
+      },
+      "hedge": {
+        "actions": 648,
+        "accuracy": 0.759259
+      }
+    },
+    "validationNinetyThreshold": {
+      "threshold": 2.21482924,
+      "coverage": 0.289033,
+      "precision": 0.900322
+    },
+    "holdoutAtValidationNinetyThreshold": {
+      "actions": 584,
+      "coverage": 0.267155,
+      "precision": 0.938356
+    },
+    "externalAtValidationNinetyThreshold": {
+      "actions": 15,
+      "coverage": 0.208333,
+      "precision": 0.933333
+    },
+    "holdoutConfidenceFrontier": [
+      {
+        "coverage": 0.099726,
+        "actions": 218,
+        "accuracy": 0.958716
+      },
+      {
+        "coverage": 0.199909,
+        "actions": 437,
+        "accuracy": 0.949657
+      },
+      {
+        "coverage": 0.299634,
+        "actions": 655,
+        "accuracy": 0.931298
+      },
+      {
+        "coverage": 0.399817,
+        "actions": 874,
+        "accuracy": 0.915332
+      },
+      {
+        "coverage": 0.5,
+        "actions": 1093,
+        "accuracy": 0.904849
+      },
+      {
+        "coverage": 0.599726,
+        "actions": 1311,
+        "accuracy": 0.885584
+      },
+      {
+        "coverage": 0.699909,
+        "actions": 1530,
+        "accuracy": 0.86732
+      },
+      {
+        "coverage": 0.799634,
+        "actions": 1748,
+        "accuracy": 0.84897
+      },
+      {
+        "coverage": 0.899817,
+        "actions": 1967,
+        "accuracy": 0.827148
+      },
+      {
+        "coverage": 1,
+        "actions": 2186,
+        "accuracy": 0.804209
+      }
+    ],
+    "externalConfidenceFrontier": [
+      {
+        "coverage": 0.097222,
+        "actions": 7,
+        "accuracy": 0.857143
+      },
+      {
+        "coverage": 0.194444,
+        "actions": 14,
+        "accuracy": 0.928571
+      },
+      {
+        "coverage": 0.291667,
+        "actions": 21,
+        "accuracy": 0.904762
+      },
+      {
+        "coverage": 0.388889,
+        "actions": 28,
+        "accuracy": 0.892857
+      },
+      {
+        "coverage": 0.5,
+        "actions": 36,
+        "accuracy": 0.916667
+      },
+      {
+        "coverage": 0.597222,
+        "actions": 43,
+        "accuracy": 0.930233
+      },
+      {
+        "coverage": 0.694444,
+        "actions": 50,
+        "accuracy": 0.92
+      },
+      {
+        "coverage": 0.791667,
+        "actions": 57,
+        "accuracy": 0.912281
+      },
+      {
+        "coverage": 0.888889,
+        "actions": 64,
+        "accuracy": 0.890625
+      },
+      {
+        "coverage": 1,
+        "actions": 72,
+        "accuracy": 0.833333
+      }
+    ]
+  },
+  "inventoryAwareDeployableModel": {
+    "trainedBefore": "2026-08-21T00:00:00.000Z",
+    "confidenceCalibratedOn": "2026-08-21",
+    "formula": "score(side)=sum(weight[field]*feature(side)/divisor[field]); choose Up if score(Up)-score(Down)>0; emit only when abs(score(Up)-score(Down))>=threshold",
+    "threshold": 2.21482924,
+    "fields": [
+      {
+        "field": "ask",
+        "divisor": 0.566469130989,
+        "weight": 1.004504666869,
+        "candidateCoefficient": 1.773273444072
+      },
+      {
+        "field": "spread",
+        "divisor": 1e-9,
+        "weight": 1.22941e-7,
+        "candidateCoefficient": 122.940863788678
+      },
+      {
+        "field": "pairAsk",
+        "divisor": 1e-9,
+        "weight": 0,
+        "candidateCoefficient": 0
+      },
+      {
+        "field": "askDepth1",
+        "divisor": 424.831469734058,
+        "weight": -0.065570478619,
+        "candidateCoefficient": -0.000154344683
+      },
+      {
+        "field": "bidDepth1",
+        "divisor": 424.831469734058,
+        "weight": 0.065570478619,
+        "candidateCoefficient": 0.000154344683
+      },
+      {
+        "field": "askDepth3",
+        "divisor": 1178.348057398029,
+        "weight": -0.064639100228,
+        "candidateCoefficient": -0.000054855694
+      },
+      {
+        "field": "bidDepth3",
+        "divisor": 1178.348057398029,
+        "weight": 0.064639100228,
+        "candidateCoefficient": 0.000054855694
+      },
+      {
+        "field": "topDepthImbalance",
+        "divisor": 1.254679635928,
+        "weight": 0.004897048233,
+        "candidateCoefficient": 0.00390302679
+      },
+      {
+        "field": "depth3Imbalance",
+        "divisor": 0.894171126828,
+        "weight": 0.337018484123,
+        "candidateCoefficient": 0.376906023927
+      },
+      {
+        "field": "micropriceBias",
+        "divisor": 0.01308171786,
+        "weight": 0.123598622799,
+        "candidateCoefficient": 9.448195116246
+      },
+      {
+        "field": "orientedInventory",
+        "divisor": 49.060696134388,
+        "weight": -0.238388885204,
+        "candidateCoefficient": -0.004859060388
+      },
+      {
+        "field": "isHedge",
+        "divisor": 0.806338525795,
+        "weight": 0.891150837703,
+        "candidateCoefficient": 1.10518201623
+      },
+      {
+        "field": "fifoPairCost",
+        "divisor": 0.866174359611,
+        "weight": -0.708525550562,
+        "candidateCoefficient": -0.81799414021
+      },
+      {
+        "field": "sinceSameSideFireS",
+        "divisor": 159.653951266479,
+        "weight": -0.247636558782,
+        "candidateCoefficient": -0.001551083182
+      },
+      {
+        "field": "sideAskTickMove",
+        "divisor": 0.022635145641,
+        "weight": 0.062693186143,
+        "candidateCoefficient": 2.769727535144
+      },
+      {
+        "field": "sideBidTickMove",
+        "divisor": 0.022635145641,
+        "weight": 0.062693186143,
+        "candidateCoefficient": 2.769727535143
+      },
+      {
+        "field": "sideAskMove100ms",
+        "divisor": 0.039336649578,
+        "weight": 0.079113624725,
+        "candidateCoefficient": 2.011193774113
+      },
+      {
+        "field": "sideBidMove100ms",
+        "divisor": 0.039336649578,
+        "weight": 0.079113624725,
+        "candidateCoefficient": 2.011193774113
+      },
+      {
+        "field": "askDepth3Change100ms",
+        "divisor": 623.232304869672,
+        "weight": -0.064275247254,
+        "candidateCoefficient": -0.000103132085
+      },
+      {
+        "field": "bidDepth3Change100ms",
+        "divisor": 623.232304869672,
+        "weight": 0.064275247254,
+        "candidateCoefficient": 0.000103132085
+      },
+      {
+        "field": "bzMove100ms",
+        "divisor": 0.008376903122,
+        "weight": 0.30340511985,
+        "candidateCoefficient": 36.21924659064
+      },
+      {
+        "field": "clMove100ms",
+        "divisor": 0.007008581484,
+        "weight": -0.209279234291,
+        "candidateCoefficient": -29.86042678967
+      },
+      {
+        "field": "sideAskMove250ms",
+        "divisor": 0.064028899725,
+        "weight": -0.019220858042,
+        "candidateCoefficient": -0.300190353494
+      },
+      {
+        "field": "sideBidMove250ms",
+        "divisor": 0.064028899725,
+        "weight": -0.019220858042,
+        "candidateCoefficient": -0.300190353494
+      },
+      {
+        "field": "askDepth3Change250ms",
+        "divisor": 803.510623703327,
+        "weight": -0.034377833314,
+        "candidateCoefficient": -0.000042784541
+      },
+      {
+        "field": "bidDepth3Change250ms",
+        "divisor": 803.510623703327,
+        "weight": 0.034377833314,
+        "candidateCoefficient": 0.000042784541
+      },
+      {
+        "field": "bzMove250ms",
+        "divisor": 0.011361990322,
+        "weight": -0.076802360785,
+        "candidateCoefficient": -6.759586886782
+      },
+      {
+        "field": "clMove250ms",
+        "divisor": 0.007101288764,
+        "weight": 0.33569957163,
+        "candidateCoefficient": 47.273048987662
+      },
+      {
+        "field": "sideAskMove500ms",
+        "divisor": 0.095517823182,
+        "weight": 0.160408299881,
+        "candidateCoefficient": 1.679354643326
+      },
+      {
+        "field": "sideBidMove500ms",
+        "divisor": 0.095517823182,
+        "weight": 0.160408299881,
+        "candidateCoefficient": 1.679354643326
+      },
+      {
+        "field": "askDepth3Change500ms",
+        "divisor": 856.690979222476,
+        "weight": -0.030401500966,
+        "candidateCoefficient": -0.000035487126
+      },
+      {
+        "field": "bidDepth3Change500ms",
+        "divisor": 856.690979222476,
+        "weight": 0.030401500966,
+        "candidateCoefficient": 0.000035487126
+      },
+      {
+        "field": "bzMove500ms",
+        "divisor": 0.01649208626,
+        "weight": 0.189015444044,
+        "candidateCoefficient": 11.460978378834
+      },
+      {
+        "field": "clMove500ms",
+        "divisor": 0.009864205626,
+        "weight": -0.550367584116,
+        "candidateCoefficient": -55.79441517826
+      },
+      {
+        "field": "sideAskMove1",
+        "divisor": 0.132934046532,
+        "weight": 0.241605043128,
+        "candidateCoefficient": 1.817480543413
+      },
+      {
+        "field": "sideBidMove1",
+        "divisor": 0.132934046532,
+        "weight": 0.241605043128,
+        "candidateCoefficient": 1.817480543413
+      },
+      {
+        "field": "askDepth3Change1",
+        "divisor": 955.186151498727,
+        "weight": 0.045931885969,
+        "candidateCoefficient": 0.000048086842
+      },
+      {
+        "field": "bidDepth3Change1",
+        "divisor": 955.186151498727,
+        "weight": -0.045931885969,
+        "candidateCoefficient": -0.000048086842
+      },
+      {
+        "field": "bzMove1",
+        "divisor": 0.022157469877,
+        "weight": 0.280340894943,
+        "candidateCoefficient": 12.652206976004
+      },
+      {
+        "field": "clMove1",
+        "divisor": 0.010109438337,
+        "weight": 0.333712017285,
+        "candidateCoefficient": 33.00994636498
+      },
+      {
+        "field": "sideAskMove3",
+        "divisor": 0.201523099511,
+        "weight": 0.312128643772,
+        "candidateCoefficient": 1.548847970928
+      },
+      {
+        "field": "sideBidMove3",
+        "divisor": 0.201523099511,
+        "weight": 0.312128643772,
+        "candidateCoefficient": 1.548847970928
+      },
+      {
+        "field": "askDepth3Change3",
+        "divisor": 1118.94702646736,
+        "weight": 0.086911740428,
+        "candidateCoefficient": 0.000077672793
+      },
+      {
+        "field": "bidDepth3Change3",
+        "divisor": 1118.94702646736,
+        "weight": -0.086911740428,
+        "candidateCoefficient": -0.000077672793
+      },
+      {
+        "field": "bzMove3",
+        "divisor": 0.036875883531,
+        "weight": 0.055556080277,
+        "candidateCoefficient": 1.50656946917
+      },
+      {
+        "field": "clMove3",
+        "divisor": 0.013553829593,
+        "weight": -0.295345513456,
+        "candidateCoefficient": -21.790558264137
+      },
+      {
+        "field": "sideAskMove5",
+        "divisor": 0.240107131392,
+        "weight": 0.163103658936,
+        "candidateCoefficient": 0.679295354497
+      },
+      {
+        "field": "sideBidMove5",
+        "divisor": 0.240107131392,
+        "weight": 0.163103658936,
+        "candidateCoefficient": 0.679295354497
+      },
+      {
+        "field": "askDepth3Change5",
+        "divisor": 1173.367838328243,
+        "weight": 0.010006918048,
+        "candidateCoefficient": 0.000008528373
+      },
+      {
+        "field": "bidDepth3Change5",
+        "divisor": 1173.367838328243,
+        "weight": -0.010006918048,
+        "candidateCoefficient": -0.000008528373
+      },
+      {
+        "field": "bzMove5",
+        "divisor": 0.044764418149,
+        "weight": -0.101312484751,
+        "candidateCoefficient": -2.263236939994
+      },
+      {
+        "field": "clMove5",
+        "divisor": 0.016967232025,
+        "weight": 0.36166088011,
+        "candidateCoefficient": 21.31525516875
+      },
+      {
+        "field": "sideAskAccel500ms",
+        "divisor": 0.112148500578,
+        "weight": -0.067809318145,
+        "candidateCoefficient": -0.604638651393
+      },
+      {
+        "field": "sideBidAccel500ms",
+        "divisor": 0.112148500578,
+        "weight": -0.067809318145,
+        "candidateCoefficient": -0.604638651393
+      },
+      {
+        "field": "bzAccel500ms",
+        "divisor": 0.019080347759,
+        "weight": -0.021004510002,
+        "candidateCoefficient": -1.100845239674
+      },
+      {
+        "field": "bzGap",
+        "divisor": 0.153382241716,
+        "weight": -0.19707421563,
+        "candidateCoefficient": -1.284856795835
+      },
+      {
+        "field": "clGap",
+        "divisor": 0.126453772924,
+        "weight": 0.00044182373,
+        "candidateCoefficient": 0.003493954512
+      }
+    ]
+  },
+  "forest": {
+    "selectedConfig": {
+      "trees": 42,
+      "maxDepth": 7,
+      "minLeaf": 24,
+      "featureTrials": 8,
+      "thresholdTrials": 5
+    },
+    "validationAccuracy": 0.723978,
+    "holdoutAccuracy": 0.791857,
+    "externalAug26Accuracy": 0.861111,
+    "holdoutByRole": {
+      "flat": {
+        "actions": 909,
+        "accuracy": 0.807481
+      },
+      "entry/topup": {
+        "actions": 629,
+        "accuracy": 0.836248
+      },
+      "hedge": {
+        "actions": 648,
+        "accuracy": 0.726852
+      }
+    },
+    "validationNinetyThreshold": {
+      "threshold": 0.6861115,
+      "coverage": 0.275093,
+      "precision": 0.902027
+    },
+    "holdoutAtValidationNinetyThreshold": {
+      "actions": 595,
+      "coverage": 0.272187,
+      "precision": 0.959664
+    },
+    "externalAtValidationNinetyThreshold": {
+      "actions": 17,
+      "coverage": 0.236111,
+      "precision": 1
+    },
+    "holdoutConfidenceFrontier": [
+      {
+        "coverage": 0.099726,
+        "actions": 218,
+        "accuracy": 0.981651
+      },
+      {
+        "coverage": 0.199909,
+        "actions": 437,
+        "accuracy": 0.967963
+      },
+      {
+        "coverage": 0.299634,
+        "actions": 655,
+        "accuracy": 0.949618
+      },
+      {
+        "coverage": 0.399817,
+        "actions": 874,
+        "accuracy": 0.921053
+      },
+      {
+        "coverage": 0.5,
+        "actions": 1093,
+        "accuracy": 0.913998
+      },
+      {
+        "coverage": 0.599726,
+        "actions": 1311,
+        "accuracy": 0.8955
+      },
+      {
+        "coverage": 0.699909,
+        "actions": 1530,
+        "accuracy": 0.866013
+      },
+      {
+        "coverage": 0.799634,
+        "actions": 1748,
+        "accuracy": 0.842677
+      },
+      {
+        "coverage": 0.899817,
+        "actions": 1967,
+        "accuracy": 0.818505
+      },
+      {
+        "coverage": 1,
+        "actions": 2186,
+        "accuracy": 0.791857
+      }
+    ],
+    "externalConfidenceFrontier": [
+      {
+        "coverage": 0.097222,
+        "actions": 7,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.194444,
+        "actions": 14,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.291667,
+        "actions": 21,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.388889,
+        "actions": 28,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.5,
+        "actions": 36,
+        "accuracy": 1
+      },
+      {
+        "coverage": 0.597222,
+        "actions": 43,
+        "accuracy": 0.976744
+      },
+      {
+        "coverage": 0.694444,
+        "actions": 50,
+        "accuracy": 0.94
+      },
+      {
+        "coverage": 0.791667,
+        "actions": 57,
+        "accuracy": 0.947368
+      },
+      {
+        "coverage": 0.888889,
+        "actions": 64,
+        "accuracy": 0.90625
+      },
+      {
+        "coverage": 1,
+        "actions": 72,
+        "accuracy": 0.861111
+      }
+    ]
+  },
+  "conclusion": {
+    "bestModel": "pairwise logistic",
+    "holdoutAccuracy": 0.804209,
+    "externalAug26Accuracy": 0.833333,
+    "ninetyPercentFullCoverageAchieved": false
+  }
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "pair92_5x1_timeout15_exact_fifo_volume_conserved_forward",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.92,
+    "pairCostCap": 0.92,
+    "orderSize": 5,
+    "minOrderShares": 5,
+    "exposureCap": 5,
+    "targetMakerLatencyMs": 2733,
+    "pauseMakerAboveLatencyMs": 3500,
+    "takerLatencyMs": 520,
+    "unpairedTimeoutS": 15,
+    "minTimeS": 5,
+    "maxTimeS": 255
+  }
+]

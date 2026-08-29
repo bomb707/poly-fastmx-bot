@@ -1,0 +1,1537 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T06:27:31.495Z",
+  "target": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "method": "exact registered helpme engine replay; one-to-one decision-time matching",
+  "markets": 2875,
+  "targetActions": 6025,
+  "tolerancesMs": [
+    500,
+    1000,
+    2000,
+    5000,
+    10000
+  ],
+  "definitions": {
+    "exactMatch": "one predicted action and one target action share side and their causal decision times differ by at most tolerance",
+    "exactPrecision": "exact matches / predicted actions",
+    "exactRecall": "exact matches / target actions",
+    "releaseRecallIgnoringSide": "time-matched releases / target actions, without requiring side"
+  },
+  "selection": {
+    "segment": "2026-08-21 validation only",
+    "toleranceMs": 2000,
+    "objective": "maximum exact F1, then recall, then precision",
+    "selected": "repeat-menu-5s"
+  },
+  "variants": {
+    "current-5s": {
+      "overrides": {},
+      "fit": {
+        "500": {
+          "predictions": 2245,
+          "targetActions": 2758,
+          "releaseMatches": 60,
+          "exactMatches": 51,
+          "exactPrecision": 0.022717,
+          "exactRecall": 0.018492,
+          "exactF1": 0.020388,
+          "releaseRecallIgnoringSide": 0.021755
+        },
+        "1000": {
+          "predictions": 2245,
+          "targetActions": 2758,
+          "releaseMatches": 117,
+          "exactMatches": 102,
+          "exactPrecision": 0.045434,
+          "exactRecall": 0.036983,
+          "exactF1": 0.040776,
+          "releaseRecallIgnoringSide": 0.042422
+        },
+        "2000": {
+          "predictions": 2245,
+          "targetActions": 2758,
+          "releaseMatches": 195,
+          "exactMatches": 170,
+          "exactPrecision": 0.075724,
+          "exactRecall": 0.061639,
+          "exactF1": 0.067959,
+          "releaseRecallIgnoringSide": 0.070703
+        },
+        "5000": {
+          "predictions": 2245,
+          "targetActions": 2758,
+          "releaseMatches": 340,
+          "exactMatches": 286,
+          "exactPrecision": 0.127394,
+          "exactRecall": 0.103698,
+          "exactF1": 0.114331,
+          "releaseRecallIgnoringSide": 0.123278
+        },
+        "10000": {
+          "predictions": 2245,
+          "targetActions": 2758,
+          "releaseMatches": 520,
+          "exactMatches": 419,
+          "exactPrecision": 0.186637,
+          "exactRecall": 0.151922,
+          "exactF1": 0.1675,
+          "releaseRecallIgnoringSide": 0.188542
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 1431,
+          "targetActions": 1079,
+          "releaseMatches": 19,
+          "exactMatches": 15,
+          "exactPrecision": 0.010482,
+          "exactRecall": 0.013902,
+          "exactF1": 0.011952,
+          "releaseRecallIgnoringSide": 0.017609
+        },
+        "1000": {
+          "predictions": 1431,
+          "targetActions": 1079,
+          "releaseMatches": 51,
+          "exactMatches": 43,
+          "exactPrecision": 0.030049,
+          "exactRecall": 0.039852,
+          "exactF1": 0.034263,
+          "releaseRecallIgnoringSide": 0.047266
+        },
+        "2000": {
+          "predictions": 1431,
+          "targetActions": 1079,
+          "releaseMatches": 96,
+          "exactMatches": 81,
+          "exactPrecision": 0.056604,
+          "exactRecall": 0.07507,
+          "exactF1": 0.064542,
+          "releaseRecallIgnoringSide": 0.088971
+        },
+        "5000": {
+          "predictions": 1431,
+          "targetActions": 1079,
+          "releaseMatches": 189,
+          "exactMatches": 158,
+          "exactPrecision": 0.110412,
+          "exactRecall": 0.146432,
+          "exactF1": 0.125896,
+          "releaseRecallIgnoringSide": 0.175162
+        },
+        "10000": {
+          "predictions": 1431,
+          "targetActions": 1079,
+          "releaseMatches": 300,
+          "exactMatches": 228,
+          "exactPrecision": 0.159329,
+          "exactRecall": 0.211307,
+          "exactF1": 0.181673,
+          "releaseRecallIgnoringSide": 0.278035
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 3856,
+          "targetActions": 2188,
+          "releaseMatches": 35,
+          "exactMatches": 32,
+          "exactPrecision": 0.008299,
+          "exactRecall": 0.014625,
+          "exactF1": 0.010589,
+          "releaseRecallIgnoringSide": 0.015996
+        },
+        "1000": {
+          "predictions": 3856,
+          "targetActions": 2188,
+          "releaseMatches": 84,
+          "exactMatches": 77,
+          "exactPrecision": 0.019969,
+          "exactRecall": 0.035192,
+          "exactF1": 0.02548,
+          "releaseRecallIgnoringSide": 0.038391
+        },
+        "2000": {
+          "predictions": 3856,
+          "targetActions": 2188,
+          "releaseMatches": 167,
+          "exactMatches": 150,
+          "exactPrecision": 0.0389,
+          "exactRecall": 0.068556,
+          "exactF1": 0.049636,
+          "releaseRecallIgnoringSide": 0.076325
+        },
+        "5000": {
+          "predictions": 3856,
+          "targetActions": 2188,
+          "releaseMatches": 342,
+          "exactMatches": 287,
+          "exactPrecision": 0.074429,
+          "exactRecall": 0.13117,
+          "exactF1": 0.09497,
+          "releaseRecallIgnoringSide": 0.156307
+        },
+        "10000": {
+          "predictions": 3856,
+          "targetActions": 2188,
+          "releaseMatches": 484,
+          "exactMatches": 390,
+          "exactPrecision": 0.101141,
+          "exactRecall": 0.178245,
+          "exactF1": 0.129054,
+          "releaseRecallIgnoringSide": 0.221207
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 7532,
+          "targetActions": 6025,
+          "releaseMatches": 114,
+          "exactMatches": 98,
+          "exactPrecision": 0.013011,
+          "exactRecall": 0.016266,
+          "exactF1": 0.014457,
+          "releaseRecallIgnoringSide": 0.018921
+        },
+        "1000": {
+          "predictions": 7532,
+          "targetActions": 6025,
+          "releaseMatches": 252,
+          "exactMatches": 222,
+          "exactPrecision": 0.029474,
+          "exactRecall": 0.036846,
+          "exactF1": 0.032751,
+          "releaseRecallIgnoringSide": 0.041826
+        },
+        "2000": {
+          "predictions": 7532,
+          "targetActions": 6025,
+          "releaseMatches": 458,
+          "exactMatches": 401,
+          "exactPrecision": 0.05324,
+          "exactRecall": 0.066556,
+          "exactF1": 0.059158,
+          "releaseRecallIgnoringSide": 0.076017
+        },
+        "5000": {
+          "predictions": 7532,
+          "targetActions": 6025,
+          "releaseMatches": 871,
+          "exactMatches": 731,
+          "exactPrecision": 0.097053,
+          "exactRecall": 0.121328,
+          "exactF1": 0.107841,
+          "releaseRecallIgnoringSide": 0.144564
+        },
+        "10000": {
+          "predictions": 7532,
+          "targetActions": 6025,
+          "releaseMatches": 1304,
+          "exactMatches": 1037,
+          "exactPrecision": 0.137679,
+          "exactRecall": 0.172116,
+          "exactF1": 0.152984,
+          "releaseRecallIgnoringSide": 0.216432
+        }
+      }
+    },
+    "hazard-7.5s": {
+      "overrides": {
+        "H_EXEC_RUN_MS": 7500
+      },
+      "fit": {
+        "500": {
+          "predictions": 1238,
+          "targetActions": 2758,
+          "releaseMatches": 38,
+          "exactMatches": 31,
+          "exactPrecision": 0.02504,
+          "exactRecall": 0.01124,
+          "exactF1": 0.015516,
+          "releaseRecallIgnoringSide": 0.013778
+        },
+        "1000": {
+          "predictions": 1238,
+          "targetActions": 2758,
+          "releaseMatches": 67,
+          "exactMatches": 56,
+          "exactPrecision": 0.045234,
+          "exactRecall": 0.020305,
+          "exactF1": 0.028028,
+          "releaseRecallIgnoringSide": 0.024293
+        },
+        "2000": {
+          "predictions": 1238,
+          "targetActions": 2758,
+          "releaseMatches": 110,
+          "exactMatches": 94,
+          "exactPrecision": 0.075929,
+          "exactRecall": 0.034083,
+          "exactF1": 0.047047,
+          "releaseRecallIgnoringSide": 0.039884
+        },
+        "5000": {
+          "predictions": 1238,
+          "targetActions": 2758,
+          "releaseMatches": 192,
+          "exactMatches": 166,
+          "exactPrecision": 0.134087,
+          "exactRecall": 0.060189,
+          "exactF1": 0.083083,
+          "releaseRecallIgnoringSide": 0.069616
+        },
+        "10000": {
+          "predictions": 1238,
+          "targetActions": 2758,
+          "releaseMatches": 272,
+          "exactMatches": 224,
+          "exactPrecision": 0.180937,
+          "exactRecall": 0.081218,
+          "exactF1": 0.112112,
+          "releaseRecallIgnoringSide": 0.098622
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 863,
+          "targetActions": 1079,
+          "releaseMatches": 21,
+          "exactMatches": 18,
+          "exactPrecision": 0.020857,
+          "exactRecall": 0.016682,
+          "exactF1": 0.018538,
+          "releaseRecallIgnoringSide": 0.019462
+        },
+        "1000": {
+          "predictions": 863,
+          "targetActions": 1079,
+          "releaseMatches": 41,
+          "exactMatches": 34,
+          "exactPrecision": 0.039397,
+          "exactRecall": 0.031511,
+          "exactF1": 0.035015,
+          "releaseRecallIgnoringSide": 0.037998
+        },
+        "2000": {
+          "predictions": 863,
+          "targetActions": 1079,
+          "releaseMatches": 66,
+          "exactMatches": 56,
+          "exactPrecision": 0.06489,
+          "exactRecall": 0.0519,
+          "exactF1": 0.057673,
+          "releaseRecallIgnoringSide": 0.061168
+        },
+        "5000": {
+          "predictions": 863,
+          "targetActions": 1079,
+          "releaseMatches": 127,
+          "exactMatches": 101,
+          "exactPrecision": 0.117034,
+          "exactRecall": 0.093605,
+          "exactF1": 0.104016,
+          "releaseRecallIgnoringSide": 0.117702
+        },
+        "10000": {
+          "predictions": 863,
+          "targetActions": 1079,
+          "releaseMatches": 195,
+          "exactMatches": 146,
+          "exactPrecision": 0.169177,
+          "exactRecall": 0.13531,
+          "exactF1": 0.15036,
+          "releaseRecallIgnoringSide": 0.180723
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 2332,
+          "targetActions": 2188,
+          "releaseMatches": 19,
+          "exactMatches": 14,
+          "exactPrecision": 0.006003,
+          "exactRecall": 0.006399,
+          "exactF1": 0.006195,
+          "releaseRecallIgnoringSide": 0.008684
+        },
+        "1000": {
+          "predictions": 2332,
+          "targetActions": 2188,
+          "releaseMatches": 49,
+          "exactMatches": 41,
+          "exactPrecision": 0.017581,
+          "exactRecall": 0.018739,
+          "exactF1": 0.018142,
+          "releaseRecallIgnoringSide": 0.022395
+        },
+        "2000": {
+          "predictions": 2332,
+          "targetActions": 2188,
+          "releaseMatches": 94,
+          "exactMatches": 78,
+          "exactPrecision": 0.033448,
+          "exactRecall": 0.035649,
+          "exactF1": 0.034513,
+          "releaseRecallIgnoringSide": 0.042962
+        },
+        "5000": {
+          "predictions": 2332,
+          "targetActions": 2188,
+          "releaseMatches": 188,
+          "exactMatches": 160,
+          "exactPrecision": 0.068611,
+          "exactRecall": 0.073126,
+          "exactF1": 0.070796,
+          "releaseRecallIgnoringSide": 0.085923
+        },
+        "10000": {
+          "predictions": 2332,
+          "targetActions": 2188,
+          "releaseMatches": 277,
+          "exactMatches": 233,
+          "exactPrecision": 0.099914,
+          "exactRecall": 0.10649,
+          "exactF1": 0.103097,
+          "releaseRecallIgnoringSide": 0.1266
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 4433,
+          "targetActions": 6025,
+          "releaseMatches": 78,
+          "exactMatches": 63,
+          "exactPrecision": 0.014212,
+          "exactRecall": 0.010456,
+          "exactF1": 0.012048,
+          "releaseRecallIgnoringSide": 0.012946
+        },
+        "1000": {
+          "predictions": 4433,
+          "targetActions": 6025,
+          "releaseMatches": 157,
+          "exactMatches": 131,
+          "exactPrecision": 0.029551,
+          "exactRecall": 0.021743,
+          "exactF1": 0.025053,
+          "releaseRecallIgnoringSide": 0.026058
+        },
+        "2000": {
+          "predictions": 4433,
+          "targetActions": 6025,
+          "releaseMatches": 270,
+          "exactMatches": 228,
+          "exactPrecision": 0.051432,
+          "exactRecall": 0.037842,
+          "exactF1": 0.043603,
+          "releaseRecallIgnoringSide": 0.044813
+        },
+        "5000": {
+          "predictions": 4433,
+          "targetActions": 6025,
+          "releaseMatches": 507,
+          "exactMatches": 427,
+          "exactPrecision": 0.096323,
+          "exactRecall": 0.070871,
+          "exactF1": 0.08166,
+          "releaseRecallIgnoringSide": 0.084149
+        },
+        "10000": {
+          "predictions": 4433,
+          "targetActions": 6025,
+          "releaseMatches": 744,
+          "exactMatches": 603,
+          "exactPrecision": 0.136025,
+          "exactRecall": 0.100083,
+          "exactF1": 0.115318,
+          "releaseRecallIgnoringSide": 0.123485
+        }
+      }
+    },
+    "hazard-9.75s": {
+      "overrides": {
+        "H_EXEC_RUN_MS": 9750
+      },
+      "fit": {
+        "500": {
+          "predictions": 692,
+          "targetActions": 2758,
+          "releaseMatches": 16,
+          "exactMatches": 16,
+          "exactPrecision": 0.023121,
+          "exactRecall": 0.005801,
+          "exactF1": 0.009275,
+          "releaseRecallIgnoringSide": 0.005801
+        },
+        "1000": {
+          "predictions": 692,
+          "targetActions": 2758,
+          "releaseMatches": 36,
+          "exactMatches": 33,
+          "exactPrecision": 0.047688,
+          "exactRecall": 0.011965,
+          "exactF1": 0.01913,
+          "releaseRecallIgnoringSide": 0.013053
+        },
+        "2000": {
+          "predictions": 692,
+          "targetActions": 2758,
+          "releaseMatches": 63,
+          "exactMatches": 57,
+          "exactPrecision": 0.08237,
+          "exactRecall": 0.020667,
+          "exactF1": 0.033043,
+          "releaseRecallIgnoringSide": 0.022843
+        },
+        "5000": {
+          "predictions": 692,
+          "targetActions": 2758,
+          "releaseMatches": 110,
+          "exactMatches": 96,
+          "exactPrecision": 0.138728,
+          "exactRecall": 0.034808,
+          "exactF1": 0.055652,
+          "releaseRecallIgnoringSide": 0.039884
+        },
+        "10000": {
+          "predictions": 692,
+          "targetActions": 2758,
+          "releaseMatches": 156,
+          "exactMatches": 130,
+          "exactPrecision": 0.187861,
+          "exactRecall": 0.047136,
+          "exactF1": 0.075362,
+          "releaseRecallIgnoringSide": 0.056563
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 465,
+          "targetActions": 1079,
+          "releaseMatches": 12,
+          "exactMatches": 12,
+          "exactPrecision": 0.025806,
+          "exactRecall": 0.011121,
+          "exactF1": 0.015544,
+          "releaseRecallIgnoringSide": 0.011121
+        },
+        "1000": {
+          "predictions": 465,
+          "targetActions": 1079,
+          "releaseMatches": 22,
+          "exactMatches": 19,
+          "exactPrecision": 0.04086,
+          "exactRecall": 0.017609,
+          "exactF1": 0.024611,
+          "releaseRecallIgnoringSide": 0.020389
+        },
+        "2000": {
+          "predictions": 465,
+          "targetActions": 1079,
+          "releaseMatches": 36,
+          "exactMatches": 31,
+          "exactPrecision": 0.066667,
+          "exactRecall": 0.02873,
+          "exactF1": 0.040155,
+          "releaseRecallIgnoringSide": 0.033364
+        },
+        "5000": {
+          "predictions": 465,
+          "targetActions": 1079,
+          "releaseMatches": 71,
+          "exactMatches": 59,
+          "exactPrecision": 0.126882,
+          "exactRecall": 0.05468,
+          "exactF1": 0.076425,
+          "releaseRecallIgnoringSide": 0.065802
+        },
+        "10000": {
+          "predictions": 465,
+          "targetActions": 1079,
+          "releaseMatches": 111,
+          "exactMatches": 90,
+          "exactPrecision": 0.193548,
+          "exactRecall": 0.083411,
+          "exactF1": 0.11658,
+          "releaseRecallIgnoringSide": 0.102873
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 1307,
+          "targetActions": 2188,
+          "releaseMatches": 13,
+          "exactMatches": 11,
+          "exactPrecision": 0.008416,
+          "exactRecall": 0.005027,
+          "exactF1": 0.006295,
+          "releaseRecallIgnoringSide": 0.005941
+        },
+        "1000": {
+          "predictions": 1307,
+          "targetActions": 2188,
+          "releaseMatches": 23,
+          "exactMatches": 21,
+          "exactPrecision": 0.016067,
+          "exactRecall": 0.009598,
+          "exactF1": 0.012017,
+          "releaseRecallIgnoringSide": 0.010512
+        },
+        "2000": {
+          "predictions": 1307,
+          "targetActions": 2188,
+          "releaseMatches": 39,
+          "exactMatches": 37,
+          "exactPrecision": 0.028309,
+          "exactRecall": 0.01691,
+          "exactF1": 0.021173,
+          "releaseRecallIgnoringSide": 0.017824
+        },
+        "5000": {
+          "predictions": 1307,
+          "targetActions": 2188,
+          "releaseMatches": 97,
+          "exactMatches": 87,
+          "exactPrecision": 0.066565,
+          "exactRecall": 0.039762,
+          "exactF1": 0.049785,
+          "releaseRecallIgnoringSide": 0.044333
+        },
+        "10000": {
+          "predictions": 1307,
+          "targetActions": 2188,
+          "releaseMatches": 149,
+          "exactMatches": 131,
+          "exactPrecision": 0.10023,
+          "exactRecall": 0.059872,
+          "exactF1": 0.074964,
+          "releaseRecallIgnoringSide": 0.068099
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 2464,
+          "targetActions": 6025,
+          "releaseMatches": 41,
+          "exactMatches": 39,
+          "exactPrecision": 0.015828,
+          "exactRecall": 0.006473,
+          "exactF1": 0.009188,
+          "releaseRecallIgnoringSide": 0.006805
+        },
+        "1000": {
+          "predictions": 2464,
+          "targetActions": 6025,
+          "releaseMatches": 81,
+          "exactMatches": 73,
+          "exactPrecision": 0.029627,
+          "exactRecall": 0.012116,
+          "exactF1": 0.017199,
+          "releaseRecallIgnoringSide": 0.013444
+        },
+        "2000": {
+          "predictions": 2464,
+          "targetActions": 6025,
+          "releaseMatches": 138,
+          "exactMatches": 125,
+          "exactPrecision": 0.050731,
+          "exactRecall": 0.020747,
+          "exactF1": 0.02945,
+          "releaseRecallIgnoringSide": 0.022905
+        },
+        "5000": {
+          "predictions": 2464,
+          "targetActions": 6025,
+          "releaseMatches": 278,
+          "exactMatches": 242,
+          "exactPrecision": 0.098214,
+          "exactRecall": 0.040166,
+          "exactF1": 0.057015,
+          "releaseRecallIgnoringSide": 0.046141
+        },
+        "10000": {
+          "predictions": 2464,
+          "targetActions": 6025,
+          "releaseMatches": 416,
+          "exactMatches": 351,
+          "exactPrecision": 0.142451,
+          "exactRecall": 0.058257,
+          "exactF1": 0.082695,
+          "releaseRecallIgnoringSide": 0.069046
+        }
+      }
+    },
+    "hazard-10s": {
+      "overrides": {
+        "H_EXEC_RUN_MS": 10000
+      },
+      "fit": {
+        "500": {
+          "predictions": 650,
+          "targetActions": 2758,
+          "releaseMatches": 13,
+          "exactMatches": 12,
+          "exactPrecision": 0.018462,
+          "exactRecall": 0.004351,
+          "exactF1": 0.007042,
+          "releaseRecallIgnoringSide": 0.004714
+        },
+        "1000": {
+          "predictions": 650,
+          "targetActions": 2758,
+          "releaseMatches": 35,
+          "exactMatches": 31,
+          "exactPrecision": 0.047692,
+          "exactRecall": 0.01124,
+          "exactF1": 0.018192,
+          "releaseRecallIgnoringSide": 0.01269
+        },
+        "2000": {
+          "predictions": 650,
+          "targetActions": 2758,
+          "releaseMatches": 58,
+          "exactMatches": 53,
+          "exactPrecision": 0.081538,
+          "exactRecall": 0.019217,
+          "exactF1": 0.031103,
+          "releaseRecallIgnoringSide": 0.02103
+        },
+        "5000": {
+          "predictions": 650,
+          "targetActions": 2758,
+          "releaseMatches": 102,
+          "exactMatches": 88,
+          "exactPrecision": 0.135385,
+          "exactRecall": 0.031907,
+          "exactF1": 0.051643,
+          "releaseRecallIgnoringSide": 0.036983
+        },
+        "10000": {
+          "predictions": 650,
+          "targetActions": 2758,
+          "releaseMatches": 141,
+          "exactMatches": 116,
+          "exactPrecision": 0.178462,
+          "exactRecall": 0.042059,
+          "exactF1": 0.068075,
+          "releaseRecallIgnoringSide": 0.051124
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 420,
+          "targetActions": 1079,
+          "releaseMatches": 12,
+          "exactMatches": 11,
+          "exactPrecision": 0.02619,
+          "exactRecall": 0.010195,
+          "exactF1": 0.014676,
+          "releaseRecallIgnoringSide": 0.011121
+        },
+        "1000": {
+          "predictions": 420,
+          "targetActions": 1079,
+          "releaseMatches": 18,
+          "exactMatches": 16,
+          "exactPrecision": 0.038095,
+          "exactRecall": 0.014829,
+          "exactF1": 0.021348,
+          "releaseRecallIgnoringSide": 0.016682
+        },
+        "2000": {
+          "predictions": 420,
+          "targetActions": 1079,
+          "releaseMatches": 36,
+          "exactMatches": 31,
+          "exactPrecision": 0.07381,
+          "exactRecall": 0.02873,
+          "exactF1": 0.041361,
+          "releaseRecallIgnoringSide": 0.033364
+        },
+        "5000": {
+          "predictions": 420,
+          "targetActions": 1079,
+          "releaseMatches": 61,
+          "exactMatches": 51,
+          "exactPrecision": 0.121429,
+          "exactRecall": 0.047266,
+          "exactF1": 0.068045,
+          "releaseRecallIgnoringSide": 0.056534
+        },
+        "10000": {
+          "predictions": 420,
+          "targetActions": 1079,
+          "releaseMatches": 100,
+          "exactMatches": 82,
+          "exactPrecision": 0.195238,
+          "exactRecall": 0.075996,
+          "exactF1": 0.109406,
+          "releaseRecallIgnoringSide": 0.092678
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 1220,
+          "targetActions": 2188,
+          "releaseMatches": 10,
+          "exactMatches": 8,
+          "exactPrecision": 0.006557,
+          "exactRecall": 0.003656,
+          "exactF1": 0.004695,
+          "releaseRecallIgnoringSide": 0.00457
+        },
+        "1000": {
+          "predictions": 1220,
+          "targetActions": 2188,
+          "releaseMatches": 21,
+          "exactMatches": 19,
+          "exactPrecision": 0.015574,
+          "exactRecall": 0.008684,
+          "exactF1": 0.01115,
+          "releaseRecallIgnoringSide": 0.009598
+        },
+        "2000": {
+          "predictions": 1220,
+          "targetActions": 2188,
+          "releaseMatches": 35,
+          "exactMatches": 32,
+          "exactPrecision": 0.02623,
+          "exactRecall": 0.014625,
+          "exactF1": 0.018779,
+          "releaseRecallIgnoringSide": 0.015996
+        },
+        "5000": {
+          "predictions": 1220,
+          "targetActions": 2188,
+          "releaseMatches": 82,
+          "exactMatches": 70,
+          "exactPrecision": 0.057377,
+          "exactRecall": 0.031993,
+          "exactF1": 0.04108,
+          "releaseRecallIgnoringSide": 0.037477
+        },
+        "10000": {
+          "predictions": 1220,
+          "targetActions": 2188,
+          "releaseMatches": 129,
+          "exactMatches": 109,
+          "exactPrecision": 0.089344,
+          "exactRecall": 0.049817,
+          "exactF1": 0.063967,
+          "releaseRecallIgnoringSide": 0.058958
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 2290,
+          "targetActions": 6025,
+          "releaseMatches": 35,
+          "exactMatches": 31,
+          "exactPrecision": 0.013537,
+          "exactRecall": 0.005145,
+          "exactF1": 0.007456,
+          "releaseRecallIgnoringSide": 0.005809
+        },
+        "1000": {
+          "predictions": 2290,
+          "targetActions": 6025,
+          "releaseMatches": 74,
+          "exactMatches": 66,
+          "exactPrecision": 0.028821,
+          "exactRecall": 0.010954,
+          "exactF1": 0.015875,
+          "releaseRecallIgnoringSide": 0.012282
+        },
+        "2000": {
+          "predictions": 2290,
+          "targetActions": 6025,
+          "releaseMatches": 129,
+          "exactMatches": 116,
+          "exactPrecision": 0.050655,
+          "exactRecall": 0.019253,
+          "exactF1": 0.027901,
+          "releaseRecallIgnoringSide": 0.021411
+        },
+        "5000": {
+          "predictions": 2290,
+          "targetActions": 6025,
+          "releaseMatches": 245,
+          "exactMatches": 209,
+          "exactPrecision": 0.091266,
+          "exactRecall": 0.034689,
+          "exactF1": 0.050271,
+          "releaseRecallIgnoringSide": 0.040664
+        },
+        "10000": {
+          "predictions": 2290,
+          "targetActions": 6025,
+          "releaseMatches": 370,
+          "exactMatches": 307,
+          "exactPrecision": 0.134061,
+          "exactRecall": 0.050954,
+          "exactF1": 0.073842,
+          "releaseRecallIgnoringSide": 0.061411
+        }
+      }
+    },
+    "hazard-12.5s": {
+      "overrides": {
+        "H_EXEC_RUN_MS": 12500
+      },
+      "fit": {
+        "500": {
+          "predictions": 384,
+          "targetActions": 2758,
+          "releaseMatches": 12,
+          "exactMatches": 10,
+          "exactPrecision": 0.026042,
+          "exactRecall": 0.003626,
+          "exactF1": 0.006365,
+          "releaseRecallIgnoringSide": 0.004351
+        },
+        "1000": {
+          "predictions": 384,
+          "targetActions": 2758,
+          "releaseMatches": 25,
+          "exactMatches": 22,
+          "exactPrecision": 0.057292,
+          "exactRecall": 0.007977,
+          "exactF1": 0.014004,
+          "releaseRecallIgnoringSide": 0.009065
+        },
+        "2000": {
+          "predictions": 384,
+          "targetActions": 2758,
+          "releaseMatches": 40,
+          "exactMatches": 34,
+          "exactPrecision": 0.088542,
+          "exactRecall": 0.012328,
+          "exactF1": 0.021642,
+          "releaseRecallIgnoringSide": 0.014503
+        },
+        "5000": {
+          "predictions": 384,
+          "targetActions": 2758,
+          "releaseMatches": 57,
+          "exactMatches": 50,
+          "exactPrecision": 0.130208,
+          "exactRecall": 0.018129,
+          "exactF1": 0.031827,
+          "releaseRecallIgnoringSide": 0.020667
+        },
+        "10000": {
+          "predictions": 384,
+          "targetActions": 2758,
+          "releaseMatches": 77,
+          "exactMatches": 66,
+          "exactPrecision": 0.171875,
+          "exactRecall": 0.02393,
+          "exactF1": 0.042011,
+          "releaseRecallIgnoringSide": 0.027919
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 235,
+          "targetActions": 1079,
+          "releaseMatches": 5,
+          "exactMatches": 4,
+          "exactPrecision": 0.017021,
+          "exactRecall": 0.003707,
+          "exactF1": 0.006088,
+          "releaseRecallIgnoringSide": 0.004634
+        },
+        "1000": {
+          "predictions": 235,
+          "targetActions": 1079,
+          "releaseMatches": 8,
+          "exactMatches": 7,
+          "exactPrecision": 0.029787,
+          "exactRecall": 0.006487,
+          "exactF1": 0.010654,
+          "releaseRecallIgnoringSide": 0.007414
+        },
+        "2000": {
+          "predictions": 235,
+          "targetActions": 1079,
+          "releaseMatches": 15,
+          "exactMatches": 14,
+          "exactPrecision": 0.059574,
+          "exactRecall": 0.012975,
+          "exactF1": 0.021309,
+          "releaseRecallIgnoringSide": 0.013902
+        },
+        "5000": {
+          "predictions": 235,
+          "targetActions": 1079,
+          "releaseMatches": 31,
+          "exactMatches": 27,
+          "exactPrecision": 0.114894,
+          "exactRecall": 0.025023,
+          "exactF1": 0.041096,
+          "releaseRecallIgnoringSide": 0.02873
+        },
+        "10000": {
+          "predictions": 235,
+          "targetActions": 1079,
+          "releaseMatches": 48,
+          "exactMatches": 40,
+          "exactPrecision": 0.170213,
+          "exactRecall": 0.037071,
+          "exactF1": 0.060883,
+          "releaseRecallIgnoringSide": 0.044486
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 720,
+          "targetActions": 2188,
+          "releaseMatches": 4,
+          "exactMatches": 4,
+          "exactPrecision": 0.005556,
+          "exactRecall": 0.001828,
+          "exactF1": 0.002751,
+          "releaseRecallIgnoringSide": 0.001828
+        },
+        "1000": {
+          "predictions": 720,
+          "targetActions": 2188,
+          "releaseMatches": 15,
+          "exactMatches": 13,
+          "exactPrecision": 0.018056,
+          "exactRecall": 0.005941,
+          "exactF1": 0.008941,
+          "releaseRecallIgnoringSide": 0.006856
+        },
+        "2000": {
+          "predictions": 720,
+          "targetActions": 2188,
+          "releaseMatches": 22,
+          "exactMatches": 21,
+          "exactPrecision": 0.029167,
+          "exactRecall": 0.009598,
+          "exactF1": 0.014443,
+          "releaseRecallIgnoringSide": 0.010055
+        },
+        "5000": {
+          "predictions": 720,
+          "targetActions": 2188,
+          "releaseMatches": 46,
+          "exactMatches": 42,
+          "exactPrecision": 0.058333,
+          "exactRecall": 0.019196,
+          "exactF1": 0.028886,
+          "releaseRecallIgnoringSide": 0.021024
+        },
+        "10000": {
+          "predictions": 720,
+          "targetActions": 2188,
+          "releaseMatches": 68,
+          "exactMatches": 59,
+          "exactPrecision": 0.081944,
+          "exactRecall": 0.026965,
+          "exactF1": 0.040578,
+          "releaseRecallIgnoringSide": 0.031079
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 1339,
+          "targetActions": 6025,
+          "releaseMatches": 21,
+          "exactMatches": 18,
+          "exactPrecision": 0.013443,
+          "exactRecall": 0.002988,
+          "exactF1": 0.004889,
+          "releaseRecallIgnoringSide": 0.003485
+        },
+        "1000": {
+          "predictions": 1339,
+          "targetActions": 6025,
+          "releaseMatches": 48,
+          "exactMatches": 42,
+          "exactPrecision": 0.031367,
+          "exactRecall": 0.006971,
+          "exactF1": 0.011407,
+          "releaseRecallIgnoringSide": 0.007967
+        },
+        "2000": {
+          "predictions": 1339,
+          "targetActions": 6025,
+          "releaseMatches": 77,
+          "exactMatches": 69,
+          "exactPrecision": 0.051531,
+          "exactRecall": 0.011452,
+          "exactF1": 0.01874,
+          "releaseRecallIgnoringSide": 0.01278
+        },
+        "5000": {
+          "predictions": 1339,
+          "targetActions": 6025,
+          "releaseMatches": 134,
+          "exactMatches": 119,
+          "exactPrecision": 0.088872,
+          "exactRecall": 0.019751,
+          "exactF1": 0.032319,
+          "releaseRecallIgnoringSide": 0.022241
+        },
+        "10000": {
+          "predictions": 1339,
+          "targetActions": 6025,
+          "releaseMatches": 193,
+          "exactMatches": 165,
+          "exactPrecision": 0.123226,
+          "exactRecall": 0.027386,
+          "exactF1": 0.044813,
+          "releaseRecallIgnoringSide": 0.032033
+        }
+      }
+    },
+    "repeat-menu-5s": {
+      "overrides": {
+        "H_MAX_ORDERS": 0,
+        "H_MAX_CELL_USES": 99
+      },
+      "fit": {
+        "500": {
+          "predictions": 2576,
+          "targetActions": 2758,
+          "releaseMatches": 64,
+          "exactMatches": 55,
+          "exactPrecision": 0.021351,
+          "exactRecall": 0.019942,
+          "exactF1": 0.020622,
+          "releaseRecallIgnoringSide": 0.023205
+        },
+        "1000": {
+          "predictions": 2576,
+          "targetActions": 2758,
+          "releaseMatches": 130,
+          "exactMatches": 113,
+          "exactPrecision": 0.043866,
+          "exactRecall": 0.040972,
+          "exactF1": 0.04237,
+          "releaseRecallIgnoringSide": 0.047136
+        },
+        "2000": {
+          "predictions": 2576,
+          "targetActions": 2758,
+          "releaseMatches": 216,
+          "exactMatches": 188,
+          "exactPrecision": 0.072981,
+          "exactRecall": 0.068165,
+          "exactF1": 0.070491,
+          "releaseRecallIgnoringSide": 0.078318
+        },
+        "5000": {
+          "predictions": 2576,
+          "targetActions": 2758,
+          "releaseMatches": 376,
+          "exactMatches": 316,
+          "exactPrecision": 0.122671,
+          "exactRecall": 0.114576,
+          "exactF1": 0.118485,
+          "releaseRecallIgnoringSide": 0.136331
+        },
+        "10000": {
+          "predictions": 2576,
+          "targetActions": 2758,
+          "releaseMatches": 576,
+          "exactMatches": 466,
+          "exactPrecision": 0.180901,
+          "exactRecall": 0.168963,
+          "exactF1": 0.174728,
+          "releaseRecallIgnoringSide": 0.208847
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 1913,
+          "targetActions": 1079,
+          "releaseMatches": 30,
+          "exactMatches": 23,
+          "exactPrecision": 0.012023,
+          "exactRecall": 0.021316,
+          "exactF1": 0.015374,
+          "releaseRecallIgnoringSide": 0.027804
+        },
+        "1000": {
+          "predictions": 1913,
+          "targetActions": 1079,
+          "releaseMatches": 64,
+          "exactMatches": 53,
+          "exactPrecision": 0.027705,
+          "exactRecall": 0.04912,
+          "exactF1": 0.035428,
+          "releaseRecallIgnoringSide": 0.059314
+        },
+        "2000": {
+          "predictions": 1913,
+          "targetActions": 1079,
+          "releaseMatches": 126,
+          "exactMatches": 104,
+          "exactPrecision": 0.054365,
+          "exactRecall": 0.096386,
+          "exactF1": 0.069519,
+          "releaseRecallIgnoringSide": 0.116775
+        },
+        "5000": {
+          "predictions": 1913,
+          "targetActions": 1079,
+          "releaseMatches": 244,
+          "exactMatches": 197,
+          "exactPrecision": 0.10298,
+          "exactRecall": 0.182576,
+          "exactF1": 0.131684,
+          "releaseRecallIgnoringSide": 0.226135
+        },
+        "10000": {
+          "predictions": 1913,
+          "targetActions": 1079,
+          "releaseMatches": 370,
+          "exactMatches": 275,
+          "exactPrecision": 0.143753,
+          "exactRecall": 0.254866,
+          "exactF1": 0.183824,
+          "releaseRecallIgnoringSide": 0.34291
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 4656,
+          "targetActions": 2188,
+          "releaseMatches": 40,
+          "exactMatches": 35,
+          "exactPrecision": 0.007517,
+          "exactRecall": 0.015996,
+          "exactF1": 0.010228,
+          "releaseRecallIgnoringSide": 0.018282
+        },
+        "1000": {
+          "predictions": 4656,
+          "targetActions": 2188,
+          "releaseMatches": 93,
+          "exactMatches": 84,
+          "exactPrecision": 0.018041,
+          "exactRecall": 0.038391,
+          "exactF1": 0.024547,
+          "releaseRecallIgnoringSide": 0.042505
+        },
+        "2000": {
+          "predictions": 4656,
+          "targetActions": 2188,
+          "releaseMatches": 187,
+          "exactMatches": 164,
+          "exactPrecision": 0.035223,
+          "exactRecall": 0.074954,
+          "exactF1": 0.047925,
+          "releaseRecallIgnoringSide": 0.085466
+        },
+        "5000": {
+          "predictions": 4656,
+          "targetActions": 2188,
+          "releaseMatches": 387,
+          "exactMatches": 325,
+          "exactPrecision": 0.069802,
+          "exactRecall": 0.148537,
+          "exactF1": 0.094974,
+          "releaseRecallIgnoringSide": 0.176874
+        },
+        "10000": {
+          "predictions": 4656,
+          "targetActions": 2188,
+          "releaseMatches": 555,
+          "exactMatches": 443,
+          "exactPrecision": 0.095146,
+          "exactRecall": 0.202468,
+          "exactF1": 0.129456,
+          "releaseRecallIgnoringSide": 0.253656
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 9145,
+          "targetActions": 6025,
+          "releaseMatches": 134,
+          "exactMatches": 113,
+          "exactPrecision": 0.012356,
+          "exactRecall": 0.018755,
+          "exactF1": 0.014898,
+          "releaseRecallIgnoringSide": 0.022241
+        },
+        "1000": {
+          "predictions": 9145,
+          "targetActions": 6025,
+          "releaseMatches": 287,
+          "exactMatches": 250,
+          "exactPrecision": 0.027337,
+          "exactRecall": 0.041494,
+          "exactF1": 0.03296,
+          "releaseRecallIgnoringSide": 0.047635
+        },
+        "2000": {
+          "predictions": 9145,
+          "targetActions": 6025,
+          "releaseMatches": 529,
+          "exactMatches": 456,
+          "exactPrecision": 0.049863,
+          "exactRecall": 0.075685,
+          "exactF1": 0.060119,
+          "releaseRecallIgnoringSide": 0.087801
+        },
+        "5000": {
+          "predictions": 9145,
+          "targetActions": 6025,
+          "releaseMatches": 1007,
+          "exactMatches": 838,
+          "exactPrecision": 0.091635,
+          "exactRecall": 0.139087,
+          "exactF1": 0.110481,
+          "releaseRecallIgnoringSide": 0.167137
+        },
+        "10000": {
+          "predictions": 9145,
+          "targetActions": 6025,
+          "releaseMatches": 1501,
+          "exactMatches": 1184,
+          "exactPrecision": 0.12947,
+          "exactRecall": 0.196515,
+          "exactF1": 0.156098,
+          "releaseRecallIgnoringSide": 0.249129
+        }
+      }
+    },
+    "repeat-menu-9.75s": {
+      "overrides": {
+        "H_EXEC_RUN_MS": 9750,
+        "H_MAX_ORDERS": 0,
+        "H_MAX_CELL_USES": 99
+      },
+      "fit": {
+        "500": {
+          "predictions": 712,
+          "targetActions": 2758,
+          "releaseMatches": 17,
+          "exactMatches": 16,
+          "exactPrecision": 0.022472,
+          "exactRecall": 0.005801,
+          "exactF1": 0.009222,
+          "releaseRecallIgnoringSide": 0.006164
+        },
+        "1000": {
+          "predictions": 712,
+          "targetActions": 2758,
+          "releaseMatches": 38,
+          "exactMatches": 34,
+          "exactPrecision": 0.047753,
+          "exactRecall": 0.012328,
+          "exactF1": 0.019597,
+          "releaseRecallIgnoringSide": 0.013778
+        },
+        "2000": {
+          "predictions": 712,
+          "targetActions": 2758,
+          "releaseMatches": 65,
+          "exactMatches": 58,
+          "exactPrecision": 0.081461,
+          "exactRecall": 0.02103,
+          "exactF1": 0.033429,
+          "releaseRecallIgnoringSide": 0.023568
+        },
+        "5000": {
+          "predictions": 712,
+          "targetActions": 2758,
+          "releaseMatches": 112,
+          "exactMatches": 97,
+          "exactPrecision": 0.136236,
+          "exactRecall": 0.03517,
+          "exactF1": 0.055908,
+          "releaseRecallIgnoringSide": 0.040609
+        },
+        "10000": {
+          "predictions": 712,
+          "targetActions": 2758,
+          "releaseMatches": 158,
+          "exactMatches": 131,
+          "exactPrecision": 0.183989,
+          "exactRecall": 0.047498,
+          "exactF1": 0.075504,
+          "releaseRecallIgnoringSide": 0.057288
+        }
+      },
+      "validation": {
+        "500": {
+          "predictions": 488,
+          "targetActions": 1079,
+          "releaseMatches": 12,
+          "exactMatches": 12,
+          "exactPrecision": 0.02459,
+          "exactRecall": 0.011121,
+          "exactF1": 0.015316,
+          "releaseRecallIgnoringSide": 0.011121
+        },
+        "1000": {
+          "predictions": 488,
+          "targetActions": 1079,
+          "releaseMatches": 22,
+          "exactMatches": 19,
+          "exactPrecision": 0.038934,
+          "exactRecall": 0.017609,
+          "exactF1": 0.02425,
+          "releaseRecallIgnoringSide": 0.020389
+        },
+        "2000": {
+          "predictions": 488,
+          "targetActions": 1079,
+          "releaseMatches": 36,
+          "exactMatches": 31,
+          "exactPrecision": 0.063525,
+          "exactRecall": 0.02873,
+          "exactF1": 0.039566,
+          "releaseRecallIgnoringSide": 0.033364
+        },
+        "5000": {
+          "predictions": 488,
+          "targetActions": 1079,
+          "releaseMatches": 71,
+          "exactMatches": 59,
+          "exactPrecision": 0.120902,
+          "exactRecall": 0.05468,
+          "exactF1": 0.075303,
+          "releaseRecallIgnoringSide": 0.065802
+        },
+        "10000": {
+          "predictions": 488,
+          "targetActions": 1079,
+          "releaseMatches": 111,
+          "exactMatches": 90,
+          "exactPrecision": 0.184426,
+          "exactRecall": 0.083411,
+          "exactF1": 0.114869,
+          "releaseRecallIgnoringSide": 0.102873
+        }
+      },
+      "holdout": {
+        "500": {
+          "predictions": 1347,
+          "targetActions": 2188,
+          "releaseMatches": 13,
+          "exactMatches": 11,
+          "exactPrecision": 0.008166,
+          "exactRecall": 0.005027,
+          "exactF1": 0.006223,
+          "releaseRecallIgnoringSide": 0.005941
+        },
+        "1000": {
+          "predictions": 1347,
+          "targetActions": 2188,
+          "releaseMatches": 23,
+          "exactMatches": 21,
+          "exactPrecision": 0.01559,
+          "exactRecall": 0.009598,
+          "exactF1": 0.011881,
+          "releaseRecallIgnoringSide": 0.010512
+        },
+        "2000": {
+          "predictions": 1347,
+          "targetActions": 2188,
+          "releaseMatches": 39,
+          "exactMatches": 37,
+          "exactPrecision": 0.027468,
+          "exactRecall": 0.01691,
+          "exactF1": 0.020934,
+          "releaseRecallIgnoringSide": 0.017824
+        },
+        "5000": {
+          "predictions": 1347,
+          "targetActions": 2188,
+          "releaseMatches": 98,
+          "exactMatches": 88,
+          "exactPrecision": 0.06533,
+          "exactRecall": 0.040219,
+          "exactF1": 0.049788,
+          "releaseRecallIgnoringSide": 0.04479
+        },
+        "10000": {
+          "predictions": 1347,
+          "targetActions": 2188,
+          "releaseMatches": 150,
+          "exactMatches": 132,
+          "exactPrecision": 0.097996,
+          "exactRecall": 0.060329,
+          "exactF1": 0.074682,
+          "releaseRecallIgnoringSide": 0.068556
+        }
+      },
+      "all": {
+        "500": {
+          "predictions": 2547,
+          "targetActions": 6025,
+          "releaseMatches": 42,
+          "exactMatches": 39,
+          "exactPrecision": 0.015312,
+          "exactRecall": 0.006473,
+          "exactF1": 0.009099,
+          "releaseRecallIgnoringSide": 0.006971
+        },
+        "1000": {
+          "predictions": 2547,
+          "targetActions": 6025,
+          "releaseMatches": 83,
+          "exactMatches": 74,
+          "exactPrecision": 0.029054,
+          "exactRecall": 0.012282,
+          "exactF1": 0.017266,
+          "releaseRecallIgnoringSide": 0.013776
+        },
+        "2000": {
+          "predictions": 2547,
+          "targetActions": 6025,
+          "releaseMatches": 140,
+          "exactMatches": 126,
+          "exactPrecision": 0.04947,
+          "exactRecall": 0.020913,
+          "exactF1": 0.029398,
+          "releaseRecallIgnoringSide": 0.023237
+        },
+        "5000": {
+          "predictions": 2547,
+          "targetActions": 6025,
+          "releaseMatches": 281,
+          "exactMatches": 244,
+          "exactPrecision": 0.095799,
+          "exactRecall": 0.040498,
+          "exactF1": 0.05693,
+          "releaseRecallIgnoringSide": 0.046639
+        },
+        "10000": {
+          "predictions": 2547,
+          "targetActions": 6025,
+          "releaseMatches": 419,
+          "exactMatches": 353,
+          "exactPrecision": 0.138594,
+          "exactRecall": 0.058589,
+          "exactF1": 0.082361,
+          "releaseRecallIgnoringSide": 0.069544
+        }
+      }
+    }
+  },
+  "conclusion": {
+    "selected": "repeat-menu-5s",
+    "holdout2s": {
+      "predictions": 4656,
+      "targetActions": 2188,
+      "releaseMatches": 187,
+      "exactMatches": 164,
+      "exactPrecision": 0.035223,
+      "exactRecall": 0.074954,
+      "exactF1": 0.047925,
+      "releaseRecallIgnoringSide": 0.085466
+    },
+    "exactReleaseActionParity98": false,
+    "runtimeConfigPromotion": false,
+    "reason": "A release-clock change is promoted only if held-out exact precision and exact recall both clear 98%."
+  }
+}

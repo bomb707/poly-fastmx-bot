@@ -1,0 +1,240 @@
+{
+  "fast055_q_cap101": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.01, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_q_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_q_cap105": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.05, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast065_q_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.65, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast075_q_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_q_lean180_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_largehedge_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 90, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_largeall_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 90, "size90Mode": "all",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_q_hedge025": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.25, "makerTtlMs": 0
+  },
+  "fast055_q_hedge050": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "mid055_q_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "fast055_q_entry070_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270, "entryMaxAsk": 0.7,
+    "hedgePairCap": 1.03, "hedgeBonus": 0, "makerTtlMs": 0
+  },
+  "split075_055_q_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_055_q_cap105": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.05, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_000_q_cap105": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.05, "hedgeBonus": 1, "makerTtlMs": 0
+  },
+  "split065_055_q_cap105": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.65, "entryTreeThreshold": 0.65, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.05, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_055_largehedge_cap105": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 90, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270,
+    "hedgePairCap": 1.05, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_055_q_entry040": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270, "entryMaxAsk": 0.4,
+    "hedgePairCap": 1.05, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_055_q_entry050": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270, "entryMaxAsk": 0.5,
+    "hedgePairCap": 1.05, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_055_q_entry060": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270, "entryMaxAsk": 0.6,
+    "hedgePairCap": 1.05, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "split075_055_q_entry050_cap103": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 270, "entryMaxAsk": 0.5,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "neutral075_q_at240": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 240,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "forceHedgeAtS": 240, "forceHedgePairCap": null, "makerTtlMs": 0
+  },
+  "neutral075_q_at260": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 260,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "forceHedgeAtS": 260, "forceHedgePairCap": null, "makerTtlMs": 0
+  },
+  "neutral075_entry050_at240": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 240, "entryMaxAsk": 0.5,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "forceHedgeAtS": 240, "forceHedgePairCap": null, "makerTtlMs": 0
+  },
+  "neutral075_q_at180": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 180,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "forceHedgeAtS": 180, "forceHedgePairCap": null, "makerTtlMs": 0
+  },
+  "neutral075_q_at210": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMax": 210,
+    "hedgePairCap": 1.03, "hedgeBonus": 0.5, "forceHedgeAtS": 210, "forceHedgePairCap": null, "makerTtlMs": 0
+  },
+  "cltrend075_q_gap0005": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 30, "entryTimeMax": 240,
+    "entryMinClGap": 0.005, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_gap001": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 30, "entryTimeMax": 240,
+    "entryMinClGap": 0.01, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_gap002": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 30, "entryTimeMax": 240,
+    "entryMinClGap": 0.02, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_gap001_lean300": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 300, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 30, "entryTimeMax": 240,
+    "entryMinClGap": 0.01, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_t120_gap001": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 120, "entryTimeMax": 240,
+    "entryMinClGap": 0.01, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_t120_gap002": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 120, "entryTimeMax": 240,
+    "entryMinClGap": 0.02, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_t180_gap001": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 180, "entryTimeMax": 240,
+    "entryMinClGap": 0.01, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  },
+  "cltrend075_q_t180_gap002": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "entryTreeThreshold": 0.75, "hedgeTreeThreshold": 0.55, "sideChoiceMode": "tree",
+    "cooldownMs": 500, "maxLean": 180, "catchupThreshold": 1000000, "size90Mode": "hedge",
+    "sizeTreeThreshold": 0.54, "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "entryTimeMin": 180, "entryTimeMax": 240,
+    "entryMinClGap": 0.02, "hedgePairCap": 1.03, "hedgeBonus": 0.5, "makerTtlMs": 0
+  }
+}

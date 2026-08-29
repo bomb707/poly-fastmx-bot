@@ -1,0 +1,263 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>history-check · momentum calibration</title>
+<style>
+  :root{ --bg:#0a0c11; --panel:#0e1018; --txt:#eaf0f5; --txt2:rgba(234,240,245,.55); --txt3:rgba(234,240,245,.3);
+    --up:#19e3a0; --dn:#ff5d7a; --acc:#7fd0ff; --pur:#cdb8ff; --brd:rgba(255,255,255,.1);
+    --mono:'JetBrains Mono',ui-monospace,monospace; --font:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:13px}
+  header{position:sticky;top:0;z-index:5;background:rgba(10,12,17,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--brd);padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+  header h1{font-size:14px;margin:0;font-weight:800;letter-spacing:.4px}
+  header h1 b{color:var(--pur)}
+  a.back{color:var(--acc);text-decoration:none;font-size:12px} a.back:hover{text-decoration:underline}
+  .ctl{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)}
+  .ctl input,.ctl select{background:#0b0e15;border:1px solid var(--brd);color:var(--txt);border-radius:6px;padding:4px 7px;font-family:var(--mono);font-size:12px;width:78px}
+  .ctl select{width:auto}
+  button{background:rgba(127,208,255,.12);border:1px solid rgba(127,208,255,.4);color:var(--acc);border-radius:7px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:12px}
+  button:hover{background:rgba(127,208,255,.22)}
+  button.go{background:rgba(25,227,160,.14);border-color:rgba(25,227,160,.45);color:var(--up)}
+  button.go:hover{background:rgba(25,227,160,.24)}
+  .grow{flex:1}
+  .crit{position:sticky;top:51px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 16px;background:rgba(13,16,24,.96);border-bottom:1px solid var(--brd)}
+  .crit .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3);font-weight:700}
+  .crit .vsep{width:1px;height:18px;background:var(--brd)}
+  .crit button{padding:4px 10px;font-size:11px}
+  #apply{background:rgba(255,93,122,.12);border-color:rgba(255,93,122,.4);color:var(--dn)} #apply:hover{background:rgba(255,93,122,.22)}
+  .wrap{padding:14px 16px}
+  .status{color:var(--txt2);font-size:11.5px;margin:0 0 8px}
+  .result{display:none;margin:0 0 14px;border:1px solid rgba(205,184,255,.3);background:rgba(205,184,255,.05);border-radius:10px;padding:12px 14px}
+  .result.show{display:block}
+  .accrow{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .acc{font-family:var(--mono);font-size:26px;font-weight:800;color:var(--up)}
+  .accsub{font-size:11px;color:var(--txt2)}
+  .best{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--pur);margin-bottom:8px}
+  .result table{border-collapse:collapse;font-family:var(--mono);font-size:11px;width:100%}
+  .result th{color:var(--txt2);text-transform:uppercase;font-size:9px;letter-spacing:.4px;text-align:right;padding:3px 8px;border-bottom:1px solid var(--brd)}
+  .result td{text-align:right;padding:2px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .result tr.top td{color:var(--up);font-weight:700}
+  table.buys{border-collapse:collapse;width:100%;font-size:12px}
+  table.buys th{position:sticky;top:90px;background:var(--panel);color:var(--txt2);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--brd)}
+  table.buys td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+  table.buys tr:hover{background:rgba(255,255,255,.03)}
+  table.buys tr.ex{opacity:.4;text-decoration:line-through}
+  table.buys tr.flt{opacity:.3}   /* below the t+ threshold */
+  table.buys tr.nomark td{background:rgba(255,93,122,.045)}   /* winning config produced NO mark for this buy */
+  .su{color:var(--up)} .sd{color:var(--dn)} .dim{color:var(--txt3)}
+  input[type=checkbox]{width:15px;height:15px;accent-color:var(--dn);cursor:pointer}
+  .cnt{font-family:var(--mono);color:var(--txt)}
+  .pbar{display:inline-block;width:160px;height:7px;border-radius:4px;background:rgba(255,255,255,.1);vertical-align:middle;overflow:hidden}
+  .pbar-f{display:block;height:100%;background:var(--up);border-radius:4px;transition:width .3s ease}
+</style></head>
+<body>
+<header>
+  <h1>📜 HISTORY-CHECK · <b>momentum calibration</b></h1>
+  <a class="back" href="/">← tracker</a>
+  <span class="ctl">days <input id="days" type="number" min="1" max="40" value="20"></span>
+  <button id="reload" title="fetch & FULLY LIST every taker buy over the last N days (rebuilds the on-chain cache)">↻ reload list</button>
+  <span class="grow"></span>
+  <button class="go" id="submit">▶ estimate (on <span id="incCnt">0</span> unchecked)</button>
+</header>
+<div class="crit">
+  <span class="lbl">match window</span>
+  <span class="ctl" title="match window BEFORE the on-chain placed time (ms)">offset − <input id="offBefore" type="number" min="0" step="100" value="200"> ms</span>
+  <span class="ctl" title="match window AFTER the on-chain placed time (ms)">offset + <input id="offAfter" type="number" min="0" step="100" value="600"> ms</span>
+  <span class="vsep"></span>
+  <span class="lbl">exclude criteria</span>
+  <span class="ctl" title="orders PLACED earlier than this t+ (on-chain placed time) fail the criteria">t+ &gt; <input id="minT" type="number" min="0" step="1" value="240"> s</span>
+  <button id="apply" title="tick (exclude) every order that FAILS the criteria — placed before t+x">✗ exclude failing</button>
+  <button id="clearEx" title="untick all exclusions">↺ clear</button>
+  <span class="dim" id="critInfo"></span>
+</div>
+<div class="wrap">
+  <div class="status" id="status">loading buys…</div>
+  <div class="result" id="result"></div>
+  <div id="ffwrap" style="display:none;margin:8px 0 4px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button id="fftoggle" style="font-family:var(--mono);cursor:pointer">▸ false fires</button>
+      <span class="dim" id="ffsum"></span>
+    </div>
+    <table class="buys" id="fftbl" style="display:none;margin-top:6px"><thead><tr>
+      <th title="row #">#</th>
+      <th title="the 5-minute window this spurious trigger fell in (UTC)">window (UTC)</th>
+      <th title="market slug tail = window start">slug</th>
+      <th title="t+ seconds of the spurious momentum mark (the trigger the bot never acted on)">mark t+</th>
+      <th title="momentum velocity at the mark (sign ⇒ implied side)">mom vel</th>
+      <th title="implied buy side from the velocity sign">side</th>
+      <th title="gap from this mark to the NEAREST real bot buy in the window (+ = mark AFTER the buy, − = before). large |gap| ⇒ genuinely spurious; small ⇒ an extra trigger around a real entry">nearest buy Δ</th>
+      <th title="how many real bot buys are in this window">win buys</th>
+    </tr></thead><tbody id="ffrows"></tbody></table>
+  </div>
+  <table class="buys"><thead><tr>
+    <th title="check = this is a wash/decoy buy → EXCLUDE it from the estimate">✗ excl</th>
+    <th title="row number (oldest → newest)">#</th>
+    <th title="the 5-minute window this buy belongs to — its start time (UTC)">window (UTC)</th>
+    <th title="market slug tail = the window's unix start time">slug</th>
+    <th title="which outcome the tracked wallet bought (Up or Down)">side</th>
+    <th title="shares FILLED / the order's FULL size (on-chain). Equal when fully filled; partials show filled / full (or '?' until a reload re-decodes the size).">filled / full</th>
+    <th title="the order's limit (cap) price — it only buys at an ask ≤ this">limit</th>
+    <th title="when the order was SUBMITTED on-chain (placedMs), as t+seconds into the window. THIS is the momentum trigger time the estimate matches against.">placed (on-chain)</th>
+    <th title="seconds from placement to execution (filledTs − placedMs) — the on-chain placed→fill latency">fill→placed</th>
+    <th title="full = the whole order filled · partial = only part filled">fill</th>
+    <th title="all-in USDC paid for this buy (notional + taker fee), from the recorded fills">cost</th>
+    <th title="how the window RESOLVED vs the side bought — WON (bought the winning side) or LOST">outcome</th>
+    <th title="realized PnL at settlement: payout ($1/share if the bought side won, else $0) − all-in cost">pnl</th>
+    <th title="after Estimate (best config): the momentum SCORE (velocity) at the placed time, using the winning lb">mom vel</th>
+    <th title="after Estimate (best config): the time of the momentum mark that matched this buy, or ✗ if no mark fell in the offset window">mark t+</th>
+    <th title="after Estimate: matched mark time − placed time, in ms (how far the mark is from placement; − = mark before placed)">Δ ms</th>
+    <th title="after Estimate: follow (bought the rising side) or fade (bought the falling side), from the matched mark's momentum direction">dir</th>
+  </tr></thead><tbody id="rows"></tbody></table>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let BUYS=[];
+const fmtT=v=> v==null?'—':'t+'+(+v).toFixed(3)+'s';   // ALWAYS 3 decimals (ms precision), never trimmed
+function updateCnt(){ const ex=document.querySelectorAll(".exbox:checked").length, inc=Math.max(0,BUYS.length-ex);
+  $("incCnt").textContent=inc;
+  $("critInfo").innerHTML = BUYS.length ? `<b class="sd">${ex}</b> excluded · <b class="su">${inc}</b> included <span class="dim">/ ${BUYS.length} total</span>` : ""; }
+async function load(refresh){
+  $("status").textContent="loading buys"+(refresh?" (rebuilding on-chain cache — can take a while)":"")+"…";
+  const days=+$("days").value||20;
+  let r; try{ r=await fetch(`/api/tracker-buys?days=${days}${refresh?'&refresh=1':''}`).then(x=>x.json()); }catch(e){ $("status").textContent="failed: "+e; return; }
+  if(r.error){ $("status").textContent="error: "+r.error; return; }
+  BUYS=r.buys||[];
+  const settled=BUYS.filter(b=>b.pnl!=null), totPnl=settled.reduce((t,b)=>t+b.pnl,0), wins=settled.filter(b=>b.pnl>0).length;
+  const pnlPill = settled.length ? ` · <b class="${totPnl>=0?'su':'sd'}">net ${totPnl>=0?'+':''}$${totPnl.toFixed(2)}</b> <span class="dim">over ${settled.length} settled (${wins}W/${settled.length-wins}L)</span>` : "";
+  $("status").innerHTML=`<span class="cnt">${BUYS.length}</span> taker BUY orders · ${r.windows||new Set(BUYS.map(b=>b.slug)).size||0} windows · last ${r.days}d · cache age ${Math.round((Date.now()-r.ts)/60000)}m${pnlPill}`;
+  $("rows").innerHTML=BUYS.map((b,i)=>{
+    const sc=b.side==="Up"?"su":"sd", d=new Date(b.ws*1000).toISOString().slice(0,16).replace("T"," ");
+    const won = b.winSide!=null ? (b.winSide===b.side) : null;
+    const oc = won==null ? '<span class="dim">—</span>' : (won?'<span class="su">WON</span>':'<span class="sd">LOST</span>');
+    const pc = b.pnl==null?'dim':(b.pnl>=0?'su':'sd'), pt = b.pnl==null?'—':`${b.pnl>=0?'+':''}$${b.pnl.toFixed(2)}`;
+    return `<tr data-i="${i}">`
+      +`<td><input type="checkbox" class="exbox" data-h="${b.orderHash}"></td>`
+      +`<td class="dim">${i+1}</td><td>${d}</td><td class="dim">…${String(b.ws)}</td>`
+      +`<td class="${sc}">${b.side==="Up"?"▲ Up":"▼ Down"}</td>`
+      +`<td>${b.shares.toFixed(1)} / ${b.fullSize!=null?b.fullSize.toFixed(1):'?'}</td>`
+      +`<td>${b.limitPx!=null?b.limitPx.toFixed(3):'—'}</td>`
+      +`<td>${fmtT(b.tTrig)}</td><td class="dim">${b.delayS!=null?(+b.delayS).toFixed(3)+'s':'—'}</td><td class="dim">${b.full?'full':'partial'}</td>`
+      +`<td class="dim">${b.cost!=null?'$'+b.cost.toFixed(2):'—'}</td><td>${oc}</td><td class="${pc}">${pt}</td>`
+      +`<td class="mc-vel dim" data-h="${b.orderHash}">—</td><td class="mc-markt dim" data-h="${b.orderHash}">—</td>`
+      +`<td class="mc-dms dim" data-h="${b.orderHash}">—</td><td class="ffcell dim" data-h="${b.orderHash}">—</td></tr>`;
+  }).join('') || '<tr><td colspan="17" class="dim" style="padding:20px">no taker buys found in range</td></tr>';
+  $("critInfo").textContent=""; updateCnt(); applyFlt();
+}
+// dim buys below the t+ criteria — they (and the marks in that region) are gated out of the estimate
+function applyFlt(){ const minT=+$("minT").value||0;
+  document.querySelectorAll("#rows tr").forEach(tr=>{ const b=BUYS[+tr.dataset.i]; if(!b)return; tr.classList.toggle("flt", b.tTrig<minT); }); }
+$("minT").addEventListener("input",applyFlt);
+$("rows").addEventListener("change",e=>{ const cb=e.target.closest(".exbox"); if(!cb)return;
+  cb.closest("tr").classList.toggle("ex",cb.checked); updateCnt(); });
+$("reload").addEventListener("click",()=>load(true));
+// EXCLUDE FAILING — tick (exclude) every order placed before t+x (fails the criteria)
+$("apply").addEventListener("click",()=>{ const minT=+$("minT").value||0;
+  document.querySelectorAll("#rows tr").forEach(tr=>{ const b=BUYS[+tr.dataset.i]; if(!b)return;
+    if(b.tTrig<minT){ const cb=tr.querySelector(".exbox"); if(cb&&!cb.checked){ cb.checked=true; tr.classList.add("ex"); } } });
+  updateCnt(); });
+$("clearEx").addEventListener("click",()=>{ document.querySelectorAll(".exbox").forEach(cb=>{cb.checked=false;cb.closest("tr").classList.remove("ex");}); $("critInfo").textContent=""; updateCnt(); });
+function bar(pct){ return `<span class="pbar"><span class="pbar-f" style="width:${pct}%"></span></span>`; }
+const sleep=ms=>new Promise(z=>setTimeout(z,ms));
+// fetch with a hard client-side timeout — a stale/dead keep-alive socket aborts fast so a retry can open a fresh one
+const fetchT=(url,opts={},ms=8000)=>{ const ac=new AbortController(); const to=setTimeout(()=>ac.abort(),ms);
+  return fetch(url,{cache:"no-store",...opts,signal:ac.signal}).finally(()=>clearTimeout(to)); };
+const getProg=async()=>{ const x=await fetchT("/api/estimate-progress",{},6000); return x.json(); };
+$("submit").addEventListener("click",async()=>{
+  const excluded=[...document.querySelectorAll(".exbox:checked")].map(c=>c.dataset.h);
+  $("submit").disabled=true; $("status").textContent="starting…";
+  const body=JSON.stringify({ days:+$("days").value||20, excluded,
+    offBeforeMs:+$("offBefore").value||0, offAfterMs:+$("offAfter").value||0, minTInto:+$("minT").value||0 });
+  // START the background estimate — WITH RETRIES. A dropped response (proxy/tunnel) does NOT mean the
+  // job didn't start, so after a failed POST we ATTACH to whatever is genuinely RUNNING (active only —
+  // never a leftover result from a previous run). `jobId` is the run we own; we apply ONLY its result.
+  let started=false, lastErr="server unreachable", jobId=null;
+  for(let k=0;k<5 && !started;k++){
+    try{ const s=await fetchT("/api/estimate-momentum",{method:"POST",
+          headers:{"Content-Type":"application/json"},body},8000).then(x=>x.json());
+      started=true; jobId=(s&&s.id!=null)?s.id:null; if(s&&s.busy) $("status").textContent="an estimate is already running — attaching…"; }
+    catch(e){ lastErr=e;
+      try{ const p=await getProg(); if(p&&p.active){ started=true; jobId=p.id; break; } }catch{}   // attach to a RUNNING job only
+      $("status").innerHTML=`network hiccup — retrying start (${k+1}/5)…`; await sleep(600*(k+1)); }
+  }
+  // POLL for progress + the final result. Apply ONLY the result whose id matches OUR run (jobId), so a
+  // stale prior result is never shown. Only declares "couldn't start" when nothing of ours runs.
+  let r=null, idle=0;
+  while(true){
+    let p=null; try{ p=await getProg(); }catch{ await sleep(700); continue; }
+    if(p.active){ started=true; if(jobId==null) jobId=p.id; idle=0; const pct=p.total?Math.min(100,Math.round(100*p.done/p.total)):0;
+      $("status").innerHTML=`${p.phase}… <b class="cnt">${p.done}/${p.total}</b> <b class="su">${pct}%</b> ${bar(pct)}`;
+      await sleep(350); continue; }
+    if(p.error && started && (jobId==null||p.id===jobId)){ $("status").innerHTML=`estimate failed: ${p.error}`; $("submit").disabled=false; return; }
+    if(p.result && started && jobId!=null && p.id===jobId){ r=p.result; break; }   // OUR run's fresh result only
+    if(started){ if(++idle>4) break; await sleep(400); continue; }   // finishing/settling gap
+    if(++idle>5){ $("status").innerHTML=`couldn't start: ${lastErr} <span class="dim">— server unreachable; check the connection and retry.</span>`; $("submit").disabled=false; return; }
+    await sleep(500);
+  }
+  $("submit").disabled=false;
+  if(!r){ $("status").textContent="no result — please click estimate again"; return; }
+  const b=r.best;
+  $("result").className="result show";
+  $("result").innerHTML = b ? (
+    `<div class="accrow"><span class="acc">accuracy ${(100*b.accuracy).toFixed(1)}%</span>`
+    +`<span class="accsub">matched ${b.matched}/${r.totalBuys} placed times <span class="dim">(catch ${(100*b.recall).toFixed(0)}%)</span> · <b class="sd">${b.falseFires} false fires</b> <span class="dim">(triggers w/ no bot buy)</span> · <b class="su">${b.follow} follow</b> / <b class="sd">${b.fade} fade</b> → ${r.direction||'—'} ${(100*b.dirAcc).toFixed(0)}% · precision ${(100*b.precision).toFixed(0)}% · F1 ${b.f1}</span></div>`
+    +`<div class="best">lb=${b.lb} · sens=${b.sens} · dens=${b.dens} · min=${b.min} · <span title="estimated from the matched buys, not chosen: the side they bought vs the momentum's implied side">dir≈${r.direction||'—'}</span></div>`
+    +`<div class="status">${b.totalMarks} total marks · window [−${r.offBeforeMs}ms, +${r.offAfterMs}ms]${r.minTInto?` · <b class="su">t+ ≥ ${r.minTInto}s gate</b> (buys & marks)`:''} · ${r.windowsUsed!=null?r.windowsUsed:r.windows}/${r.windows} windows${r.partial?' <span class="sd">(partial — ticks still loading; click estimate again for full coverage)</span>':''} · ${r.excluded} excluded · ${r.totalBuys} included</div>`
+    +`<table><thead><tr>`
+    +`<th title="lookback (s) — velocity window: v = mid(t) − mid(t−lb)">lb</th>`
+    +`<th title="sensitivity — relative bar = sens × window-peak|velocity| × (1−0.85·dens). sens=0 = floor only">sens</th>`
+    +`<th title="density — lowers the bar and also marks |velocity| peaks within a move">dens</th>`
+    +`<th title="absolute |velocity| FLOOR the bar never drops below (0 = off)">min</th>`
+    +`<th title="ACCURACY (the ranking score) — overlap of the bot's buys with this config's triggers = matched / (real buys + false fires). Penalizes BOTH missed buys and false fires.">accuracy</th>`
+    +`<th title="CATCH (recall) — % of the non-excluded real buys that a momentum mark landed on within the offset window (ignores false fires)">catch</th>`
+    +`<th title="FALSE FIRES — count of this config's marks that did NOT coincide with any real bot buy (triggers the bot never acted on)">false</th>`
+    +`<th title="PRECISION — of all marks these params produced, the % that landed on (coincided with) a real buy. Counts MARKS, so it cannot exceed 100%.">prec</th>`
+    +`<th title="DIRECTION consistency — of the matched buys, the % that went the dominant way (follow=bought the rising side, fade=bought the falling side). Always ≥50% by construction.">dir</th>`
+    +`<th title="total momentum marks these params produced across all windows (lower = fewer spurious)">marks</th>`
+    +`<th title="F1 — harmonic mean of catch (recall) and precision; tie-breaker for the ranking">F1</th>`
+    +`</tr></thead><tbody>`
+    +r.top.map((t,i)=>`<tr class="${i===0?'top':''}"><td>${t.lb}</td><td>${t.sens}</td><td>${t.dens}</td><td>${t.min}</td><td>${(100*t.accuracy).toFixed(1)}%</td><td class="dim">${(100*t.recall).toFixed(0)}%</td><td class="sd">${t.falseFires}</td><td>${(100*t.precision).toFixed(0)}%</td><td>${(100*t.dirAcc).toFixed(0)}%</td><td>${t.totalMarks}</td><td>${t.f1}</td></tr>`).join('')
+    +`</tbody></table>`
+  ) : '<div class="status">no result (no usable buys/windows)</div>';
+  // per-buy momentum detail under the WINNING config: score (vel), matched mark time, Δms, direction
+  const PB=r.perBuy||{};
+  document.querySelectorAll("#rows tr").forEach(tr=>{ const b=BUYS[+tr.dataset.i]; if(!b)return; const pb=PB[b.orderHash];
+    const set=(cls,txt,col)=>{ const td=tr.querySelector("."+cls); if(td){ td.textContent=txt; td.className=cls+(col?" "+col:""); } };
+    if(pb){
+      set("mc-vel", pb.vel!=null?(pb.vel>=0?'+':'')+pb.vel.toFixed(3):'—', pb.vel==null?'dim':(pb.vel>=0?'su':'sd'));
+      set("mc-markt", pb.markT!=null?'t+'+pb.markT.toFixed(3)+'s':'✗', pb.markT!=null?'':'sd');
+      set("mc-dms", pb.dms!=null?(pb.dms>=0?'+':'')+pb.dms:'—','dim');
+      set("ffcell", pb.ff||'—', pb.ff==="follow"?"su":pb.ff==="fade"?"sd":"dim");
+      tr.classList.toggle("nomark", !pb.matched);
+    } else { set("mc-vel","—","dim"); set("mc-markt","—","dim"); set("mc-dms","—","dim"); set("ffcell","—","dim"); tr.classList.remove("nomark"); }
+  });
+  renderFalseFires(r);
+  $("status").innerHTML=`done · estimated from ${r.totalBuys} buys (${r.excluded} excluded) · "accuracy" = matched / (real buys + false fires) — penalizes both misses and triggers the bot never fired`;
+});
+// FALSE FIRES panel: the winning config's triggers that hit no real bot buy
+function renderFalseFires(r){
+  const ff=r.falseFires||[], total=r.falseFiresTotal||ff.length;
+  if(!total){ $("ffwrap").style.display="none"; return; }
+  $("ffwrap").style.display=""; $("fftbl").style.display="none";   // collapsed on each new estimate
+  const absD=ff.filter(f=>f.nearestDt!=null).map(f=>Math.abs(f.nearestDt)).sort((a,b)=>a-b);
+  const med=absD.length?absD[Math.floor(absD.length/2)]:null;
+  const far=ff.filter(f=>f.nearestDt!=null&&Math.abs(f.nearestDt)>2).length;   // >2s from any real buy = clearly spurious
+  const up=ff.filter(f=>f.side==="Up").length;
+  $("fftoggle").textContent=`▸ false fires (${total})`;
+  $("ffsum").innerHTML=`across <b>${r.falseFireWindows||new Set(ff.map(f=>f.slug)).size}</b> windows · side <b class="su">${up}↑</b>/<b class="sd">${ff.length-up}↓</b>`
+    +(med!=null?` · median gap to nearest buy <b>${med.toFixed(3)}s</b>`:'')
+    +` · <b class="sd">${far}</b> are &gt;2s from any real buy (clearly spurious)`
+    +(total>ff.length?` · <span class="sd">showing first ${ff.length}</span>`:'');
+  $("ffrows").innerHTML=ff.map((f,i)=>{
+    const d=new Date(f.ws*1000).toISOString().slice(0,16).replace("T"," ");
+    const sc=f.side==="Up"?"su":"sd";
+    const nd=f.nearestDt==null?'—':`${f.nearestDt>=0?'+':''}${f.nearestDt.toFixed(3)}s`;
+    const ndCls=f.nearestDt!=null&&Math.abs(f.nearestDt)>2?'sd':'dim';
+    return `<tr><td class="dim">${i+1}</td><td>${d}</td><td class="dim">…${String(f.ws)}</td>`
+      +`<td>${fmtT(f.t)}</td><td class="${f.vel>=0?'su':'sd'}">${f.vel>=0?'+':''}${f.vel.toFixed(3)}</td>`
+      +`<td class="${sc}">${f.side==="Up"?"▲ Up":"▼ Down"}</td>`
+      +`<td class="${ndCls}">${nd}</td><td class="dim">${f.buysInWin}</td></tr>`;
+  }).join('');
+}
+$("fftoggle").addEventListener("click",()=>{ const t=$("fftbl"), open=t.style.display!=="none";
+  t.style.display=open?"none":""; $("fftoggle").textContent=$("fftoggle").textContent.replace(open?'▾':'▸', open?'▸':'▾'); });
+load(false);
+</script></body></html>

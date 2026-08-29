@@ -1,0 +1,456 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T08:28:14.889Z",
+  "objective": "same-side precision of independently switchable FastMX velocity families at inferred target action times",
+  "formula": {
+    "binanceGapVelocity": "(priceNow-open)-(pricePrior-open)=priceNow-pricePrior, raw USD",
+    "clobMidVelocity": "upMidNow-upMidPrior, where upMid=(bestBid+bestAsk)/2",
+    "both": "both enabled families clear thresholds and agree"
+  },
+  "config": {
+    "clobLookbackMs": 3000,
+    "clobVelocityMin": 0.08,
+    "binanceLookbackMs": 3000,
+    "binanceGapVelocityMinUsd": 6
+  },
+  "dataQuality": {
+    "main": {
+      "pairs": 6012,
+      "missingFeeds": 0,
+      "missingVelocity": 75
+    },
+    "externalAug26": {
+      "pairs": 72,
+      "missingFeeds": 0,
+      "missingVelocity": 0
+    },
+    "freshExactAug27": {
+      "pairs": 294,
+      "missingFeeds": 0,
+      "missingVelocity": 0
+    }
+  },
+  "modes": {
+    "both": {
+      "fit": {
+        "actions": 409,
+        "successes": 376,
+        "errors": 33,
+        "coverage": 0.148727,
+        "precision": 0.919315,
+        "wilson95Low": 0.888854,
+        "wilson95High": 0.941973,
+        "byDay": {
+          "2026-08-16": {
+            "actions": 16,
+            "precision": 1
+          },
+          "2026-08-17": {
+            "actions": 52,
+            "precision": 0.884615
+          },
+          "2026-08-18": {
+            "actions": 14,
+            "precision": 1
+          },
+          "2026-08-19": {
+            "actions": 107,
+            "precision": 0.934579
+          },
+          "2026-08-20": {
+            "actions": 220,
+            "precision": 0.909091
+          }
+        }
+      },
+      "validation": {
+        "actions": 171,
+        "successes": 141,
+        "errors": 30,
+        "coverage": 0.158922,
+        "precision": 0.824561,
+        "wilson95Low": 0.760604,
+        "wilson95High": 0.874256,
+        "byDay": {
+          "2026-08-21": {
+            "actions": 171,
+            "precision": 0.824561
+          }
+        }
+      },
+      "holdout": {
+        "actions": 355,
+        "successes": 320,
+        "errors": 35,
+        "coverage": 0.162397,
+        "precision": 0.901408,
+        "wilson95Low": 0.865969,
+        "wilson95High": 0.928254,
+        "byDay": {
+          "2026-08-22": {
+            "actions": 102,
+            "precision": 0.882353
+          },
+          "2026-08-23": {
+            "actions": 54,
+            "precision": 0.925926
+          },
+          "2026-08-24": {
+            "actions": 87,
+            "precision": 0.885057
+          },
+          "2026-08-25": {
+            "actions": 112,
+            "precision": 0.919643
+          }
+        }
+      },
+      "externalAug26": {
+        "actions": 12,
+        "successes": 11,
+        "errors": 1,
+        "coverage": 0.166667,
+        "precision": 0.916667,
+        "wilson95Low": 0.64612,
+        "wilson95High": 0.985135,
+        "byDay": {
+          "2026-08-26": {
+            "actions": 12,
+            "precision": 0.916667
+          }
+        }
+      },
+      "freshExactAug27": {
+        "actions": 57,
+        "successes": 56,
+        "errors": 1,
+        "coverage": 0.193878,
+        "precision": 0.982456,
+        "wilson95Low": 0.907093,
+        "wilson95High": 0.996896,
+        "byDay": {
+          "2026-08-27": {
+            "actions": 57,
+            "precision": 0.982456
+          }
+        }
+      },
+      "combinedForward": {
+        "actions": 424,
+        "successes": 387,
+        "errors": 37,
+        "coverage": 0.166144,
+        "precision": 0.912736,
+        "wilson95Low": 0.882032,
+        "wilson95High": 0.936028,
+        "byDay": {
+          "2026-08-22": {
+            "actions": 102,
+            "precision": 0.882353
+          },
+          "2026-08-23": {
+            "actions": 54,
+            "precision": 0.925926
+          },
+          "2026-08-24": {
+            "actions": 87,
+            "precision": 0.885057
+          },
+          "2026-08-25": {
+            "actions": 112,
+            "precision": 0.919643
+          },
+          "2026-08-26": {
+            "actions": 12,
+            "precision": 0.916667
+          },
+          "2026-08-27": {
+            "actions": 57,
+            "precision": 0.982456
+          }
+        }
+      }
+    },
+    "clobOnly": {
+      "fit": {
+        "actions": 653,
+        "successes": 594,
+        "errors": 59,
+        "coverage": 0.237455,
+        "precision": 0.909648,
+        "wilson95Low": 0.885197,
+        "wilson95High": 0.929307,
+        "byDay": {
+          "2026-08-16": {
+            "actions": 47,
+            "precision": 0.957447
+          },
+          "2026-08-17": {
+            "actions": 121,
+            "precision": 0.917355
+          },
+          "2026-08-18": {
+            "actions": 38,
+            "precision": 0.973684
+          },
+          "2026-08-19": {
+            "actions": 162,
+            "precision": 0.901235
+          },
+          "2026-08-20": {
+            "actions": 285,
+            "precision": 0.894737
+          }
+        }
+      },
+      "validation": {
+        "actions": 217,
+        "successes": 178,
+        "errors": 39,
+        "coverage": 0.201673,
+        "precision": 0.820276,
+        "wilson95Low": 0.76376,
+        "wilson95High": 0.865651,
+        "byDay": {
+          "2026-08-21": {
+            "actions": 217,
+            "precision": 0.820276
+          }
+        }
+      },
+      "holdout": {
+        "actions": 514,
+        "successes": 456,
+        "errors": 58,
+        "coverage": 0.235133,
+        "precision": 0.88716,
+        "wilson95Low": 0.856886,
+        "wilson95High": 0.911689,
+        "byDay": {
+          "2026-08-22": {
+            "actions": 148,
+            "precision": 0.885135
+          },
+          "2026-08-23": {
+            "actions": 96,
+            "precision": 0.90625
+          },
+          "2026-08-24": {
+            "actions": 121,
+            "precision": 0.876033
+          },
+          "2026-08-25": {
+            "actions": 149,
+            "precision": 0.885906
+          }
+        }
+      },
+      "externalAug26": {
+        "actions": 14,
+        "successes": 11,
+        "errors": 3,
+        "coverage": 0.194444,
+        "precision": 0.785714,
+        "wilson95Low": 0.524108,
+        "wilson95High": 0.924286,
+        "byDay": {
+          "2026-08-26": {
+            "actions": 14,
+            "precision": 0.785714
+          }
+        }
+      },
+      "freshExactAug27": {
+        "actions": 72,
+        "successes": 70,
+        "errors": 2,
+        "coverage": 0.244898,
+        "precision": 0.972222,
+        "wilson95Low": 0.904258,
+        "wilson95High": 0.992349,
+        "byDay": {
+          "2026-08-27": {
+            "actions": 72,
+            "precision": 0.972222
+          }
+        }
+      },
+      "combinedForward": {
+        "actions": 600,
+        "successes": 537,
+        "errors": 63,
+        "coverage": 0.23511,
+        "precision": 0.895,
+        "wilson95Low": 0.867908,
+        "wilson95High": 0.917067,
+        "byDay": {
+          "2026-08-22": {
+            "actions": 148,
+            "precision": 0.885135
+          },
+          "2026-08-23": {
+            "actions": 96,
+            "precision": 0.90625
+          },
+          "2026-08-24": {
+            "actions": 121,
+            "precision": 0.876033
+          },
+          "2026-08-25": {
+            "actions": 149,
+            "precision": 0.885906
+          },
+          "2026-08-26": {
+            "actions": 14,
+            "precision": 0.785714
+          },
+          "2026-08-27": {
+            "actions": 72,
+            "precision": 0.972222
+          }
+        }
+      }
+    },
+    "binanceOnly": {
+      "fit": {
+        "actions": 873,
+        "successes": 701,
+        "errors": 172,
+        "coverage": 0.317455,
+        "precision": 0.802978,
+        "wilson95Low": 0.775291,
+        "wilson95High": 0.828011,
+        "byDay": {
+          "2026-08-16": {
+            "actions": 30,
+            "precision": 0.966667
+          },
+          "2026-08-17": {
+            "actions": 90,
+            "precision": 0.833333
+          },
+          "2026-08-18": {
+            "actions": 19,
+            "precision": 1
+          },
+          "2026-08-19": {
+            "actions": 264,
+            "precision": 0.757576
+          },
+          "2026-08-20": {
+            "actions": 470,
+            "precision": 0.804255
+          }
+        }
+      },
+      "validation": {
+        "actions": 578,
+        "successes": 420,
+        "errors": 158,
+        "coverage": 0.537175,
+        "precision": 0.726644,
+        "wilson95Low": 0.688903,
+        "wilson95High": 0.761392,
+        "byDay": {
+          "2026-08-21": {
+            "actions": 578,
+            "precision": 0.726644
+          }
+        }
+      },
+      "holdout": {
+        "actions": 861,
+        "successes": 700,
+        "errors": 161,
+        "coverage": 0.39387,
+        "precision": 0.813008,
+        "wilson95Low": 0.785595,
+        "wilson95High": 0.837641,
+        "byDay": {
+          "2026-08-22": {
+            "actions": 247,
+            "precision": 0.821862
+          },
+          "2026-08-23": {
+            "actions": 127,
+            "precision": 0.874016
+          },
+          "2026-08-24": {
+            "actions": 212,
+            "precision": 0.75
+          },
+          "2026-08-25": {
+            "actions": 275,
+            "precision": 0.825455
+          }
+        }
+      },
+      "externalAug26": {
+        "actions": 34,
+        "successes": 29,
+        "errors": 5,
+        "coverage": 0.472222,
+        "precision": 0.852941,
+        "wilson95Low": 0.698719,
+        "wilson95High": 0.935506,
+        "byDay": {
+          "2026-08-26": {
+            "actions": 34,
+            "precision": 0.852941
+          }
+        }
+      },
+      "freshExactAug27": {
+        "actions": 102,
+        "successes": 98,
+        "errors": 4,
+        "coverage": 0.346939,
+        "precision": 0.960784,
+        "wilson95Low": 0.903475,
+        "wilson95High": 0.984646,
+        "byDay": {
+          "2026-08-27": {
+            "actions": 102,
+            "precision": 0.960784
+          }
+        }
+      },
+      "combinedForward": {
+        "actions": 997,
+        "successes": 827,
+        "errors": 170,
+        "coverage": 0.390674,
+        "precision": 0.829488,
+        "wilson95Low": 0.80489,
+        "wilson95High": 0.851558,
+        "byDay": {
+          "2026-08-22": {
+            "actions": 247,
+            "precision": 0.821862
+          },
+          "2026-08-23": {
+            "actions": 127,
+            "precision": 0.874016
+          },
+          "2026-08-24": {
+            "actions": 212,
+            "precision": 0.75
+          },
+          "2026-08-25": {
+            "actions": 275,
+            "precision": 0.825455
+          },
+          "2026-08-26": {
+            "actions": 34,
+            "precision": 0.852941
+          },
+          "2026-08-27": {
+            "actions": 102,
+            "precision": 0.960784
+          }
+        }
+      }
+    }
+  },
+  "caveat": "Retrospective direction precision at target action times is not market participation, release-time parity, profitability, or a prospectively locked result."
+}

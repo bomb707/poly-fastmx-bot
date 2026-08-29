@@ -1,0 +1,548 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T14:06:49.232Z",
+  "target": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "scope": "strict V2/V4 consensus BTC five-minute target actions, Aug 16-25",
+  "actions": 6025,
+  "decodedOrderJoinPct": 100,
+  "definitions": {
+    "orientedInventory": "(Up shares - Down shares) * signal-side sign; negative means the action opposes current inventory",
+    "signedMinimumShares": "minimum tokens encoded in the BUY at its signed price cap",
+    "fixedBudgetUsd": "signed price cap * signed minimum shares",
+    "actualFilledShares": "fixed budget / realized execution price, subject to partial fill"
+  },
+  "menuEvidence": {
+    "orders": 6578,
+    "signedWithin15sPct": 93.645,
+    "signedWithin30sPct": 97.796,
+    "releasedAtLeast20sLaterPct": 87.975,
+    "releasedAtLeast60sLaterPct": 72.423,
+    "signedIntoMs": {
+      "p10": 789,
+      "p25": 3805,
+      "p50": 7392,
+      "p75": 10847,
+      "p90": 13650
+    },
+    "decisionLeadMs": {
+      "p10": 15739,
+      "p25": 55057,
+      "p50": 118908,
+      "p75": 191631,
+      "p90": 237351
+    }
+  },
+  "roles": {
+    "entryTopup": {
+      "actions": 4188,
+      "signedMinimumShares": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 8,
+        "p75": 14,
+        "p90": 27
+      },
+      "signedBudgetUsd": {
+        "p10": 2.73,
+        "p25": 3.85,
+        "p50": 5.5,
+        "p75": 9.68,
+        "p90": 17.82
+      },
+      "signedLimit": {
+        "p10": 0.39,
+        "p25": 0.59,
+        "p50": 0.76,
+        "p75": 0.9,
+        "p90": 0.97
+      },
+      "beforeOriented": {
+        "p10": 0,
+        "p25": 0,
+        "p50": 0,
+        "p75": 10.32714,
+        "p90": 22.636682
+      },
+      "afterOriented": {
+        "p10": 5.143281,
+        "p25": 7,
+        "p50": 13.15555,
+        "p75": 24.642535,
+        "p90": 43.112506
+      },
+      "fillExpansion": {
+        "p10": 1,
+        "p25": 1,
+        "p50": 1.013889,
+        "p75": 1.047059,
+        "p90": 1.095238
+      },
+      "construction": {
+        "orders": 4593,
+        "signedWithin15sPct": 94.535,
+        "signedWithin30sPct": 98.236,
+        "releasedAtLeast20sLaterPct": 84.193,
+        "releasedAtLeast60sLaterPct": 65.121,
+        "signedIntoMs": {
+          "p10": 789,
+          "p25": 3824,
+          "p50": 7399,
+          "p75": 10784,
+          "p90": 12889
+        },
+        "decisionLeadMs": {
+          "p10": 10149,
+          "p25": 41927,
+          "p50": 95002,
+          "p75": 175668,
+          "p90": 229152
+        }
+      }
+    },
+    "hedge": {
+      "actions": 833,
+      "signedMinimumShares": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 8,
+        "p75": 16,
+        "p90": 33
+      },
+      "signedBudgetUsd": {
+        "p10": 2.1,
+        "p25": 3.3,
+        "p50": 5.04,
+        "p75": 9.15,
+        "p90": 18.63
+      },
+      "signedLimit": {
+        "p10": 0.205,
+        "p25": 0.43,
+        "p50": 0.68,
+        "p75": 0.87,
+        "p90": 0.96
+      },
+      "beforeOriented": {
+        "p10": -53.890912,
+        "p25": -32,
+        "p50": -18,
+        "p75": -11,
+        "p90": -6.311686
+      },
+      "afterOriented": {
+        "p10": -36.133417,
+        "p25": -19.090912,
+        "p50": -8.21,
+        "p75": -2.862027,
+        "p90": -0.720927
+      },
+      "fillExpansion": {
+        "p10": 0.284605,
+        "p25": 1,
+        "p50": 1,
+        "p75": 1.022988,
+        "p90": 1.074074
+      },
+      "construction": {
+        "orders": 869,
+        "signedWithin15sPct": 90.219,
+        "signedWithin30sPct": 96.318,
+        "releasedAtLeast20sLaterPct": 97.353,
+        "releasedAtLeast60sLaterPct": 89.068,
+        "signedIntoMs": {
+          "p10": 803,
+          "p25": 3779,
+          "p50": 7484,
+          "p75": 11812,
+          "p90": 14505
+        },
+        "decisionLeadMs": {
+          "p10": 58302,
+          "p25": 106347,
+          "p50": 167733,
+          "p75": 217323,
+          "p90": 251114
+        }
+      }
+    },
+    "overhedgeCross": {
+      "actions": 1004,
+      "signedMinimumShares": {
+        "p10": 6,
+        "p25": 10,
+        "p50": 21,
+        "p75": 38,
+        "p90": 63
+      },
+      "signedBudgetUsd": {
+        "p10": 2.2,
+        "p25": 4.64,
+        "p50": 9.24,
+        "p75": 20.79,
+        "p90": 40.85
+      },
+      "signedLimit": {
+        "p10": 0.14,
+        "p25": 0.35,
+        "p50": 0.64,
+        "p75": 0.87,
+        "p90": 0.96
+      },
+      "beforeOriented": {
+        "p10": -25.504845,
+        "p25": -13.412729,
+        "p50": -6.797755,
+        "p75": -5,
+        "p90": -1.826922
+      },
+      "afterOriented": {
+        "p10": 1.516128,
+        "p25": 4.227271,
+        "p50": 10.444446,
+        "p75": 23,
+        "p90": 43.04396
+      },
+      "fillExpansion": {
+        "p10": 0.844444,
+        "p25": 1,
+        "p50": 1,
+        "p75": 1.027218,
+        "p90": 1.09596
+      },
+      "construction": {
+        "orders": 1116,
+        "signedWithin15sPct": 92.652,
+        "signedWithin30sPct": 97.133,
+        "releasedAtLeast20sLaterPct": 96.237,
+        "releasedAtLeast60sLaterPct": 89.516,
+        "signedIntoMs": {
+          "p10": 761,
+          "p25": 3705,
+          "p50": 7344,
+          "p75": 10957,
+          "p90": 13908
+        },
+        "decisionLeadMs": {
+          "p10": 57887,
+          "p25": 105356,
+          "p50": 159512,
+          "p75": 215024,
+          "p90": 245328
+        }
+      }
+    }
+  },
+  "entrySizing": {
+    "identity": "Q_min is selected from a pre-signed integer-share menu; budgetUsd = cap * Q_min",
+    "observedResidualLadderByFireMinute": [
+      {
+        "fromS": 0,
+        "toS": 60,
+        "actions": 1209,
+        "signedMinimumSharesP50": 6,
+        "postActionResidualP50": 8,
+        "signedLimitP50": 0.68
+      },
+      {
+        "fromS": 60,
+        "toS": 120,
+        "actions": 1070,
+        "signedMinimumSharesP50": 7,
+        "postActionResidualP50": 11.070587,
+        "signedLimitP50": 0.75
+      },
+      {
+        "fromS": 120,
+        "toS": 180,
+        "actions": 805,
+        "signedMinimumSharesP50": 8,
+        "postActionResidualP50": 16.753663,
+        "signedLimitP50": 0.81
+      },
+      {
+        "fromS": 180,
+        "toS": 240,
+        "actions": 703,
+        "signedMinimumSharesP50": 10,
+        "postActionResidualP50": 23,
+        "signedLimitP50": 0.88
+      },
+      {
+        "fromS": 240,
+        "toS": 301,
+        "actions": 401,
+        "signedMinimumSharesP50": 13,
+        "postActionResidualP50": 35.056172,
+        "signedLimitP50": 0.86
+      }
+    ],
+    "approximation": "Q_min = max(5, round(R_target(time, price, confidence) - orientedInventory))"
+  },
+  "reversalSizing": {
+    "exactPositionIdentity": "afterOriented = beforeOriented + actualFilledShares",
+    "plannedBranchRule": "beforeOriented + signedMinimumShares > 0 means the signed order intends to cross; otherwise it intends to trim",
+    "plannedBranchAll": {
+      "rows": 1837,
+      "tp": 962,
+      "fp": 104,
+      "tn": 729,
+      "fn": 42,
+      "accuracyPct": 92.052,
+      "crossPrecisionPct": 90.244,
+      "crossRecallPct": 95.817
+    },
+    "plannedBranchFit": {
+      "rows": 1189,
+      "tp": 632,
+      "fp": 66,
+      "tn": 469,
+      "fn": 22,
+      "accuracyPct": 92.599,
+      "crossPrecisionPct": 90.544,
+      "crossRecallPct": 96.636
+    },
+    "plannedBranchHoldout": {
+      "rows": 648,
+      "tp": 330,
+      "fp": 38,
+      "tn": 260,
+      "fn": 20,
+      "accuracyPct": 91.049,
+      "crossPrecisionPct": 89.674,
+      "crossRecallPct": 94.286
+    },
+    "partialHedge": {
+      "formula": "desiredFillShares = abs(beforeOriented) - desiredOldSideResidual",
+      "actions": 833,
+      "oldImbalanceAbs": {
+        "p10": 6.25352,
+        "p25": 11,
+        "p50": 18,
+        "p75": 32,
+        "p90": 53.502875
+      },
+      "signedMinimumShares": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 8,
+        "p75": 16,
+        "p90": 33
+      },
+      "filledToOldImbalanceRatio": {
+        "p10": 0.171724,
+        "p25": 0.302825,
+        "p50": 0.506189,
+        "p75": 0.76886,
+        "p90": 0.923913
+      },
+      "postActionResidualAbs": {
+        "p10": 0.703706,
+        "p25": 2.862027,
+        "p50": 8.21,
+        "p75": 19.090912,
+        "p90": 36.09
+      },
+      "fifoPairCost": {
+        "p10": 0.861045,
+        "p25": 0.984125,
+        "p50": 1.082725,
+        "p75": 1.262865,
+        "p90": 1.447426
+      },
+      "fifoPairCostAtMostOnePct": 28.691
+    },
+    "overhedgeCross": {
+      "formula": "desiredFillShares = abs(beforeOriented) + desiredNewSideResidual",
+      "actions": 1004,
+      "oldImbalanceAbs": {
+        "p10": 1.806381,
+        "p25": 5,
+        "p50": 6.779089,
+        "p75": 13.392208,
+        "p90": 25.347033
+      },
+      "signedMinimumShares": {
+        "p10": 6,
+        "p25": 10,
+        "p50": 21,
+        "p75": 38,
+        "p90": 63
+      },
+      "filledToOldImbalanceRatio": {
+        "p10": 1.16724,
+        "p25": 1.510574,
+        "p50": 2.379012,
+        "p75": 4.454054,
+        "p90": 10.235513
+      },
+      "postActionResidualAbs": {
+        "p10": 1.516128,
+        "p25": 4.227271,
+        "p50": 10.444446,
+        "p75": 23,
+        "p90": 43.04396
+      },
+      "fifoPairCost": {
+        "p10": 0.830352,
+        "p25": 0.986247,
+        "p50": 1.1175,
+        "p75": 1.318245,
+        "p90": 1.506586
+      },
+      "fifoPairCostAtMostOnePct": 28.088
+    },
+    "signedBudgetConversion": "Q_min ~= ceil(desiredFillShares * expectedFillPrice / signedPriceCap); budgetUsd = signedPriceCap * Q_min"
+  },
+  "lastOppositeSideAction": {
+    "definition": "chronologically last hedge or overhedge-cross action in each market",
+    "markets": 893,
+    "alsoFinalActionInMarketPct": 60.246,
+    "partialHedge": {
+      "markets": 356,
+      "shareOfLastReversalsPct": 39.866,
+      "timeS": {
+        "p10": 97.318,
+        "p25": 146.768,
+        "p50": 208.393,
+        "p75": 244.009,
+        "p90": 268.435
+      },
+      "actions": 356,
+      "oldImbalanceAbs": {
+        "p10": 6.677418,
+        "p25": 11.318506,
+        "p50": 19.102266,
+        "p75": 35.880884,
+        "p90": 57.573336
+      },
+      "signedMinimumShares": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 9,
+        "p75": 18,
+        "p90": 39
+      },
+      "filledToOldImbalanceRatio": {
+        "p10": 0.177778,
+        "p25": 0.300885,
+        "p50": 0.512281,
+        "p75": 0.797014,
+        "p90": 0.93965
+      },
+      "postActionResidualAbs": {
+        "p10": 0.571436,
+        "p25": 3.193542,
+        "p50": 8.991,
+        "p75": 20.885212,
+        "p90": 37.072352
+      },
+      "fifoPairCost": {
+        "p10": 0.814604,
+        "p25": 0.979564,
+        "p50": 1.085801,
+        "p75": 1.309873,
+        "p90": 1.49994
+      },
+      "fifoPairCostAtMostOnePct": 28.933,
+      "orderSideWinnerPct": 60.674,
+      "postActionLeanWinnerPct": 37.921
+    },
+    "overhedgeCross": {
+      "markets": 537,
+      "shareOfLastReversalsPct": 60.134,
+      "timeS": {
+        "p10": 86.701,
+        "p25": 132.561,
+        "p50": 191.578,
+        "p75": 237.463,
+        "p90": 258.047
+      },
+      "actions": 537,
+      "oldImbalanceAbs": {
+        "p10": 1.789475,
+        "p25": 5,
+        "p50": 6.909089,
+        "p75": 15,
+        "p90": 26.456421
+      },
+      "signedMinimumShares": {
+        "p10": 6,
+        "p25": 10,
+        "p50": 22,
+        "p75": 44,
+        "p90": 70
+      },
+      "filledToOldImbalanceRatio": {
+        "p10": 1.183379,
+        "p25": 1.5,
+        "p50": 2.345455,
+        "p75": 4.492476,
+        "p90": 11
+      },
+      "postActionResidualAbs": {
+        "p10": 1.551314,
+        "p25": 4.615386,
+        "p50": 11.003836,
+        "p75": 24.563576,
+        "p90": 46.424386
+      },
+      "fifoPairCost": {
+        "p10": 0.858105,
+        "p25": 1.016856,
+        "p50": 1.185417,
+        "p75": 1.39024,
+        "p90": 1.578413
+      },
+      "fifoPairCostAtMostOnePct": 21.788,
+      "orderSideWinnerPct": 81.378,
+      "postActionLeanWinnerPct": 81.378
+    }
+  },
+  "heldOutModels": {
+    "branch": {
+      "rows": 648,
+      "positives": 350,
+      "auc": 0.792915,
+      "threshold": 0.485064,
+      "tp": 291,
+      "fp": 117,
+      "tn": 181,
+      "fn": 59,
+      "accuracyPct": 72.84,
+      "precisionPct": 71.324,
+      "recallPct": 83.143,
+      "predictedCrossPct": 62.963,
+      "actualCrossPct": 54.012
+    },
+    "residualSize": {
+      "rows": 2188,
+      "actual": {
+        "p10": 4.073349,
+        "p25": 5.487641,
+        "p50": 10.276025,
+        "p75": 20,
+        "p90": 37.792915
+      },
+      "predicted": {
+        "p10": 7,
+        "p25": 7,
+        "p50": 9,
+        "p75": 13,
+        "p90": 28
+      },
+      "medianAbsoluteError": 3.446799,
+      "p90AbsoluteError": 17.40325,
+      "medianAbsoluteLogError": 0.287682,
+      "exactTierPct": 52.697,
+      "large16PrecisionPct": 85.802,
+      "large16RecallPct": 57.123,
+      "baselineMedianSize": 13,
+      "baselineMedianAbsoluteError": 7.401494
+    }
+  },
+  "conclusion": {
+    "exactPrivateLogicRecovered": false,
+    "runtimePromotion": false,
+    "reason": "The inventory arithmetic and menu encoding are exact, but public settled orders reveal only the menu item that fired, not the complete private menu or its confidence state."
+  }
+}

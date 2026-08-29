@@ -1,0 +1,9 @@
+[
+  {
+    "name": "pair98_q3_frozen",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.98,
+    "pairCostCap": 0.98,
+    "exposureCap": 3
+  }
+]

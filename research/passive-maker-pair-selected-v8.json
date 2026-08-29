@@ -1,0 +1,17 @@
+[
+  {
+    "name": "pair94_5x3_timeout10_exact_latency_normalized_forward",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.94,
+    "pairCostCap": 0.94,
+    "orderSize": 5,
+    "minOrderShares": 5,
+    "exposureCap": 15,
+    "targetMakerLatencyMs": 2733,
+    "pauseMakerAboveLatencyMs": 3500,
+    "takerLatencyMs": 520,
+    "unpairedTimeoutS": 10,
+    "minTimeS": 5,
+    "maxTimeS": 255
+  }
+]

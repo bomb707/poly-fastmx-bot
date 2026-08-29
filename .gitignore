@@ -1,0 +1,22 @@
+# dependencies (never commit)
+node_modules/
+
+# secrets / environment — never commit (.env.local holds WEB_PASSWORD/API_KEY/PROTECT_KEY/CIPHERTEXT)
+.env
+.env.*
+!.env.example
+# encrypted wallet/API key material (RSA ciphertext resolved by the executor) — never commit
+key/
+
+# runtime output / logs / trained-model binaries (large + regenerable — never commit)
+data/
+logs/
+.state/
+ai_data/
+*.log
+npm-debug.log*
+.DS_Store
+
+# order-latency probes (contain a private-key slot — never commit)
+research/latency_test.mjs
+research/latency_test_standalone.mjs

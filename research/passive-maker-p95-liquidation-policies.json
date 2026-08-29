@@ -1,0 +1,6 @@
+[
+  { "name": "p95_q3_hold", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255 },
+  { "name": "p95_q3_exit260", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "endLiquidateS": 260 },
+  { "name": "p95_q3_exit270", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "endLiquidateS": 270 },
+  { "name": "p95_q3_exit280", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "endLiquidateS": 280 }
+]

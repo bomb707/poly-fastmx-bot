@@ -1,0 +1,54 @@
+[
+  {
+    "name": "consensus_oco_q094_ttl750_stop150_exp10_timeout5",
+    "signalMode": "twoSided", "postOnly": true,
+    "pairQuoteCap": 0.94, "confirmPairQuoteCap": 0.94, "confirmMaxAgeMs": 500,
+    "pairCostCap": 0.94, "balancedInventoryPairBidCap": 0.94,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 750, "cancelLatencyMs": 500, "cancelOverweightOnFill": true,
+    "unpairedTimeoutS": 5, "minTimeS": 5, "maxTimeS": 150,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "timeoutCompleteCap": 1,
+    "endLiquidateS": 280, "priceMin": 0.12, "priceMax": 0.89,
+    "targetMakerLatencyMs": 130, "pauseMakerAboveLatencyMs": 250,
+    "takerLatencyMs": 520, "makerRebateRate": 0
+  },
+  {
+    "name": "consensus_oco_q094_ttl750_stop150_exp5_timeout5",
+    "signalMode": "twoSided", "postOnly": true,
+    "pairQuoteCap": 0.94, "confirmPairQuoteCap": 0.94, "confirmMaxAgeMs": 500,
+    "pairCostCap": 0.94, "balancedInventoryPairBidCap": 0.94,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 5,
+    "ttlMs": 750, "cancelLatencyMs": 500, "cancelOverweightOnFill": true,
+    "unpairedTimeoutS": 5, "minTimeS": 5, "maxTimeS": 150,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "timeoutCompleteCap": 1,
+    "endLiquidateS": 280, "priceMin": 0.12, "priceMax": 0.89,
+    "targetMakerLatencyMs": 130, "pauseMakerAboveLatencyMs": 250,
+    "takerLatencyMs": 520, "makerRebateRate": 0
+  },
+  {
+    "name": "consensus_oco_q094_ttl750_stop150_exp10_timeout8",
+    "signalMode": "twoSided", "postOnly": true,
+    "pairQuoteCap": 0.94, "confirmPairQuoteCap": 0.94, "confirmMaxAgeMs": 500,
+    "pairCostCap": 0.94, "balancedInventoryPairBidCap": 0.94,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 750, "cancelLatencyMs": 500, "cancelOverweightOnFill": true,
+    "unpairedTimeoutS": 8, "minTimeS": 5, "maxTimeS": 150,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "timeoutCompleteCap": 1,
+    "endLiquidateS": 280, "priceMin": 0.12, "priceMax": 0.89,
+    "targetMakerLatencyMs": 130, "pauseMakerAboveLatencyMs": 250,
+    "takerLatencyMs": 520, "makerRebateRate": 0
+  },
+  {
+    "name": "consensus_oco_q094_ttl750_stop150_exp5_timeout8",
+    "signalMode": "twoSided", "postOnly": true,
+    "pairQuoteCap": 0.94, "confirmPairQuoteCap": 0.94, "confirmMaxAgeMs": 500,
+    "pairCostCap": 0.94, "balancedInventoryPairBidCap": 0.94,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 5,
+    "ttlMs": 750, "cancelLatencyMs": 500, "cancelOverweightOnFill": true,
+    "unpairedTimeoutS": 8, "minTimeS": 5, "maxTimeS": 150,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "timeoutCompleteCap": 1,
+    "endLiquidateS": 280, "priceMin": 0.12, "priceMax": 0.89,
+    "targetMakerLatencyMs": 130, "pauseMakerAboveLatencyMs": 250,
+    "takerLatencyMs": 520, "makerRebateRate": 0
+  }
+]

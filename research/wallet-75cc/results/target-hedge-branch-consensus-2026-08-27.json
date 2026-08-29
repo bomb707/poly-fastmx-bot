@@ -1,0 +1,800 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T14:02:46.080Z",
+  "split": "2026-08-22T00:00:00.000Z",
+  "method": "chronological classifier for partial-hedge versus inventory-cross using only public pre-fire L2/feed and reconstructed pre-action inventory",
+  "samples": {
+    "actions": 6025,
+    "reversals": 1837,
+    "train": 1189,
+    "holdout": 648,
+    "hedge": 833,
+    "cross": 1004
+  },
+  "formulaEvidence": {
+    "hedge": {
+      "signedShares": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 8,
+        "p75": 16,
+        "p90": 33
+      },
+      "beforeAbs": {
+        "p10": 6.265153,
+        "p25": 11,
+        "p50": 18,
+        "p75": 32,
+        "p90": 53.813305
+      },
+      "remainingOldResidual": {
+        "p10": 0.70715,
+        "p25": 2.862027,
+        "p50": 8.21,
+        "p75": 19.090912,
+        "p90": 36.124734
+      }
+    },
+    "cross": {
+      "signedShares": {
+        "p10": 6,
+        "p25": 10,
+        "p50": 21,
+        "p75": 38,
+        "p90": 63.7
+      },
+      "beforeAbs": {
+        "p10": 1.812543,
+        "p25": 5,
+        "p50": 6.788422,
+        "p75": 13.397338,
+        "p90": 25.457501
+      },
+      "newSideResidual": {
+        "p10": 1.516666,
+        "p25": 4.256672,
+        "p50": 10.472223,
+        "p75": 23.070442,
+        "p90": 43.401858
+      },
+      "sizeMinusOldImbalance": {
+        "p10": 1.516666,
+        "p25": 4.256672,
+        "p50": 10.472223,
+        "p75": 23.070442,
+        "p90": 43.401858
+      }
+    },
+    "signedSizeBands": [
+      {
+        "low": 0,
+        "high": 7,
+        "orders": 525,
+        "crossPct": 27.81,
+        "beforeAbs": {
+          "p10": 2.528,
+          "p25": 5.073528,
+          "p50": 8.201022,
+          "p75": 16.263156,
+          "p90": 29.330176
+        },
+        "afterResidual": {
+          "p10": 0.267362,
+          "p25": 1,
+          "p50": 2.398597,
+          "p75": 4.561545,
+          "p90": 5.733304
+        }
+      },
+      {
+        "low": 8,
+        "high": 15,
+        "orders": 470,
+        "crossPct": 50.851,
+        "beforeAbs": {
+          "p10": 2.859824,
+          "p25": 5.205555,
+          "p50": 9.499898,
+          "p75": 18.971875,
+          "p90": 34.764817
+        },
+        "afterResidual": {
+          "p10": 1.098933,
+          "p25": 2.993591,
+          "p50": 5,
+          "p75": 7.978394,
+          "p90": 10.328378
+        }
+      },
+      {
+        "low": 16,
+        "high": 29,
+        "orders": 385,
+        "crossPct": 69.351,
+        "beforeAbs": {
+          "p10": 4.670384,
+          "p25": 6,
+          "p50": 11.587271,
+          "p75": 20.892742,
+          "p90": 36
+        },
+        "afterResidual": {
+          "p10": 3.041578,
+          "p25": 7.387809,
+          "p50": 12.828583,
+          "p75": 16.757689,
+          "p90": 22.350905
+        }
+      },
+      {
+        "low": 30,
+        "high": 59,
+        "orders": 308,
+        "crossPct": 75.649,
+        "beforeAbs": {
+          "p10": 5.073363,
+          "p25": 7.86515,
+          "p50": 15.339474,
+          "p75": 27.046344,
+          "p90": 45.550914
+        },
+        "afterResidual": {
+          "p10": 8.415583,
+          "p25": 14.974933,
+          "p50": 25.504845,
+          "p75": 34.165713,
+          "p90": 43.438299
+        }
+      },
+      {
+        "low": 60,
+        "high": null,
+        "orders": 149,
+        "crossPct": 79.866,
+        "beforeAbs": {
+          "p10": 5.435893,
+          "p25": 12.179364,
+          "p50": 26.182646,
+          "p75": 48.189387,
+          "p90": 74.39681
+        },
+        "afterResidual": {
+          "p10": 17.538053,
+          "p25": 35.190294,
+          "p50": 55.148697,
+          "p75": 73.67681,
+          "p90": 114.270095
+        }
+      }
+    ]
+  },
+  "model": {
+    "features": [
+      "timeS",
+      "ask",
+      "spread",
+      "pairAsk",
+      "askDepth1",
+      "bidDepth1",
+      "askDepth3",
+      "bidDepth3",
+      "topDepthImbalance",
+      "depth3Imbalance",
+      "topAskShareOfDepth3",
+      "micropriceBias",
+      "sideAskMove1",
+      "sideBidMove1",
+      "sideAskMove3",
+      "sideBidMove3",
+      "sideAskMove5",
+      "sideBidMove5",
+      "sideAskMove10",
+      "sideBidMove10",
+      "askDepth3Change1",
+      "bidDepth3Change1",
+      "askDepth3Change3",
+      "bidDepth3Change3",
+      "askDepth3Change5",
+      "bidDepth3Change5",
+      "bzMove1",
+      "bzMove3",
+      "bzMove5",
+      "bzMove10",
+      "clMove1",
+      "clMove3",
+      "clMove5",
+      "clMove10",
+      "bzGap",
+      "clGap",
+      "absoluteInventory",
+      "orientedInventory",
+      "fifoPairCost",
+      "sinceLastFireS",
+      "sinceSameSideFireS"
+    ],
+    "tree": {
+      "positiveWeight": 0.8180428134556575,
+      "root": {
+        "id": 0,
+        "depth": 0,
+        "rows": 1189,
+        "positives": 654,
+        "observedPositiveRate": 0.550042,
+        "balancedPositiveRate": 0.5,
+        "field": "absoluteInventory",
+        "threshold": 9.202,
+        "gain": 0.08264989,
+        "left": {
+          "id": 1,
+          "depth": 1,
+          "rows": 476,
+          "positives": 378,
+          "observedPositiveRate": 0.794118,
+          "balancedPositiveRate": 0.759344,
+          "field": "orientedInventory",
+          "threshold": -5,
+          "gain": 0.04362953,
+          "left": {
+            "id": 2,
+            "depth": 2,
+            "rows": 313,
+            "positives": 219,
+            "observedPositiveRate": 0.699681,
+            "balancedPositiveRate": 0.655868,
+            "field": "topAskShareOfDepth3",
+            "threshold": 0.38570565,
+            "gain": 0.01192347,
+            "left": {
+              "id": 3,
+              "depth": 3,
+              "rows": 250,
+              "positives": 166,
+              "observedPositiveRate": 0.664,
+              "balancedPositiveRate": 0.617826,
+              "field": "bzMove10",
+              "threshold": 0.01025324,
+              "gain": 0.01385869,
+              "left": {
+                "id": 4,
+                "depth": 4,
+                "rows": 150,
+                "positives": 90,
+                "observedPositiveRate": 0.6,
+                "balancedPositiveRate": 0.550978,
+                "field": "topDepthImbalance",
+                "threshold": 0.24815022,
+                "gain": 0.00989721,
+                "left": {
+                  "id": 5,
+                  "depth": 5,
+                  "rows": 60,
+                  "positives": 41,
+                  "observedPositiveRate": 0.683333,
+                  "balancedPositiveRate": 0.638369
+                },
+                "right": {
+                  "id": 6,
+                  "depth": 5,
+                  "rows": 90,
+                  "positives": 49,
+                  "observedPositiveRate": 0.544444,
+                  "balancedPositiveRate": 0.494352
+                }
+              },
+              "right": {
+                "id": 7,
+                "depth": 4,
+                "rows": 100,
+                "positives": 76,
+                "observedPositiveRate": 0.76,
+                "balancedPositiveRate": 0.721485
+              }
+            },
+            "right": {
+              "id": 8,
+              "depth": 3,
+              "rows": 63,
+              "positives": 53,
+              "observedPositiveRate": 0.84127,
+              "balancedPositiveRate": 0.812581
+            }
+          },
+          "right": {
+            "id": 9,
+            "depth": 2,
+            "rows": 163,
+            "positives": 159,
+            "observedPositiveRate": 0.97546,
+            "balancedPositiveRate": 0.970165
+          }
+        },
+        "right": {
+          "id": 10,
+          "depth": 1,
+          "rows": 713,
+          "positives": 276,
+          "observedPositiveRate": 0.387097,
+          "balancedPositiveRate": 0.340656,
+          "field": "sinceLastFireS",
+          "threshold": 33.225,
+          "gain": 0.01824545,
+          "left": {
+            "id": 11,
+            "depth": 2,
+            "rows": 429,
+            "positives": 131,
+            "observedPositiveRate": 0.305361,
+            "balancedPositiveRate": 0.264495,
+            "field": "absoluteInventory",
+            "threshold": 18.8575,
+            "gain": 0.01770308,
+            "left": {
+              "id": 12,
+              "depth": 3,
+              "rows": 172,
+              "positives": 74,
+              "observedPositiveRate": 0.430233,
+              "balancedPositiveRate": 0.381841,
+              "field": "bidDepth3Change5",
+              "threshold": -60.032,
+              "gain": 0.0400634,
+              "left": {
+                "id": 13,
+                "depth": 4,
+                "rows": 69,
+                "positives": 42,
+                "observedPositiveRate": 0.608696,
+                "balancedPositiveRate": 0.559958
+              },
+              "right": {
+                "id": 14,
+                "depth": 4,
+                "rows": 103,
+                "positives": 32,
+                "observedPositiveRate": 0.31068,
+                "balancedPositiveRate": 0.269377
+              }
+            },
+            "right": {
+              "id": 15,
+              "depth": 3,
+              "rows": 257,
+              "positives": 57,
+              "observedPositiveRate": 0.22179,
+              "balancedPositiveRate": 0.189064,
+              "field": "askDepth1",
+              "threshold": 97.322,
+              "gain": 0.00958639,
+              "left": {
+                "id": 16,
+                "depth": 4,
+                "rows": 103,
+                "positives": 13,
+                "observedPositiveRate": 0.126214,
+                "balancedPositiveRate": 0.105675
+              },
+              "right": {
+                "id": 17,
+                "depth": 4,
+                "rows": 154,
+                "positives": 44,
+                "observedPositiveRate": 0.285714,
+                "balancedPositiveRate": 0.246544,
+                "field": "ask",
+                "threshold": 0.46,
+                "gain": 0.0104664,
+                "left": {
+                  "id": 18,
+                  "depth": 5,
+                  "rows": 63,
+                  "positives": 24,
+                  "observedPositiveRate": 0.380952,
+                  "balancedPositiveRate": 0.334846
+                },
+                "right": {
+                  "id": 19,
+                  "depth": 5,
+                  "rows": 91,
+                  "positives": 20,
+                  "observedPositiveRate": 0.21978,
+                  "balancedPositiveRate": 0.187279
+                }
+              }
+            }
+          },
+          "right": {
+            "id": 20,
+            "depth": 2,
+            "rows": 284,
+            "positives": 145,
+            "observedPositiveRate": 0.510563,
+            "balancedPositiveRate": 0.460438,
+            "field": "askDepth3",
+            "threshold": 671.76,
+            "gain": 0.00708413,
+            "left": {
+              "id": 21,
+              "depth": 3,
+              "rows": 142,
+              "positives": 64,
+              "observedPositiveRate": 0.450704,
+              "balancedPositiveRate": 0.401633,
+              "field": "askDepth1",
+              "threshold": 68.265,
+              "gain": 0.01346281,
+              "left": {
+                "id": 22,
+                "depth": 4,
+                "rows": 71,
+                "positives": 26,
+                "observedPositiveRate": 0.366197,
+                "balancedPositiveRate": 0.320951
+              },
+              "right": {
+                "id": 23,
+                "depth": 4,
+                "rows": 71,
+                "positives": 38,
+                "observedPositiveRate": 0.535211,
+                "balancedPositiveRate": 0.485064
+              }
+            },
+            "right": {
+              "id": 24,
+              "depth": 3,
+              "rows": 142,
+              "positives": 81,
+              "observedPositiveRate": 0.570423,
+              "balancedPositiveRate": 0.520672,
+              "field": "clGap",
+              "threshold": -0.00964804,
+              "gain": 0.02316079,
+              "left": {
+                "id": 25,
+                "depth": 4,
+                "rows": 71,
+                "positives": 48,
+                "observedPositiveRate": 0.676056,
+                "balancedPositiveRate": 0.630617
+              },
+              "right": {
+                "id": 26,
+                "depth": 4,
+                "rows": 71,
+                "positives": 33,
+                "observedPositiveRate": 0.464789,
+                "balancedPositiveRate": 0.415343
+              }
+            }
+          }
+        }
+      }
+    },
+    "train": {
+      "rows": 1189,
+      "positives": 654,
+      "auc": 0.801535,
+      "threshold": 0.485064,
+      "tp": 506,
+      "fp": 181,
+      "tn": 354,
+      "fn": 148,
+      "accuracyPct": 72.33,
+      "precisionPct": 73.654,
+      "recallPct": 77.37,
+      "predictedCrossPct": 57.78,
+      "actualCrossPct": 55.004
+    },
+    "holdout": {
+      "rows": 648,
+      "positives": 350,
+      "auc": 0.792915,
+      "threshold": 0.485064,
+      "tp": 291,
+      "fp": 117,
+      "tn": 181,
+      "fn": 59,
+      "accuracyPct": 72.84,
+      "precisionPct": 71.324,
+      "recallPct": 83.143,
+      "predictedCrossPct": 62.963,
+      "actualCrossPct": 54.012
+    },
+    "strongestCrossLeaves": [
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory > -5"
+        ],
+        "rows": 163,
+        "positives": 159,
+        "observedPositiveRate": 0.97546,
+        "balancedPositiveRate": 0.970165
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 > 0.38570565"
+        ],
+        "rows": 63,
+        "positives": 53,
+        "observedPositiveRate": 0.84127,
+        "balancedPositiveRate": 0.812581
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 <= 0.38570565",
+          "bzMove10 > 0.01025324"
+        ],
+        "rows": 100,
+        "positives": 76,
+        "observedPositiveRate": 0.76,
+        "balancedPositiveRate": 0.721485
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 <= 0.38570565",
+          "bzMove10 <= 0.01025324",
+          "topDepthImbalance <= 0.24815022"
+        ],
+        "rows": 60,
+        "positives": 41,
+        "observedPositiveRate": 0.683333,
+        "balancedPositiveRate": 0.638369
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 > 671.76",
+          "clGap <= -0.00964804"
+        ],
+        "rows": 71,
+        "positives": 48,
+        "observedPositiveRate": 0.676056,
+        "balancedPositiveRate": 0.630617
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory <= 18.8575",
+          "bidDepth3Change5 <= -60.032"
+        ],
+        "rows": 69,
+        "positives": 42,
+        "observedPositiveRate": 0.608696,
+        "balancedPositiveRate": 0.559958
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 <= 0.38570565",
+          "bzMove10 <= 0.01025324",
+          "topDepthImbalance > 0.24815022"
+        ],
+        "rows": 90,
+        "positives": 49,
+        "observedPositiveRate": 0.544444,
+        "balancedPositiveRate": 0.494352
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 <= 671.76",
+          "askDepth1 > 68.265"
+        ],
+        "rows": 71,
+        "positives": 38,
+        "observedPositiveRate": 0.535211,
+        "balancedPositiveRate": 0.485064
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 > 671.76",
+          "clGap > -0.00964804"
+        ],
+        "rows": 71,
+        "positives": 33,
+        "observedPositiveRate": 0.464789,
+        "balancedPositiveRate": 0.415343
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory > 18.8575",
+          "askDepth1 > 97.322",
+          "ask <= 0.46"
+        ],
+        "rows": 63,
+        "positives": 24,
+        "observedPositiveRate": 0.380952,
+        "balancedPositiveRate": 0.334846
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 <= 671.76",
+          "askDepth1 <= 68.265"
+        ],
+        "rows": 71,
+        "positives": 26,
+        "observedPositiveRate": 0.366197,
+        "balancedPositiveRate": 0.320951
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory <= 18.8575",
+          "bidDepth3Change5 > -60.032"
+        ],
+        "rows": 103,
+        "positives": 32,
+        "observedPositiveRate": 0.31068,
+        "balancedPositiveRate": 0.269377
+      }
+    ],
+    "strongestHedgeLeaves": [
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory > 18.8575",
+          "askDepth1 <= 97.322"
+        ],
+        "rows": 103,
+        "positives": 13,
+        "observedPositiveRate": 0.126214,
+        "balancedPositiveRate": 0.105675
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory > 18.8575",
+          "askDepth1 > 97.322",
+          "ask > 0.46"
+        ],
+        "rows": 91,
+        "positives": 20,
+        "observedPositiveRate": 0.21978,
+        "balancedPositiveRate": 0.187279
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory <= 18.8575",
+          "bidDepth3Change5 > -60.032"
+        ],
+        "rows": 103,
+        "positives": 32,
+        "observedPositiveRate": 0.31068,
+        "balancedPositiveRate": 0.269377
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 <= 671.76",
+          "askDepth1 <= 68.265"
+        ],
+        "rows": 71,
+        "positives": 26,
+        "observedPositiveRate": 0.366197,
+        "balancedPositiveRate": 0.320951
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory > 18.8575",
+          "askDepth1 > 97.322",
+          "ask <= 0.46"
+        ],
+        "rows": 63,
+        "positives": 24,
+        "observedPositiveRate": 0.380952,
+        "balancedPositiveRate": 0.334846
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 > 671.76",
+          "clGap > -0.00964804"
+        ],
+        "rows": 71,
+        "positives": 33,
+        "observedPositiveRate": 0.464789,
+        "balancedPositiveRate": 0.415343
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 <= 671.76",
+          "askDepth1 > 68.265"
+        ],
+        "rows": 71,
+        "positives": 38,
+        "observedPositiveRate": 0.535211,
+        "balancedPositiveRate": 0.485064
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 <= 0.38570565",
+          "bzMove10 <= 0.01025324",
+          "topDepthImbalance > 0.24815022"
+        ],
+        "rows": 90,
+        "positives": 49,
+        "observedPositiveRate": 0.544444,
+        "balancedPositiveRate": 0.494352
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS <= 33.225",
+          "absoluteInventory <= 18.8575",
+          "bidDepth3Change5 <= -60.032"
+        ],
+        "rows": 69,
+        "positives": 42,
+        "observedPositiveRate": 0.608696,
+        "balancedPositiveRate": 0.559958
+      },
+      {
+        "rules": [
+          "absoluteInventory > 9.202",
+          "sinceLastFireS > 33.225",
+          "askDepth3 > 671.76",
+          "clGap <= -0.00964804"
+        ],
+        "rows": 71,
+        "positives": 48,
+        "observedPositiveRate": 0.676056,
+        "balancedPositiveRate": 0.630617
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 <= 0.38570565",
+          "bzMove10 <= 0.01025324",
+          "topDepthImbalance <= 0.24815022"
+        ],
+        "rows": 60,
+        "positives": 41,
+        "observedPositiveRate": 0.683333,
+        "balancedPositiveRate": 0.638369
+      },
+      {
+        "rules": [
+          "absoluteInventory <= 9.202",
+          "orientedInventory <= -5",
+          "topAskShareOfDepth3 <= 0.38570565",
+          "bzMove10 > 0.01025324"
+        ],
+        "rows": 100,
+        "positives": 76,
+        "observedPositiveRate": 0.76,
+        "balancedPositiveRate": 0.721485
+      }
+    ]
+  }
+}

@@ -1,0 +1,1400 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T14:02:51.025Z",
+  "split": "2026-08-22T00:00:00.000Z",
+  "targetMode": "residual",
+  "method": "regression tree on log(1+absolute post-action residual shares), using only causal public pre-fire features and inventory",
+  "features": [
+    "timeS",
+    "ask",
+    "spread",
+    "pairAsk",
+    "askDepth1",
+    "bidDepth1",
+    "askDepth3",
+    "bidDepth3",
+    "topDepthImbalance",
+    "depth3Imbalance",
+    "topAskShareOfDepth3",
+    "micropriceBias",
+    "sideAskMove1",
+    "sideBidMove1",
+    "sideAskMove3",
+    "sideBidMove3",
+    "sideAskMove5",
+    "sideBidMove5",
+    "sideAskMove10",
+    "sideBidMove10",
+    "askDepth3Change1",
+    "bidDepth3Change1",
+    "askDepth3Change3",
+    "bidDepth3Change3",
+    "askDepth3Change5",
+    "bidDepth3Change5",
+    "bzMove1",
+    "bzMove3",
+    "bzMove5",
+    "bzMove10",
+    "clMove1",
+    "clMove3",
+    "clMove5",
+    "clMove10",
+    "bzGap",
+    "clGap",
+    "absoluteInventory",
+    "orientedInventory",
+    "isHedge",
+    "fifoPairCost",
+    "sinceLastFireS",
+    "sinceSameSideFireS",
+    "coinBtc"
+  ],
+  "samples": {
+    "all": 6025,
+    "train": 3837,
+    "holdout": 2188
+  },
+  "tree": {
+    "id": 0,
+    "depth": 0,
+    "rows": 3837,
+    "medianSize": 13.43846,
+    "meanLogSize": 2.667566812,
+    "size": {
+      "p10": 4.875579,
+      "p25": 6.538463,
+      "p50": 13.43846,
+      "p75": 25.58946,
+      "p90": 44.493685
+    },
+    "field": "orientedInventory",
+    "threshold": 10.05128,
+    "gain": 0.25040391,
+    "left": {
+      "id": 1,
+      "depth": 1,
+      "rows": 3069,
+      "medianSize": 10.454533,
+      "meanLogSize": 2.43883712,
+      "size": {
+        "p10": 3.742346,
+        "p25": 6,
+        "p50": 10.454533,
+        "p75": 17.309053,
+        "p90": 32.304882
+      },
+      "field": "orientedInventory",
+      "threshold": -23.6111536,
+      "gain": 0.07865532,
+      "left": {
+        "id": 2,
+        "depth": 2,
+        "rows": 307,
+        "medianSize": 23.448686,
+        "meanLogSize": 3.148308026,
+        "size": {
+          "p10": 6.955842,
+          "p25": 14.524048,
+          "p50": 23.448686,
+          "p75": 40.160086,
+          "p90": 63.714424
+        },
+        "field": "absoluteInventory",
+        "threshold": 41.8222216,
+        "gain": 0.13048064,
+        "left": {
+          "id": 3,
+          "depth": 3,
+          "rows": 184,
+          "medianSize": 19.545537,
+          "meanLogSize": 2.886714068,
+          "size": {
+            "p10": 4.769725,
+            "p25": 11.129677,
+            "p50": 19.545537,
+            "p75": 27.169119,
+            "p90": 38.430739
+          },
+          "field": "orientedInventory",
+          "threshold": -30.237485,
+          "gain": 0.06568109,
+          "left": {
+            "id": 4,
+            "depth": 4,
+            "rows": 92,
+            "medianSize": 24.194714,
+            "meanLogSize": 3.095656312,
+            "size": {
+              "p10": 7.293254,
+              "p25": 17.668883,
+              "p50": 24.194714,
+              "p75": 30.925739,
+              "p90": 38.281188
+            },
+            "field": "askDepth3Change1",
+            "threshold": -85.84,
+            "gain": 0.04640463,
+            "left": {
+              "id": 5,
+              "depth": 5,
+              "rows": 46,
+              "medianSize": 23.582645,
+              "meanLogSize": 2.940442693,
+              "size": {
+                "p10": 4.861825,
+                "p25": 16.513889,
+                "p50": 23.582645,
+                "p75": 30.593409,
+                "p90": 35.619047
+              }
+            },
+            "right": {
+              "id": 6,
+              "depth": 5,
+              "rows": 46,
+              "medianSize": 24.284918,
+              "meanLogSize": 3.250869931,
+              "size": {
+                "p10": 13.055941,
+                "p25": 20.098937,
+                "p50": 24.284918,
+                "p75": 31.078141,
+                "p90": 41.663984
+              }
+            }
+          },
+          "right": {
+            "id": 7,
+            "depth": 4,
+            "rows": 92,
+            "medianSize": 16.326729,
+            "meanLogSize": 2.677771823,
+            "size": {
+              "p10": 3.350969,
+              "p25": 8.64218,
+              "p50": 16.326729,
+              "p75": 20.541091,
+              "p90": 37.754735
+            },
+            "field": "fifoPairCost",
+            "threshold": 1.07321307,
+            "gain": 0.05972262,
+            "left": {
+              "id": 8,
+              "depth": 5,
+              "rows": 46,
+              "medianSize": 12.521365,
+              "meanLogSize": 2.469991186,
+              "size": {
+                "p10": 2.289544,
+                "p25": 7.13613,
+                "p50": 12.521365,
+                "p75": 18.404753,
+                "p90": 21.297071
+              }
+            },
+            "right": {
+              "id": 9,
+              "depth": 5,
+              "rows": 46,
+              "medianSize": 17.742758,
+              "meanLogSize": 2.885552461,
+              "size": {
+                "p10": 6.817642,
+                "p25": 9.833338,
+                "p50": 17.742758,
+                "p75": 22.370874,
+                "p90": 40.851055
+              }
+            }
+          }
+        },
+        "right": {
+          "id": 10,
+          "depth": 3,
+          "rows": 123,
+          "medianSize": 39.963558,
+          "meanLogSize": 3.539635574,
+          "size": {
+            "p10": 11.594156,
+            "p25": 23.069161,
+            "p50": 39.963558,
+            "p75": 59.252519,
+            "p90": 73.251586
+          },
+          "field": "absoluteInventory",
+          "threshold": 62.6571488,
+          "gain": 0.09466062,
+          "left": {
+            "id": 11,
+            "depth": 4,
+            "rows": 74,
+            "medianSize": 33.562087,
+            "meanLogSize": 3.32892001,
+            "size": {
+              "p10": 9.533051,
+              "p25": 21.168823,
+              "p50": 33.562087,
+              "p75": 42.968021,
+              "p90": 53.66712
+            }
+          },
+          "right": {
+            "id": 12,
+            "depth": 4,
+            "rows": 49,
+            "medianSize": 61.281301,
+            "meanLogSize": 3.857859078,
+            "size": {
+              "p10": 12.124681,
+              "p25": 47.333332,
+              "p50": 61.281301,
+              "p75": 70.815297,
+              "p90": 95.206742
+            }
+          }
+        }
+      },
+      "right": {
+        "id": 13,
+        "depth": 2,
+        "rows": 2762,
+        "medianSize": 9.907755,
+        "meanLogSize": 2.359978478,
+        "size": {
+          "p10": 3.438881,
+          "p25": 5.815056,
+          "p50": 9.907755,
+          "p75": 15.589678,
+          "p90": 27.179354
+        },
+        "field": "orientedInventory",
+        "threshold": 0,
+        "gain": 0.1023974,
+        "left": {
+          "id": 14,
+          "depth": 3,
+          "rows": 2143,
+          "medianSize": 7.638014,
+          "meanLogSize": 2.22228715,
+          "size": {
+            "p10": 2.489441,
+            "p25": 5.103102,
+            "p50": 7.638014,
+            "p75": 13.776364,
+            "p90": 25.493876
+          },
+          "field": "fifoPairCost",
+          "threshold": 0.67467601,
+          "gain": 0.0247648,
+          "left": {
+            "id": 15,
+            "depth": 4,
+            "rows": 1286,
+            "medianSize": 8,
+            "meanLogSize": 2.327549459,
+            "size": {
+              "p10": 5,
+              "p25": 6,
+              "p50": 8,
+              "p75": 13.180685,
+              "p90": 22.300008
+            },
+            "field": "timeS",
+            "threshold": 126.634,
+            "gain": 0.05642286,
+            "left": {
+              "id": 16,
+              "depth": 5,
+              "rows": 1029,
+              "medianSize": 7.31343,
+              "meanLogSize": 2.256302046,
+              "size": {
+                "p10": 5,
+                "p25": 5.675673,
+                "p50": 7.31343,
+                "p75": 12,
+                "p90": 17.891524
+              },
+              "field": "askDepth3",
+              "threshold": 416.276,
+              "gain": 0.03572754,
+              "left": {
+                "id": 17,
+                "depth": 6,
+                "rows": 309,
+                "medianSize": 8.571425,
+                "meanLogSize": 2.404574564,
+                "size": {
+                  "p10": 5.11263,
+                  "p25": 6.11111,
+                  "p50": 8.571425,
+                  "p75": 15.31111,
+                  "p90": 24.037173
+                }
+              },
+              "right": {
+                "id": 18,
+                "depth": 6,
+                "rows": 720,
+                "medianSize": 7,
+                "meanLogSize": 2.192668423,
+                "size": {
+                  "p10": 5,
+                  "p25": 5.355574,
+                  "p50": 7,
+                  "p75": 10.959281,
+                  "p90": 16
+                }
+              }
+            },
+            "right": {
+              "id": 19,
+              "depth": 5,
+              "rows": 257,
+              "medianSize": 11,
+              "meanLogSize": 2.61281634,
+              "size": {
+                "p10": 5.111185,
+                "p25": 6.24,
+                "p50": 11,
+                "p75": 22.483135,
+                "p90": 40.264282
+              },
+              "field": "timeS",
+              "threshold": 191.6052,
+              "gain": 0.04385192,
+              "left": {
+                "id": 20,
+                "depth": 6,
+                "rows": 154,
+                "medianSize": 9.469642,
+                "meanLogSize": 2.475443741,
+                "size": {
+                  "p10": 5.03409,
+                  "p25": 6.062829,
+                  "p50": 9.469642,
+                  "p75": 19.85,
+                  "p90": 32.294735
+                }
+              },
+              "right": {
+                "id": 21,
+                "depth": 6,
+                "rows": 103,
+                "medianSize": 13.134,
+                "meanLogSize": 2.818208382,
+                "size": {
+                  "p10": 5.192155,
+                  "p25": 7.756097,
+                  "p50": 13.134,
+                  "p75": 28.675,
+                  "p90": 52.490283
+                }
+              }
+            }
+          },
+          "right": {
+            "id": 22,
+            "depth": 4,
+            "rows": 857,
+            "medianSize": 7,
+            "meanLogSize": 2.064332274,
+            "size": {
+              "p10": 0.912249,
+              "p25": 2.876415,
+              "p50": 7,
+              "p75": 14.476008,
+              "p90": 30.224611
+            },
+            "field": "timeS",
+            "threshold": 177.1008,
+            "gain": 0.04082056,
+            "left": {
+              "id": 23,
+              "depth": 5,
+              "rows": 514,
+              "medianSize": 5.765885,
+              "meanLogSize": 1.891487399,
+              "size": {
+                "p10": 0.671388,
+                "p25": 2.146748,
+                "p50": 5.765885,
+                "p75": 11.833215,
+                "p90": 24.78613
+              },
+              "field": "sideBidMove10",
+              "threshold": 0.11,
+              "gain": 0.05029438,
+              "left": {
+                "id": 24,
+                "depth": 6,
+                "rows": 417,
+                "medianSize": 5.055216,
+                "meanLogSize": 1.783123208,
+                "size": {
+                  "p10": 0.505431,
+                  "p25": 1.819703,
+                  "p50": 5.055216,
+                  "p75": 11.056172,
+                  "p90": 21.497354
+                }
+              },
+              "right": {
+                "id": 25,
+                "depth": 6,
+                "rows": 97,
+                "medianSize": 8.777404,
+                "meanLogSize": 2.357341706,
+                "size": {
+                  "p10": 2.914774,
+                  "p25": 4.968297,
+                  "p50": 8.777404,
+                  "p75": 17.191364,
+                  "p90": 40.487721
+                }
+              }
+            },
+            "right": {
+              "id": 26,
+              "depth": 5,
+              "rows": 343,
+              "medianSize": 9.514283,
+              "meanLogSize": 2.323347625,
+              "size": {
+                "p10": 1.508728,
+                "p25": 4.105517,
+                "p50": 9.514283,
+                "p75": 17.876832,
+                "p90": 42.377027
+              },
+              "field": "topAskShareOfDepth3",
+              "threshold": 0.30420129,
+              "gain": 0.03026351,
+              "left": {
+                "id": 27,
+                "depth": 6,
+                "rows": 240,
+                "medianSize": 8.657878,
+                "meanLogSize": 2.202508999,
+                "size": {
+                  "p10": 1.300164,
+                  "p25": 3.176449,
+                  "p50": 8.657878,
+                  "p75": 16.084474,
+                  "p90": 33.573289
+                }
+              },
+              "right": {
+                "id": 28,
+                "depth": 6,
+                "rows": 103,
+                "medianSize": 12.181366,
+                "meanLogSize": 2.604913355,
+                "size": {
+                  "p10": 3.024542,
+                  "p25": 6.081338,
+                  "p50": 12.181366,
+                  "p75": 21.992253,
+                  "p90": 58.485687
+                }
+              }
+            }
+          }
+        },
+        "right": {
+          "id": 29,
+          "depth": 3,
+          "rows": 619,
+          "medianSize": 14.37428,
+          "meanLogSize": 2.836670748,
+          "size": {
+            "p10": 9.860582,
+            "p25": 11.574694,
+            "p50": 14.37428,
+            "p75": 19.363312,
+            "p90": 32.460498
+          },
+          "field": "absoluteInventory",
+          "threshold": 6.3,
+          "gain": 0.05880842,
+          "left": {
+            "id": 30,
+            "depth": 4,
+            "rows": 373,
+            "medianSize": 12.484593,
+            "meanLogSize": 2.739604856,
+            "size": {
+              "p10": 8.238101,
+              "p25": 10.781092,
+              "p50": 12.484593,
+              "p75": 18,
+              "p90": 31.166666
+            },
+            "field": "timeS",
+            "threshold": 153.8112,
+            "gain": 0.0487239,
+            "left": {
+              "id": 31,
+              "depth": 5,
+              "rows": 224,
+              "medianSize": 12.052466,
+              "meanLogSize": 2.644962659,
+              "size": {
+                "p10": 9.244348,
+                "p25": 10.989844,
+                "p50": 12.052466,
+                "p75": 15.147629,
+                "p90": 21.621039
+              },
+              "field": "absoluteInventory",
+              "threshold": 4.0545466,
+              "gain": 0.1611879,
+              "left": {
+                "id": 32,
+                "depth": 6,
+                "rows": 45,
+                "medianSize": 9.56,
+                "meanLogSize": 2.352526019,
+                "size": {
+                  "p10": 5.963558,
+                  "p25": 7.76,
+                  "p50": 9.56,
+                  "p75": 11.238094,
+                  "p90": 14.625589
+                }
+              },
+              "right": {
+                "id": 33,
+                "depth": 6,
+                "rows": 179,
+                "medianSize": 12.455216,
+                "meanLogSize": 2.71848025,
+                "size": {
+                  "p10": 10.371386,
+                  "p25": 11.170055,
+                  "p50": 12.455216,
+                  "p75": 16.421948,
+                  "p90": 23.317339
+                }
+              }
+            },
+            "right": {
+              "id": 34,
+              "depth": 5,
+              "rows": 149,
+              "medianSize": 13.8344,
+              "meanLogSize": 2.881885745,
+              "size": {
+                "p10": 7.529053,
+                "p25": 10.263156,
+                "p50": 13.8344,
+                "p75": 24.677648,
+                "p90": 48.390906
+              },
+              "field": "askDepth3Change1",
+              "threshold": 141.81,
+              "gain": 0.05080643,
+              "left": {
+                "id": 35,
+                "depth": 6,
+                "rows": 104,
+                "medianSize": 13.345522,
+                "meanLogSize": 2.78158533,
+                "size": {
+                  "p10": 7.292165,
+                  "p25": 10.21186,
+                  "p50": 13.345522,
+                  "p75": 20.114449,
+                  "p90": 37.197606
+                }
+              },
+              "right": {
+                "id": 36,
+                "depth": 6,
+                "rows": 45,
+                "medianSize": 18.653845,
+                "meanLogSize": 3.113691147,
+                "size": {
+                  "p10": 9.467896,
+                  "p25": 11.40354,
+                  "p50": 18.653845,
+                  "p75": 35.533299,
+                  "p90": 57.36792
+                }
+              }
+            }
+          },
+          "right": {
+            "id": 37,
+            "depth": 4,
+            "rows": 246,
+            "medianSize": 16.240703,
+            "meanLogSize": 2.983847892,
+            "size": {
+              "p10": 13.120595,
+              "p25": 14.181815,
+              "p50": 16.240703,
+              "p75": 22.09375,
+              "p90": 33.207774
+            },
+            "field": "sinceSameSideFireS",
+            "threshold": 70.785,
+            "gain": 0.07469477,
+            "left": {
+              "id": 38,
+              "depth": 5,
+              "rows": 197,
+              "medianSize": 15.892852,
+              "meanLogSize": 2.929966837,
+              "size": {
+                "p10": 13.079812,
+                "p25": 14.135134,
+                "p50": 15.892852,
+                "p75": 20.895234,
+                "p90": 28.489598
+              },
+              "field": "absoluteInventory",
+              "threshold": 8.322171,
+              "gain": 0.07254493,
+              "left": {
+                "id": 39,
+                "depth": 6,
+                "rows": 119,
+                "medianSize": 14.8,
+                "meanLogSize": 2.859269744,
+                "size": {
+                  "p10": 12.745593,
+                  "p25": 13.281775,
+                  "p50": 14.8,
+                  "p75": 18.10294,
+                  "p90": 23.764482
+                }
+              },
+              "right": {
+                "id": 40,
+                "depth": 6,
+                "rows": 78,
+                "medianSize": 16.903367,
+                "meanLogSize": 3.037825221,
+                "size": {
+                  "p10": 14.368574,
+                  "p25": 15.225568,
+                  "p50": 16.903367,
+                  "p75": 23.782581,
+                  "p90": 32.853724
+                }
+              }
+            },
+            "right": {
+              "id": 41,
+              "depth": 5,
+              "rows": 49,
+              "medianSize": 18.627908,
+              "meanLogSize": 3.200471725,
+              "size": {
+                "p10": 13.328302,
+                "p25": 15.877836,
+                "p50": 18.627908,
+                "p75": 35.891893,
+                "p90": 48.912773
+              }
+            }
+          }
+        }
+      }
+    },
+    "right": {
+      "id": 42,
+      "depth": 1,
+      "rows": 768,
+      "medianSize": 31.173738,
+      "meanLogSize": 3.581592107,
+      "size": {
+        "p10": 18.621634,
+        "p25": 23.674075,
+        "p50": 31.173738,
+        "p75": 47.110539,
+        "p90": 74.942299
+      },
+      "field": "absoluteInventory",
+      "threshold": 22.1514898,
+      "gain": 0.43705991,
+      "left": {
+        "id": 43,
+        "depth": 2,
+        "rows": 461,
+        "medianSize": 24.621151,
+        "meanLogSize": 3.29391276,
+        "size": {
+          "p10": 17.528945,
+          "p25": 20,
+          "p50": 24.621151,
+          "p75": 30.081785,
+          "p90": 41.407018
+        },
+        "field": "absoluteInventory",
+        "threshold": 13.48148,
+        "gain": 0.12941302,
+        "left": {
+          "id": 44,
+          "depth": 3,
+          "rows": 185,
+          "medianSize": 19.406203,
+          "meanLogSize": 3.141677602,
+          "size": {
+            "p10": 16.349744,
+            "p25": 17.528945,
+            "p50": 19.406203,
+            "p75": 25.252676,
+            "p90": 35.78616
+          },
+          "field": "timeS",
+          "threshold": 166.6944,
+          "gain": 0.098558,
+          "left": {
+            "id": 45,
+            "depth": 4,
+            "rows": 111,
+            "medianSize": 18.4,
+            "meanLogSize": 3.053482501,
+            "size": {
+              "p10": 16.300749,
+              "p25": 17,
+              "p50": 18.4,
+              "p75": 22.246533,
+              "p90": 28.57844
+            },
+            "field": "ask",
+            "threshold": 0.79,
+            "gain": 0.04136377,
+            "left": {
+              "id": 46,
+              "depth": 5,
+              "rows": 62,
+              "medianSize": 18.152839,
+              "meanLogSize": 3.008799631,
+              "size": {
+                "p10": 16.101797,
+                "p25": 16.616543,
+                "p50": 18.152839,
+                "p75": 19.75648,
+                "p90": 27.020919
+              }
+            },
+            "right": {
+              "id": 47,
+              "depth": 5,
+              "rows": 49,
+              "medianSize": 19.600797,
+              "meanLogSize": 3.11002001,
+              "size": {
+                "p10": 16.711454,
+                "p25": 17.639695,
+                "p50": 19.600797,
+                "p75": 23.757966,
+                "p90": 28.662752
+              }
+            }
+          },
+          "right": {
+            "id": 48,
+            "depth": 4,
+            "rows": 74,
+            "medianSize": 23.015438,
+            "meanLogSize": 3.273970253,
+            "size": {
+              "p10": 17.001177,
+              "p25": 18.691002,
+              "p50": 23.015438,
+              "p75": 29.482582,
+              "p90": 43.571773
+            }
+          }
+        },
+        "right": {
+          "id": 49,
+          "depth": 3,
+          "rows": 276,
+          "medianSize": 26.714999,
+          "meanLogSize": 3.395954442,
+          "size": {
+            "p10": 21.258895,
+            "p25": 23.845343,
+            "p50": 26.714999,
+            "p75": 31.525918,
+            "p90": 43.194579
+          },
+          "field": "timeS",
+          "threshold": 222.166,
+          "gain": 0.06904056,
+          "left": {
+            "id": 50,
+            "depth": 4,
+            "rows": 221,
+            "medianSize": 26.270313,
+            "meanLogSize": 3.355510542,
+            "size": {
+              "p10": 20.735223,
+              "p25": 23.346243,
+              "p50": 26.270313,
+              "p75": 30.843746,
+              "p90": 40.395782
+            },
+            "field": "absoluteInventory",
+            "threshold": 18.372074,
+            "gain": 0.06163077,
+            "left": {
+              "id": 51,
+              "depth": 5,
+              "rows": 155,
+              "medianSize": 24.415985,
+              "meanLogSize": 3.31291656,
+              "size": {
+                "p10": 20.05755,
+                "p25": 22.225377,
+                "p50": 24.415985,
+                "p75": 30.096191,
+                "p90": 37.301115
+              },
+              "field": "absoluteInventory",
+              "threshold": 15.12386,
+              "gain": 0.03665907,
+              "left": {
+                "id": 52,
+                "depth": 6,
+                "rows": 62,
+                "medianSize": 22.743716,
+                "meanLogSize": 3.25418984,
+                "size": {
+                  "p10": 19.343787,
+                  "p25": 20.044541,
+                  "p50": 22.743716,
+                  "p75": 28.69074,
+                  "p90": 35.269378
+                }
+              },
+              "right": {
+                "id": 53,
+                "depth": 6,
+                "rows": 93,
+                "medianSize": 25.371558,
+                "meanLogSize": 3.352067707,
+                "size": {
+                  "p10": 22.132749,
+                  "p25": 23.696684,
+                  "p50": 25.371558,
+                  "p75": 30.159457,
+                  "p90": 37.455521
+                }
+              }
+            },
+            "right": {
+              "id": 54,
+              "depth": 5,
+              "rows": 66,
+              "medianSize": 28.033839,
+              "meanLogSize": 3.455541863,
+              "size": {
+                "p10": 24.998774,
+                "p25": 26.122876,
+                "p50": 28.033839,
+                "p75": 31.342567,
+                "p90": 43.76072
+              }
+            }
+          },
+          "right": {
+            "id": 55,
+            "depth": 4,
+            "rows": 55,
+            "medianSize": 30.12,
+            "meanLogSize": 3.558465388,
+            "size": {
+              "p10": 21.981774,
+              "p25": 25.858375,
+              "p50": 30.12,
+              "p75": 44.208661,
+              "p90": 64.654042
+            }
+          }
+        }
+      },
+      "right": {
+        "id": 56,
+        "depth": 2,
+        "rows": 307,
+        "medianSize": 49.842738,
+        "meanLogSize": 4.013579661,
+        "size": {
+          "p10": 31.739809,
+          "p25": 37.15853,
+          "p50": 49.842738,
+          "p75": 72.804363,
+          "p90": 107.967853
+        },
+        "field": "absoluteInventory",
+        "threshold": 56.1730624,
+        "gain": 0.4772844,
+        "left": {
+          "id": 57,
+          "depth": 3,
+          "rows": 245,
+          "medianSize": 43.653845,
+          "meanLogSize": 3.850504733,
+          "size": {
+            "p10": 31.205692,
+            "p25": 35.340067,
+            "p50": 43.653845,
+            "p75": 56.497379,
+            "p90": 69.574202
+          },
+          "field": "absoluteInventory",
+          "threshold": 31.907941,
+          "gain": 0.17378992,
+          "left": {
+            "id": 58,
+            "depth": 4,
+            "rows": 147,
+            "medianSize": 36.328125,
+            "meanLogSize": 3.735904649,
+            "size": {
+              "p10": 30.207742,
+              "p25": 32.729455,
+              "p50": 36.328125,
+              "p75": 45.512919,
+              "p90": 62.43208
+            },
+            "field": "timeS",
+            "threshold": 206.1314,
+            "gain": 0.090853,
+            "left": {
+              "id": 59,
+              "depth": 5,
+              "rows": 88,
+              "medianSize": 36.016139,
+              "meanLogSize": 3.649042016,
+              "size": {
+                "p10": 30.516821,
+                "p25": 32.740884,
+                "p50": 36.016139,
+                "p75": 40.091903,
+                "p90": 50.184153
+              }
+            },
+            "right": {
+              "id": 60,
+              "depth": 5,
+              "rows": 59,
+              "medianSize": 38.57404,
+              "meanLogSize": 3.865462474,
+              "size": {
+                "p10": 29.992675,
+                "p25": 33.052864,
+                "p50": 38.57404,
+                "p75": 56.941871,
+                "p90": 106.413808
+              }
+            }
+          },
+          "right": {
+            "id": 61,
+            "depth": 4,
+            "rows": 98,
+            "medianSize": 51.839984,
+            "meanLogSize": 4.022404859,
+            "size": {
+              "p10": 42.166872,
+              "p25": 47.510372,
+              "p50": 51.839984,
+              "p75": 61.105549,
+              "p90": 74.036578
+            },
+            "field": "absoluteInventory",
+            "threshold": 40.759392,
+            "gain": 0.12003117,
+            "left": {
+              "id": 62,
+              "depth": 5,
+              "rows": 49,
+              "medianSize": 47.540096,
+              "meanLogSize": 3.946236595,
+              "size": {
+                "p10": 40.118962,
+                "p25": 43.081979,
+                "p50": 47.540096,
+                "p75": 57.08802,
+                "p90": 71.770017
+              }
+            },
+            "right": {
+              "id": 63,
+              "depth": 5,
+              "rows": 49,
+              "medianSize": 57.292935,
+              "meanLogSize": 4.098573123,
+              "size": {
+                "p10": 49.834796,
+                "p25": 51.165713,
+                "p50": 57.292935,
+                "p75": 63.305492,
+                "p90": 74.369444
+              }
+            }
+          }
+        },
+        "right": {
+          "id": 64,
+          "depth": 3,
+          "rows": 62,
+          "medianSize": 96.125251,
+          "meanLogSize": 4.65798865,
+          "size": {
+            "p10": 72.344792,
+            "p25": 77.241023,
+            "p50": 96.125251,
+            "p75": 131.588789,
+            "p90": 182.136939
+          }
+        }
+      }
+    }
+  },
+  "train": {
+    "rows": 3837,
+    "actual": {
+      "p10": 4.875579,
+      "p25": 6.538463,
+      "p50": 13.43846,
+      "p75": 25.58946,
+      "p90": 44.493685
+    },
+    "predicted": {
+      "p10": 5,
+      "p25": 7,
+      "p50": 9,
+      "p75": 19,
+      "p90": 34
+    },
+    "medianAbsoluteError": 3.788191,
+    "p90AbsoluteError": 19.789566,
+    "medianAbsoluteLogError": 0.287682,
+    "exactTierPct": 54.626,
+    "large16PrecisionPct": 89.425,
+    "large16RecallPct": 65.17,
+    "baselineMedianSize": 13,
+    "baselineMedianAbsoluteError": 7.568756
+  },
+  "holdout": {
+    "rows": 2188,
+    "actual": {
+      "p10": 4.073349,
+      "p25": 5.487641,
+      "p50": 10.276025,
+      "p75": 20,
+      "p90": 37.792915
+    },
+    "predicted": {
+      "p10": 7,
+      "p25": 7,
+      "p50": 9,
+      "p75": 13,
+      "p90": 28
+    },
+    "medianAbsoluteError": 3.446799,
+    "p90AbsoluteError": 17.40325,
+    "medianAbsoluteLogError": 0.287682,
+    "exactTierPct": 52.697,
+    "large16PrecisionPct": 85.802,
+    "large16RecallPct": 57.123,
+    "baselineMedianSize": 13,
+    "baselineMedianAbsoluteError": 7.401494
+  },
+  "largestLeaves": [
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory > 22.1514898",
+        "absoluteInventory > 56.1730624"
+      ],
+      "rows": 62,
+      "medianSize": 96.125251,
+      "size": {
+        "p10": 72.344792,
+        "p25": 77.241023,
+        "p50": 96.125251,
+        "p75": 131.588789,
+        "p90": 182.136939
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= 10.05128",
+        "orientedInventory <= -23.6111536",
+        "absoluteInventory > 41.8222216",
+        "absoluteInventory > 62.6571488"
+      ],
+      "rows": 49,
+      "medianSize": 61.281301,
+      "size": {
+        "p10": 12.124681,
+        "p25": 47.333332,
+        "p50": 61.281301,
+        "p75": 70.815297,
+        "p90": 95.206742
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory > 22.1514898",
+        "absoluteInventory <= 56.1730624",
+        "absoluteInventory > 31.907941",
+        "absoluteInventory > 40.759392"
+      ],
+      "rows": 49,
+      "medianSize": 57.292935,
+      "size": {
+        "p10": 49.834796,
+        "p25": 51.165713,
+        "p50": 57.292935,
+        "p75": 63.305492,
+        "p90": 74.369444
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory > 22.1514898",
+        "absoluteInventory <= 56.1730624",
+        "absoluteInventory > 31.907941",
+        "absoluteInventory <= 40.759392"
+      ],
+      "rows": 49,
+      "medianSize": 47.540096,
+      "size": {
+        "p10": 40.118962,
+        "p25": 43.081979,
+        "p50": 47.540096,
+        "p75": 57.08802,
+        "p90": 71.770017
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory > 22.1514898",
+        "absoluteInventory <= 56.1730624",
+        "absoluteInventory <= 31.907941",
+        "timeS > 206.1314"
+      ],
+      "rows": 59,
+      "medianSize": 38.57404,
+      "size": {
+        "p10": 29.992675,
+        "p25": 33.052864,
+        "p50": 38.57404,
+        "p75": 56.941871,
+        "p90": 106.413808
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory > 22.1514898",
+        "absoluteInventory <= 56.1730624",
+        "absoluteInventory <= 31.907941",
+        "timeS <= 206.1314"
+      ],
+      "rows": 88,
+      "medianSize": 36.016139,
+      "size": {
+        "p10": 30.516821,
+        "p25": 32.740884,
+        "p50": 36.016139,
+        "p75": 40.091903,
+        "p90": 50.184153
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= 10.05128",
+        "orientedInventory <= -23.6111536",
+        "absoluteInventory > 41.8222216",
+        "absoluteInventory <= 62.6571488"
+      ],
+      "rows": 74,
+      "medianSize": 33.562087,
+      "size": {
+        "p10": 9.533051,
+        "p25": 21.168823,
+        "p50": 33.562087,
+        "p75": 42.968021,
+        "p90": 53.66712
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory <= 22.1514898",
+        "absoluteInventory > 13.48148",
+        "timeS > 222.166"
+      ],
+      "rows": 55,
+      "medianSize": 30.12,
+      "size": {
+        "p10": 21.981774,
+        "p25": 25.858375,
+        "p50": 30.12,
+        "p75": 44.208661,
+        "p90": 64.654042
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory <= 22.1514898",
+        "absoluteInventory > 13.48148",
+        "timeS <= 222.166",
+        "absoluteInventory > 18.372074"
+      ],
+      "rows": 66,
+      "medianSize": 28.033839,
+      "size": {
+        "p10": 24.998774,
+        "p25": 26.122876,
+        "p50": 28.033839,
+        "p75": 31.342567,
+        "p90": 43.76072
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory <= 22.1514898",
+        "absoluteInventory > 13.48148",
+        "timeS <= 222.166",
+        "absoluteInventory <= 18.372074",
+        "absoluteInventory > 15.12386"
+      ],
+      "rows": 93,
+      "medianSize": 25.371558,
+      "size": {
+        "p10": 22.132749,
+        "p25": 23.696684,
+        "p50": 25.371558,
+        "p75": 30.159457,
+        "p90": 37.455521
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= 10.05128",
+        "orientedInventory <= -23.6111536",
+        "absoluteInventory <= 41.8222216",
+        "orientedInventory <= -30.237485",
+        "askDepth3Change1 > -85.84"
+      ],
+      "rows": 46,
+      "medianSize": 24.284918,
+      "size": {
+        "p10": 13.055941,
+        "p25": 20.098937,
+        "p50": 24.284918,
+        "p75": 31.078141,
+        "p90": 41.663984
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= 10.05128",
+        "orientedInventory <= -23.6111536",
+        "absoluteInventory <= 41.8222216",
+        "orientedInventory <= -30.237485",
+        "askDepth3Change1 <= -85.84"
+      ],
+      "rows": 46,
+      "medianSize": 23.582645,
+      "size": {
+        "p10": 4.861825,
+        "p25": 16.513889,
+        "p50": 23.582645,
+        "p75": 30.593409,
+        "p90": 35.619047
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory <= 22.1514898",
+        "absoluteInventory <= 13.48148",
+        "timeS > 166.6944"
+      ],
+      "rows": 74,
+      "medianSize": 23.015438,
+      "size": {
+        "p10": 17.001177,
+        "p25": 18.691002,
+        "p50": 23.015438,
+        "p75": 29.482582,
+        "p90": 43.571773
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory <= 22.1514898",
+        "absoluteInventory > 13.48148",
+        "timeS <= 222.166",
+        "absoluteInventory <= 18.372074",
+        "absoluteInventory <= 15.12386"
+      ],
+      "rows": 62,
+      "medianSize": 22.743716,
+      "size": {
+        "p10": 19.343787,
+        "p25": 20.044541,
+        "p50": 22.743716,
+        "p75": 28.69074,
+        "p90": 35.269378
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > 10.05128",
+        "absoluteInventory <= 22.1514898",
+        "absoluteInventory <= 13.48148",
+        "timeS <= 166.6944",
+        "ask > 0.79"
+      ],
+      "rows": 49,
+      "medianSize": 19.600797,
+      "size": {
+        "p10": 16.711454,
+        "p25": 17.639695,
+        "p50": 19.600797,
+        "p75": 23.757966,
+        "p90": 28.662752
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= 10.05128",
+        "orientedInventory > -23.6111536",
+        "orientedInventory > 0",
+        "absoluteInventory <= 6.3",
+        "timeS > 153.8112",
+        "askDepth3Change1 > 141.81"
+      ],
+      "rows": 45,
+      "medianSize": 18.653845,
+      "size": {
+        "p10": 9.467896,
+        "p25": 11.40354,
+        "p50": 18.653845,
+        "p75": 35.533299,
+        "p90": 57.36792
+      }
+    }
+  ]
+}

@@ -1,0 +1,2372 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T11:57:09.761Z",
+  "target": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "range": {
+    "start": "2026-08-26T11:25:00.000Z",
+    "fitEnd": "2026-08-26T19:25:00.000Z",
+    "selectionEnd": "2026-08-26T23:25:00.000Z",
+    "end": "2026-08-27T11:25:00.000Z"
+  },
+  "methodology": "First 8h fit + next 4h selection; final 12h untouched. Rank by worst fit/selection Wilson-95 lower bound. Direction precision is measured at target action times and is not release-time precision or profitability.",
+  "formula": {
+    "clob": "Up midpoint(t)-Up midpoint(t-lookback); Down is the negative orientation",
+    "binance": "Binance spot(t)-Binance spot(t-lookback), raw USD",
+    "trend": "100*(current five-minute Binance open-open N minutes earlier)/prior open",
+    "agreement": "all three enabled signal directions clear thresholds and agree",
+    "binanceGapAgree": "optional existing toggle: selected direction also matches spot versus current window open"
+  },
+  "dataQuality": {
+    "sourcePairs": 1604,
+    "usableRows": 1604,
+    "missingFeeds": 24,
+    "missingCurrentFeed": 0,
+    "missingActionSide": 0,
+    "splitRows": {
+      "fit": 627,
+      "selection": 258,
+      "holdout": 719,
+      "fullDay": 1604
+    }
+  },
+  "selected": {
+    "config": {
+      "clobLookbackMs": 5000,
+      "clobVelocityMin": 0,
+      "binanceLookbackMs": 3000,
+      "binanceVelocityMinUsd": 5,
+      "trendLookbackMin": 20,
+      "trendThresholdPct": 0,
+      "binanceGapAgreeOn": false
+    },
+    "fit": {
+      "actions": 223,
+      "successes": 219,
+      "errors": 4,
+      "coverage": 0.355662,
+      "precision": 0.982063,
+      "wilson95Low": 0.954796,
+      "wilson95High": 0.993003,
+      "byRole": {
+        "flat": {
+          "actions": 35,
+          "precision": 0.942857
+        },
+        "entry/topup": {
+          "actions": 119,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 69,
+          "precision": 0.971014
+        }
+      }
+    },
+    "selection": {
+      "actions": 84,
+      "successes": 84,
+      "errors": 0,
+      "coverage": 0.325581,
+      "precision": 1,
+      "wilson95Low": 0.956268,
+      "wilson95High": 1,
+      "byRole": {
+        "entry/topup": {
+          "actions": 41,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 28,
+          "precision": 1
+        },
+        "flat": {
+          "actions": 15,
+          "precision": 1
+        }
+      }
+    },
+    "holdout": {
+      "actions": 242,
+      "successes": 239,
+      "errors": 3,
+      "coverage": 0.336579,
+      "precision": 0.987603,
+      "wilson95Low": 0.964193,
+      "wilson95High": 0.995775,
+      "byRole": {
+        "flat": {
+          "actions": 49,
+          "precision": 1
+        },
+        "entry/topup": {
+          "actions": 115,
+          "precision": 0.991304
+        },
+        "hedge": {
+          "actions": 78,
+          "precision": 0.974359
+        }
+      }
+    },
+    "fullDay": {
+      "actions": 549,
+      "successes": 542,
+      "errors": 7,
+      "coverage": 0.342269,
+      "precision": 0.98725,
+      "wilson95Low": 0.973917,
+      "wilson95High": 0.99381,
+      "byRole": {
+        "flat": {
+          "actions": 99,
+          "precision": 0.979798
+        },
+        "entry/topup": {
+          "actions": 275,
+          "precision": 0.996364
+        },
+        "hedge": {
+          "actions": 175,
+          "precision": 0.977143
+        }
+      }
+    }
+  },
+  "selectedClob3": {
+    "config": {
+      "clobLookbackMs": 3000,
+      "clobVelocityMin": 0.02,
+      "binanceLookbackMs": 3000,
+      "binanceVelocityMinUsd": 5,
+      "trendLookbackMin": 15,
+      "trendThresholdPct": 0,
+      "binanceGapAgreeOn": false
+    },
+    "fit": {
+      "actions": 205,
+      "successes": 201,
+      "errors": 4,
+      "coverage": 0.326954,
+      "precision": 0.980488,
+      "wilson95Low": 0.950913,
+      "wilson95High": 0.992387,
+      "byRole": {
+        "flat": {
+          "actions": 32,
+          "precision": 0.9375
+        },
+        "entry/topup": {
+          "actions": 104,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 69,
+          "precision": 0.971014
+        }
+      }
+    },
+    "selection": {
+      "actions": 81,
+      "successes": 81,
+      "errors": 0,
+      "coverage": 0.313953,
+      "precision": 1,
+      "wilson95Low": 0.954722,
+      "wilson95High": 1,
+      "byRole": {
+        "entry/topup": {
+          "actions": 38,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 24,
+          "precision": 1
+        },
+        "flat": {
+          "actions": 19,
+          "precision": 1
+        }
+      }
+    },
+    "holdout": {
+      "actions": 197,
+      "successes": 194,
+      "errors": 3,
+      "coverage": 0.273992,
+      "precision": 0.984772,
+      "wilson95Low": 0.956191,
+      "wilson95High": 0.994808,
+      "byRole": {
+        "flat": {
+          "actions": 44,
+          "precision": 1
+        },
+        "entry/topup": {
+          "actions": 96,
+          "precision": 0.989583
+        },
+        "hedge": {
+          "actions": 57,
+          "precision": 0.964912
+        }
+      }
+    },
+    "fullDay": {
+      "actions": 483,
+      "successes": 476,
+      "errors": 7,
+      "coverage": 0.301122,
+      "precision": 0.985507,
+      "wilson95Low": 0.97039,
+      "wilson95High": 0.992962,
+      "byRole": {
+        "flat": {
+          "actions": 95,
+          "precision": 0.978947
+        },
+        "entry/topup": {
+          "actions": 238,
+          "precision": 0.995798
+        },
+        "hedge": {
+          "actions": 150,
+          "precision": 0.973333
+        }
+      }
+    }
+  },
+  "selectedWithoutGapAgreement": {
+    "config": {
+      "clobLookbackMs": 5000,
+      "clobVelocityMin": 0,
+      "binanceLookbackMs": 3000,
+      "binanceVelocityMinUsd": 5,
+      "trendLookbackMin": 20,
+      "trendThresholdPct": 0,
+      "binanceGapAgreeOn": false
+    },
+    "fit": {
+      "actions": 223,
+      "successes": 219,
+      "errors": 4,
+      "coverage": 0.355662,
+      "precision": 0.982063,
+      "wilson95Low": 0.954796,
+      "wilson95High": 0.993003,
+      "byRole": {
+        "flat": {
+          "actions": 35,
+          "precision": 0.942857
+        },
+        "entry/topup": {
+          "actions": 119,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 69,
+          "precision": 0.971014
+        }
+      }
+    },
+    "selection": {
+      "actions": 84,
+      "successes": 84,
+      "errors": 0,
+      "coverage": 0.325581,
+      "precision": 1,
+      "wilson95Low": 0.956268,
+      "wilson95High": 1,
+      "byRole": {
+        "entry/topup": {
+          "actions": 41,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 28,
+          "precision": 1
+        },
+        "flat": {
+          "actions": 15,
+          "precision": 1
+        }
+      }
+    },
+    "holdout": {
+      "actions": 242,
+      "successes": 239,
+      "errors": 3,
+      "coverage": 0.336579,
+      "precision": 0.987603,
+      "wilson95Low": 0.964193,
+      "wilson95High": 0.995775,
+      "byRole": {
+        "flat": {
+          "actions": 49,
+          "precision": 1
+        },
+        "entry/topup": {
+          "actions": 115,
+          "precision": 0.991304
+        },
+        "hedge": {
+          "actions": 78,
+          "precision": 0.974359
+        }
+      }
+    },
+    "fullDay": {
+      "actions": 549,
+      "successes": 542,
+      "errors": 7,
+      "coverage": 0.342269,
+      "precision": 0.98725,
+      "wilson95Low": 0.973917,
+      "wilson95High": 0.99381,
+      "byRole": {
+        "flat": {
+          "actions": 99,
+          "precision": 0.979798
+        },
+        "entry/topup": {
+          "actions": 275,
+          "precision": 0.996364
+        },
+        "hedge": {
+          "actions": 175,
+          "precision": 0.977143
+        }
+      }
+    }
+  },
+  "polyMomDefaults": {
+    "config": {
+      "clobLookbackMs": 3000,
+      "clobVelocityMin": 0.08,
+      "binanceLookbackMs": 3000,
+      "binanceVelocityMinUsd": 6,
+      "trendLookbackMin": 30,
+      "trendThresholdPct": 0.05,
+      "binanceGapAgreeOn": true
+    },
+    "fit": {
+      "actions": 59,
+      "successes": 59,
+      "errors": 0,
+      "coverage": 0.094099,
+      "precision": 1,
+      "wilson95Low": 0.938871,
+      "wilson95High": 1,
+      "byRole": {
+        "hedge": {
+          "actions": 13,
+          "precision": 1
+        },
+        "flat": {
+          "actions": 14,
+          "precision": 1
+        },
+        "entry/topup": {
+          "actions": 32,
+          "precision": 1
+        }
+      }
+    },
+    "selection": {
+      "actions": 25,
+      "successes": 25,
+      "errors": 0,
+      "coverage": 0.096899,
+      "precision": 1,
+      "wilson95Low": 0.866808,
+      "wilson95High": 1,
+      "byRole": {
+        "entry/topup": {
+          "actions": 16,
+          "precision": 1
+        },
+        "flat": {
+          "actions": 6,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 3,
+          "precision": 1
+        }
+      }
+    },
+    "holdout": {
+      "actions": 73,
+      "successes": 73,
+      "errors": 0,
+      "coverage": 0.10153,
+      "precision": 1,
+      "wilson95Low": 0.950008,
+      "wilson95High": 1,
+      "byRole": {
+        "flat": {
+          "actions": 16,
+          "precision": 1
+        },
+        "entry/topup": {
+          "actions": 30,
+          "precision": 1
+        },
+        "hedge": {
+          "actions": 27,
+          "precision": 1
+        }
+      }
+    },
+    "fullDay": {
+      "actions": 157,
+      "successes": 157,
+      "errors": 0,
+      "coverage": 0.09788,
+      "precision": 1,
+      "wilson95Low": 0.976116,
+      "wilson95High": 1,
+      "byRole": {
+        "hedge": {
+          "actions": 43,
+          "precision": 1
+        },
+        "flat": {
+          "actions": 36,
+          "precision": 1
+        },
+        "entry/topup": {
+          "actions": 78,
+          "precision": 1
+        }
+      }
+    }
+  },
+  "leaderboard": [
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.982063,
+      "robustWilson": 0.954796,
+      "fit": {
+        "actions": 223,
+        "successes": 219,
+        "errors": 4,
+        "coverage": 0.355662,
+        "precision": 0.982063,
+        "wilson95Low": 0.954796,
+        "wilson95High": 0.993003
+      },
+      "selection": {
+        "actions": 84,
+        "successes": 84,
+        "errors": 0,
+        "coverage": 0.325581,
+        "precision": 1,
+        "wilson95Low": 0.956268,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 242,
+        "successes": 239,
+        "errors": 3,
+        "coverage": 0.336579,
+        "precision": 0.987603,
+        "wilson95Low": 0.964193,
+        "wilson95High": 0.995775,
+        "byRole": {
+          "flat": {
+            "actions": 49,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 115,
+            "precision": 0.991304
+          },
+          "hedge": {
+            "actions": 78,
+            "precision": 0.974359
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 549,
+        "successes": 542,
+        "errors": 7,
+        "coverage": 0.342269,
+        "precision": 0.98725,
+        "wilson95Low": 0.973917,
+        "wilson95High": 0.99381,
+        "byRole": {
+          "flat": {
+            "actions": 99,
+            "precision": 0.979798
+          },
+          "entry/topup": {
+            "actions": 275,
+            "precision": 0.996364
+          },
+          "hedge": {
+            "actions": 175,
+            "precision": 0.977143
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.982063,
+      "robustWilson": 0.954796,
+      "fit": {
+        "actions": 223,
+        "successes": 219,
+        "errors": 4,
+        "coverage": 0.355662,
+        "precision": 0.982063,
+        "wilson95Low": 0.954796,
+        "wilson95High": 0.993003
+      },
+      "selection": {
+        "actions": 84,
+        "successes": 84,
+        "errors": 0,
+        "coverage": 0.325581,
+        "precision": 1,
+        "wilson95Low": 0.956268,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 241,
+        "successes": 238,
+        "errors": 3,
+        "coverage": 0.335188,
+        "precision": 0.987552,
+        "wilson95Low": 0.964047,
+        "wilson95High": 0.995758,
+        "byRole": {
+          "flat": {
+            "actions": 49,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 114,
+            "precision": 0.991228
+          },
+          "hedge": {
+            "actions": 78,
+            "precision": 0.974359
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 548,
+        "successes": 541,
+        "errors": 7,
+        "coverage": 0.341646,
+        "precision": 0.987226,
+        "wilson95Low": 0.97387,
+        "wilson95High": 0.993799,
+        "byRole": {
+          "flat": {
+            "actions": 99,
+            "precision": 0.979798
+          },
+          "entry/topup": {
+            "actions": 274,
+            "precision": 0.99635
+          },
+          "hedge": {
+            "actions": 175,
+            "precision": 0.977143
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.05,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.9819,
+      "robustWilson": 0.954395,
+      "fit": {
+        "actions": 221,
+        "successes": 217,
+        "errors": 4,
+        "coverage": 0.352472,
+        "precision": 0.9819,
+        "wilson95Low": 0.954395,
+        "wilson95High": 0.992939
+      },
+      "selection": {
+        "actions": 86,
+        "successes": 86,
+        "errors": 0,
+        "coverage": 0.333333,
+        "precision": 1,
+        "wilson95Low": 0.957242,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 236,
+        "successes": 231,
+        "errors": 5,
+        "coverage": 0.328234,
+        "precision": 0.978814,
+        "wilson95Low": 0.951372,
+        "wilson95High": 0.990917,
+        "byRole": {
+          "flat": {
+            "actions": 50,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 107,
+            "precision": 0.981308
+          },
+          "hedge": {
+            "actions": 79,
+            "precision": 0.962025
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 543,
+        "successes": 534,
+        "errors": 9,
+        "coverage": 0.338529,
+        "precision": 0.983425,
+        "wilson95Low": 0.968803,
+        "wilson95High": 0.991256,
+        "byRole": {
+          "flat": {
+            "actions": 101,
+            "precision": 0.980198
+          },
+          "entry/topup": {
+            "actions": 262,
+            "precision": 0.992366
+          },
+          "hedge": {
+            "actions": 180,
+            "precision": 0.972222
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.9819,
+      "robustWilson": 0.954395,
+      "fit": {
+        "actions": 221,
+        "successes": 217,
+        "errors": 4,
+        "coverage": 0.352472,
+        "precision": 0.9819,
+        "wilson95Low": 0.954395,
+        "wilson95High": 0.992939
+      },
+      "selection": {
+        "actions": 84,
+        "successes": 84,
+        "errors": 0,
+        "coverage": 0.325581,
+        "precision": 1,
+        "wilson95Low": 0.956268,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 236,
+        "successes": 234,
+        "errors": 2,
+        "coverage": 0.328234,
+        "precision": 0.991525,
+        "wilson95Low": 0.969633,
+        "wilson95High": 0.997673,
+        "byRole": {
+          "flat": {
+            "actions": 48,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 113,
+            "precision": 0.99115
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.986667
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 541,
+        "successes": 535,
+        "errors": 6,
+        "coverage": 0.337282,
+        "precision": 0.988909,
+        "wilson95Low": 0.976017,
+        "wilson95High": 0.994907,
+        "byRole": {
+          "flat": {
+            "actions": 98,
+            "precision": 0.979592
+          },
+          "entry/topup": {
+            "actions": 273,
+            "precision": 0.996337
+          },
+          "hedge": {
+            "actions": 170,
+            "precision": 0.982353
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.9819,
+      "robustWilson": 0.954395,
+      "fit": {
+        "actions": 221,
+        "successes": 217,
+        "errors": 4,
+        "coverage": 0.352472,
+        "precision": 0.9819,
+        "wilson95Low": 0.954395,
+        "wilson95High": 0.992939
+      },
+      "selection": {
+        "actions": 84,
+        "successes": 84,
+        "errors": 0,
+        "coverage": 0.325581,
+        "precision": 1,
+        "wilson95Low": 0.956268,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 235,
+        "successes": 233,
+        "errors": 2,
+        "coverage": 0.326843,
+        "precision": 0.991489,
+        "wilson95Low": 0.969506,
+        "wilson95High": 0.997663,
+        "byRole": {
+          "flat": {
+            "actions": 48,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 112,
+            "precision": 0.991071
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.986667
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 540,
+        "successes": 534,
+        "errors": 6,
+        "coverage": 0.336658,
+        "precision": 0.988889,
+        "wilson95Low": 0.975973,
+        "wilson95High": 0.994898,
+        "byRole": {
+          "flat": {
+            "actions": 98,
+            "precision": 0.979592
+          },
+          "entry/topup": {
+            "actions": 272,
+            "precision": 0.996324
+          },
+          "hedge": {
+            "actions": 170,
+            "precision": 0.982353
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.05,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981735,
+      "robustWilson": 0.953987,
+      "fit": {
+        "actions": 219,
+        "successes": 215,
+        "errors": 4,
+        "coverage": 0.349282,
+        "precision": 0.981735,
+        "wilson95Low": 0.953987,
+        "wilson95High": 0.992875
+      },
+      "selection": {
+        "actions": 86,
+        "successes": 86,
+        "errors": 0,
+        "coverage": 0.333333,
+        "precision": 1,
+        "wilson95Low": 0.957242,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 234,
+        "successes": 229,
+        "errors": 5,
+        "coverage": 0.325452,
+        "precision": 0.978632,
+        "wilson95Low": 0.950964,
+        "wilson95High": 0.990839,
+        "byRole": {
+          "flat": {
+            "actions": 50,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 106,
+            "precision": 0.981132
+          },
+          "hedge": {
+            "actions": 78,
+            "precision": 0.961538
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 539,
+        "successes": 530,
+        "errors": 9,
+        "coverage": 0.336035,
+        "precision": 0.983302,
+        "wilson95Low": 0.968574,
+        "wilson95High": 0.991191,
+        "byRole": {
+          "flat": {
+            "actions": 101,
+            "precision": 0.980198
+          },
+          "entry/topup": {
+            "actions": 261,
+            "precision": 0.992337
+          },
+          "hedge": {
+            "actions": 177,
+            "precision": 0.971751
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.02,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981651,
+      "robustWilson": 0.95378,
+      "fit": {
+        "actions": 218,
+        "successes": 214,
+        "errors": 4,
+        "coverage": 0.347687,
+        "precision": 0.981651,
+        "wilson95Low": 0.95378,
+        "wilson95High": 0.992842
+      },
+      "selection": {
+        "actions": 83,
+        "successes": 83,
+        "errors": 0,
+        "coverage": 0.321705,
+        "precision": 1,
+        "wilson95Low": 0.955765,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 231,
+        "successes": 228,
+        "errors": 3,
+        "coverage": 0.32128,
+        "precision": 0.987013,
+        "wilson95Low": 0.96252,
+        "wilson95High": 0.995574,
+        "byRole": {
+          "flat": {
+            "actions": 48,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 111,
+            "precision": 0.990991
+          },
+          "hedge": {
+            "actions": 72,
+            "precision": 0.972222
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 532,
+        "successes": 525,
+        "errors": 7,
+        "coverage": 0.331671,
+        "precision": 0.986842,
+        "wilson95Low": 0.973092,
+        "wilson95High": 0.993612,
+        "byRole": {
+          "flat": {
+            "actions": 97,
+            "precision": 0.979381
+          },
+          "entry/topup": {
+            "actions": 268,
+            "precision": 0.996269
+          },
+          "hedge": {
+            "actions": 167,
+            "precision": 0.976048
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.06,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.990244,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 205,
+        "successes": 203,
+        "errors": 2,
+        "coverage": 0.326954,
+        "precision": 0.990244,
+        "wilson95Low": 0.965132,
+        "wilson95High": 0.99732
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 207,
+        "successes": 203,
+        "errors": 4,
+        "coverage": 0.2879,
+        "precision": 0.980676,
+        "wilson95Low": 0.951377,
+        "wilson95High": 0.99246,
+        "byRole": {
+          "flat": {
+            "actions": 42,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 94,
+            "precision": 0.989362
+          },
+          "hedge": {
+            "actions": 71,
+            "precision": 0.957746
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 491,
+        "successes": 485,
+        "errors": 6,
+        "coverage": 0.30611,
+        "precision": 0.98778,
+        "wilson95Low": 0.973599,
+        "wilson95High": 0.994388,
+        "byRole": {
+          "flat": {
+            "actions": 87,
+            "precision": 0.988506
+          },
+          "entry/topup": {
+            "actions": 241,
+            "precision": 0.995851
+          },
+          "hedge": {
+            "actions": 163,
+            "precision": 0.97546
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.06,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.990148,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 203,
+        "successes": 201,
+        "errors": 2,
+        "coverage": 0.323764,
+        "precision": 0.990148,
+        "wilson95Low": 0.964796,
+        "wilson95High": 0.997294
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 205,
+        "successes": 201,
+        "errors": 4,
+        "coverage": 0.285118,
+        "precision": 0.980488,
+        "wilson95Low": 0.950913,
+        "wilson95High": 0.992387,
+        "byRole": {
+          "flat": {
+            "actions": 42,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 93,
+            "precision": 0.989247
+          },
+          "hedge": {
+            "actions": 70,
+            "precision": 0.957143
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 487,
+        "successes": 481,
+        "errors": 6,
+        "coverage": 0.303616,
+        "precision": 0.98768,
+        "wilson95Low": 0.973384,
+        "wilson95High": 0.994342,
+        "byRole": {
+          "flat": {
+            "actions": 87,
+            "precision": 0.988506
+          },
+          "entry/topup": {
+            "actions": 240,
+            "precision": 0.995833
+          },
+          "hedge": {
+            "actions": 160,
+            "precision": 0.975
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.06,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.99,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 200,
+        "successes": 198,
+        "errors": 2,
+        "coverage": 0.318979,
+        "precision": 0.99,
+        "wilson95Low": 0.964278,
+        "wilson95High": 0.997253
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 204,
+        "successes": 201,
+        "errors": 3,
+        "coverage": 0.283727,
+        "precision": 0.985294,
+        "wilson95Low": 0.957663,
+        "wilson95High": 0.994986,
+        "byRole": {
+          "flat": {
+            "actions": 41,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 92,
+            "precision": 0.98913
+          },
+          "hedge": {
+            "actions": 71,
+            "precision": 0.971831
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 483,
+        "successes": 478,
+        "errors": 5,
+        "coverage": 0.301122,
+        "precision": 0.989648,
+        "wilson95Low": 0.975998,
+        "wilson95High": 0.99557,
+        "byRole": {
+          "flat": {
+            "actions": 86,
+            "precision": 0.988372
+          },
+          "entry/topup": {
+            "actions": 235,
+            "precision": 0.995745
+          },
+          "hedge": {
+            "actions": 162,
+            "precision": 0.981481
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.06,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.989848,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 197,
+        "successes": 195,
+        "errors": 2,
+        "coverage": 0.314195,
+        "precision": 0.989848,
+        "wilson95Low": 0.963746,
+        "wilson95High": 0.997211
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 202,
+        "successes": 199,
+        "errors": 3,
+        "coverage": 0.280946,
+        "precision": 0.985149,
+        "wilson95Low": 0.957253,
+        "wilson95High": 0.994937,
+        "byRole": {
+          "flat": {
+            "actions": 41,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 91,
+            "precision": 0.989011
+          },
+          "hedge": {
+            "actions": 70,
+            "precision": 0.971429
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 478,
+        "successes": 473,
+        "errors": 5,
+        "coverage": 0.298005,
+        "precision": 0.98954,
+        "wilson95Low": 0.97575,
+        "wilson95High": 0.995524,
+        "byRole": {
+          "flat": {
+            "actions": 86,
+            "precision": 0.988372
+          },
+          "entry/topup": {
+            "actions": 234,
+            "precision": 0.995726
+          },
+          "hedge": {
+            "actions": 158,
+            "precision": 0.981013
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.05,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 30,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.984043,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 188,
+        "successes": 185,
+        "errors": 3,
+        "coverage": 0.299841,
+        "precision": 0.984043,
+        "wilson95Low": 0.954142,
+        "wilson95High": 0.994558
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 207,
+        "successes": 204,
+        "errors": 3,
+        "coverage": 0.2879,
+        "precision": 0.985507,
+        "wilson95Low": 0.958264,
+        "wilson95High": 0.995059,
+        "byRole": {
+          "flat": {
+            "actions": 43,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 90,
+            "precision": 0.988889
+          },
+          "hedge": {
+            "actions": 74,
+            "precision": 0.972973
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 474,
+        "successes": 468,
+        "errors": 6,
+        "coverage": 0.295511,
+        "precision": 0.987342,
+        "wilson95Low": 0.972662,
+        "wilson95High": 0.994186,
+        "byRole": {
+          "hedge": {
+            "actions": 160,
+            "precision": 0.98125
+          },
+          "flat": {
+            "actions": 96,
+            "precision": 0.979167
+          },
+          "entry/topup": {
+            "actions": 218,
+            "precision": 0.995413
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.01,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981818,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 220,
+        "successes": 216,
+        "errors": 4,
+        "coverage": 0.350877,
+        "precision": 0.981818,
+        "wilson95Low": 0.954192,
+        "wilson95High": 0.992907
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 236,
+        "successes": 234,
+        "errors": 2,
+        "coverage": 0.328234,
+        "precision": 0.991525,
+        "wilson95Low": 0.969633,
+        "wilson95High": 0.997673,
+        "byRole": {
+          "flat": {
+            "actions": 48,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 113,
+            "precision": 0.99115
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.986667
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 535,
+        "successes": 529,
+        "errors": 6,
+        "coverage": 0.333541,
+        "precision": 0.988785,
+        "wilson95Low": 0.975751,
+        "wilson95High": 0.99485,
+        "byRole": {
+          "flat": {
+            "actions": 98,
+            "precision": 0.979592
+          },
+          "entry/topup": {
+            "actions": 268,
+            "precision": 0.996269
+          },
+          "hedge": {
+            "actions": 169,
+            "precision": 0.982249
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.01,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981818,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 220,
+        "successes": 216,
+        "errors": 4,
+        "coverage": 0.350877,
+        "precision": 0.981818,
+        "wilson95Low": 0.954192,
+        "wilson95High": 0.992907
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 235,
+        "successes": 233,
+        "errors": 2,
+        "coverage": 0.326843,
+        "precision": 0.991489,
+        "wilson95Low": 0.969506,
+        "wilson95High": 0.997663,
+        "byRole": {
+          "flat": {
+            "actions": 48,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 112,
+            "precision": 0.991071
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.986667
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 534,
+        "successes": 528,
+        "errors": 6,
+        "coverage": 0.332918,
+        "precision": 0.988764,
+        "wilson95Low": 0.975706,
+        "wilson95High": 0.994841,
+        "byRole": {
+          "flat": {
+            "actions": 98,
+            "precision": 0.979592
+          },
+          "entry/topup": {
+            "actions": 267,
+            "precision": 0.996255
+          },
+          "hedge": {
+            "actions": 169,
+            "precision": 0.982249
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.02,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981735,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 219,
+        "successes": 215,
+        "errors": 4,
+        "coverage": 0.349282,
+        "precision": 0.981735,
+        "wilson95Low": 0.953987,
+        "wilson95High": 0.992875
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 232,
+        "successes": 230,
+        "errors": 2,
+        "coverage": 0.32267,
+        "precision": 0.991379,
+        "wilson95Low": 0.969118,
+        "wilson95High": 0.997633,
+        "byRole": {
+          "flat": {
+            "actions": 45,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 113,
+            "precision": 0.99115
+          },
+          "hedge": {
+            "actions": 74,
+            "precision": 0.986486
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 530,
+        "successes": 524,
+        "errors": 6,
+        "coverage": 0.330424,
+        "precision": 0.988679,
+        "wilson95Low": 0.975524,
+        "wilson95High": 0.994802,
+        "byRole": {
+          "flat": {
+            "actions": 94,
+            "precision": 0.978723
+          },
+          "entry/topup": {
+            "actions": 268,
+            "precision": 0.996269
+          },
+          "hedge": {
+            "actions": 168,
+            "precision": 0.982143
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.02,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981735,
+      "robustWilson": 0.953629,
+      "fit": {
+        "actions": 219,
+        "successes": 215,
+        "errors": 4,
+        "coverage": 0.349282,
+        "precision": 0.981735,
+        "wilson95Low": 0.953987,
+        "wilson95High": 0.992875
+      },
+      "selection": {
+        "actions": 79,
+        "successes": 79,
+        "errors": 0,
+        "coverage": 0.306202,
+        "precision": 1,
+        "wilson95Low": 0.953629,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 231,
+        "successes": 229,
+        "errors": 2,
+        "coverage": 0.32128,
+        "precision": 0.991342,
+        "wilson95Low": 0.968987,
+        "wilson95High": 0.997622,
+        "byRole": {
+          "flat": {
+            "actions": 45,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 112,
+            "precision": 0.991071
+          },
+          "hedge": {
+            "actions": 74,
+            "precision": 0.986486
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 529,
+        "successes": 523,
+        "errors": 6,
+        "coverage": 0.3298,
+        "precision": 0.988658,
+        "wilson95Low": 0.975478,
+        "wilson95High": 0.994792,
+        "byRole": {
+          "flat": {
+            "actions": 94,
+            "precision": 0.978723
+          },
+          "entry/topup": {
+            "actions": 267,
+            "precision": 0.996255
+          },
+          "hedge": {
+            "actions": 168,
+            "precision": 0.982143
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.04,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.979757,
+      "robustWilson": 0.953497,
+      "fit": {
+        "actions": 247,
+        "successes": 242,
+        "errors": 5,
+        "coverage": 0.393939,
+        "precision": 0.979757,
+        "wilson95Low": 0.953497,
+        "wilson95High": 0.991323
+      },
+      "selection": {
+        "actions": 89,
+        "successes": 89,
+        "errors": 0,
+        "coverage": 0.344961,
+        "precision": 1,
+        "wilson95Low": 0.958623,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 262,
+        "successes": 255,
+        "errors": 7,
+        "coverage": 0.364395,
+        "precision": 0.973282,
+        "wilson95Low": 0.945888,
+        "wilson95High": 0.986999,
+        "byRole": {
+          "flat": {
+            "actions": 55,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 117,
+            "precision": 0.982906
+          },
+          "hedge": {
+            "actions": 90,
+            "precision": 0.944444
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 598,
+        "successes": 586,
+        "errors": 12,
+        "coverage": 0.372818,
+        "precision": 0.979933,
+        "wilson95Low": 0.965255,
+        "wilson95High": 0.988484,
+        "byRole": {
+          "flat": {
+            "actions": 112,
+            "precision": 0.973214
+          },
+          "entry/topup": {
+            "actions": 283,
+            "precision": 0.992933
+          },
+          "hedge": {
+            "actions": 203,
+            "precision": 0.965517
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.02,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981481,
+      "robustWilson": 0.953361,
+      "fit": {
+        "actions": 216,
+        "successes": 212,
+        "errors": 4,
+        "coverage": 0.344498,
+        "precision": 0.981481,
+        "wilson95Low": 0.953361,
+        "wilson95High": 0.992776
+      },
+      "selection": {
+        "actions": 83,
+        "successes": 83,
+        "errors": 0,
+        "coverage": 0.321705,
+        "precision": 1,
+        "wilson95Low": 0.955765,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 225,
+        "successes": 223,
+        "errors": 2,
+        "coverage": 0.312935,
+        "precision": 0.991111,
+        "wilson95Low": 0.968175,
+        "wilson95High": 0.997559,
+        "byRole": {
+          "flat": {
+            "actions": 47,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 109,
+            "precision": 0.990826
+          },
+          "hedge": {
+            "actions": 69,
+            "precision": 0.985507
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 524,
+        "successes": 518,
+        "errors": 6,
+        "coverage": 0.326683,
+        "precision": 0.98855,
+        "wilson95Low": 0.975246,
+        "wilson95High": 0.994742,
+        "byRole": {
+          "flat": {
+            "actions": 96,
+            "precision": 0.979167
+          },
+          "entry/topup": {
+            "actions": 266,
+            "precision": 0.996241
+          },
+          "hedge": {
+            "actions": 162,
+            "precision": 0.981481
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.05,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.01,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981481,
+      "robustWilson": 0.953361,
+      "fit": {
+        "actions": 216,
+        "successes": 212,
+        "errors": 4,
+        "coverage": 0.344498,
+        "precision": 0.981481,
+        "wilson95Low": 0.953361,
+        "wilson95High": 0.992776
+      },
+      "selection": {
+        "actions": 80,
+        "successes": 80,
+        "errors": 0,
+        "coverage": 0.310078,
+        "precision": 1,
+        "wilson95Low": 0.954182,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 234,
+        "successes": 229,
+        "errors": 5,
+        "coverage": 0.325452,
+        "precision": 0.978632,
+        "wilson95Low": 0.950964,
+        "wilson95High": 0.990839,
+        "byRole": {
+          "flat": {
+            "actions": 50,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 106,
+            "precision": 0.981132
+          },
+          "hedge": {
+            "actions": 78,
+            "precision": 0.961538
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 530,
+        "successes": 521,
+        "errors": 9,
+        "coverage": 0.330424,
+        "precision": 0.983019,
+        "wilson95Low": 0.968045,
+        "wilson95High": 0.991041,
+        "byRole": {
+          "flat": {
+            "actions": 100,
+            "precision": 0.98
+          },
+          "entry/topup": {
+            "actions": 256,
+            "precision": 0.992188
+          },
+          "hedge": {
+            "actions": 174,
+            "precision": 0.971264
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.05,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981395,
+      "robustWilson": 0.953148,
+      "fit": {
+        "actions": 215,
+        "successes": 211,
+        "errors": 4,
+        "coverage": 0.342903,
+        "precision": 0.981395,
+        "wilson95Low": 0.953148,
+        "wilson95High": 0.992742
+      },
+      "selection": {
+        "actions": 86,
+        "successes": 86,
+        "errors": 0,
+        "coverage": 0.333333,
+        "precision": 1,
+        "wilson95Low": 0.957242,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 231,
+        "successes": 228,
+        "errors": 3,
+        "coverage": 0.32128,
+        "precision": 0.987013,
+        "wilson95Low": 0.96252,
+        "wilson95High": 0.995574,
+        "byRole": {
+          "flat": {
+            "actions": 50,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 104,
+            "precision": 0.990385
+          },
+          "hedge": {
+            "actions": 77,
+            "precision": 0.974026
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 532,
+        "successes": 525,
+        "errors": 7,
+        "coverage": 0.331671,
+        "precision": 0.986842,
+        "wilson95Low": 0.973092,
+        "wilson95High": 0.993612,
+        "byRole": {
+          "flat": {
+            "actions": 101,
+            "precision": 0.980198
+          },
+          "entry/topup": {
+            "actions": 255,
+            "precision": 0.996078
+          },
+          "hedge": {
+            "actions": 176,
+            "precision": 0.977273
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 6,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981395,
+      "robustWilson": 0.953148,
+      "fit": {
+        "actions": 215,
+        "successes": 211,
+        "errors": 4,
+        "coverage": 0.342903,
+        "precision": 0.981395,
+        "wilson95Low": 0.953148,
+        "wilson95High": 0.992742
+      },
+      "selection": {
+        "actions": 82,
+        "successes": 82,
+        "errors": 0,
+        "coverage": 0.317829,
+        "precision": 1,
+        "wilson95Low": 0.955249,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 231,
+        "successes": 228,
+        "errors": 3,
+        "coverage": 0.32128,
+        "precision": 0.987013,
+        "wilson95Low": 0.96252,
+        "wilson95High": 0.995574,
+        "byRole": {
+          "flat": {
+            "actions": 47,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 109,
+            "precision": 0.990826
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.973333
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 528,
+        "successes": 521,
+        "errors": 7,
+        "coverage": 0.329177,
+        "precision": 0.986742,
+        "wilson95Low": 0.97289,
+        "wilson95High": 0.993564,
+        "byRole": {
+          "flat": {
+            "actions": 97,
+            "precision": 0.979381
+          },
+          "entry/topup": {
+            "actions": 265,
+            "precision": 0.996226
+          },
+          "hedge": {
+            "actions": 166,
+            "precision": 0.975904
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 6,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981395,
+      "robustWilson": 0.953148,
+      "fit": {
+        "actions": 215,
+        "successes": 211,
+        "errors": 4,
+        "coverage": 0.342903,
+        "precision": 0.981395,
+        "wilson95Low": 0.953148,
+        "wilson95High": 0.992742
+      },
+      "selection": {
+        "actions": 82,
+        "successes": 82,
+        "errors": 0,
+        "coverage": 0.317829,
+        "precision": 1,
+        "wilson95Low": 0.955249,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 230,
+        "successes": 227,
+        "errors": 3,
+        "coverage": 0.319889,
+        "precision": 0.986957,
+        "wilson95Low": 0.96236,
+        "wilson95High": 0.995554,
+        "byRole": {
+          "flat": {
+            "actions": 47,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 108,
+            "precision": 0.990741
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.973333
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 527,
+        "successes": 520,
+        "errors": 7,
+        "coverage": 0.328554,
+        "precision": 0.986717,
+        "wilson95Low": 0.972839,
+        "wilson95High": 0.993551,
+        "byRole": {
+          "flat": {
+            "actions": 97,
+            "precision": 0.979381
+          },
+          "entry/topup": {
+            "actions": 264,
+            "precision": 0.996212
+          },
+          "hedge": {
+            "actions": 166,
+            "precision": 0.975904
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.05,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.02,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.981395,
+      "robustWilson": 0.953148,
+      "fit": {
+        "actions": 215,
+        "successes": 211,
+        "errors": 4,
+        "coverage": 0.342903,
+        "precision": 0.981395,
+        "wilson95Low": 0.953148,
+        "wilson95High": 0.992742
+      },
+      "selection": {
+        "actions": 80,
+        "successes": 80,
+        "errors": 0,
+        "coverage": 0.310078,
+        "precision": 1,
+        "wilson95Low": 0.954182,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 227,
+        "successes": 222,
+        "errors": 5,
+        "coverage": 0.315716,
+        "precision": 0.977974,
+        "wilson95Low": 0.949483,
+        "wilson95High": 0.990556,
+        "byRole": {
+          "flat": {
+            "actions": 47,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 105,
+            "precision": 0.980952
+          },
+          "hedge": {
+            "actions": 75,
+            "precision": 0.96
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 522,
+        "successes": 513,
+        "errors": 9,
+        "coverage": 0.325436,
+        "precision": 0.982759,
+        "wilson95Low": 0.967561,
+        "wilson95High": 0.990903,
+        "byRole": {
+          "flat": {
+            "actions": 96,
+            "precision": 0.979167
+          },
+          "entry/topup": {
+            "actions": 255,
+            "precision": 0.992157
+          },
+          "hedge": {
+            "actions": 171,
+            "precision": 0.97076
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.04,
+        "binanceLookbackMs": 5000,
+        "binanceVelocityMinUsd": 0,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0.005,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.979592,
+      "robustWilson": 0.953124,
+      "fit": {
+        "actions": 245,
+        "successes": 240,
+        "errors": 5,
+        "coverage": 0.39075,
+        "precision": 0.979592,
+        "wilson95Low": 0.953124,
+        "wilson95High": 0.991252
+      },
+      "selection": {
+        "actions": 89,
+        "successes": 89,
+        "errors": 0,
+        "coverage": 0.344961,
+        "precision": 1,
+        "wilson95Low": 0.958623,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 259,
+        "successes": 253,
+        "errors": 6,
+        "coverage": 0.360223,
+        "precision": 0.976834,
+        "wilson95Low": 0.950389,
+        "wilson95High": 0.989341,
+        "byRole": {
+          "flat": {
+            "actions": 55,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 116,
+            "precision": 0.982759
+          },
+          "hedge": {
+            "actions": 88,
+            "precision": 0.954545
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 593,
+        "successes": 582,
+        "errors": 11,
+        "coverage": 0.369701,
+        "precision": 0.98145,
+        "wilson95Low": 0.967092,
+        "wilson95High": 0.989611,
+        "byRole": {
+          "flat": {
+            "actions": 112,
+            "precision": 0.973214
+          },
+          "entry/topup": {
+            "actions": 282,
+            "precision": 0.992908
+          },
+          "hedge": {
+            "actions": 199,
+            "precision": 0.969849
+          }
+        }
+      }
+    },
+    {
+      "config": {
+        "clobLookbackMs": 5000,
+        "clobVelocityMin": 0.04,
+        "binanceLookbackMs": 3000,
+        "binanceVelocityMinUsd": 5,
+        "trendLookbackMin": 20,
+        "trendThresholdPct": 0,
+        "binanceGapAgreeOn": false
+      },
+      "robustPrecision": 0.985,
+      "robustWilson": 0.953062,
+      "fit": {
+        "actions": 200,
+        "successes": 197,
+        "errors": 3,
+        "coverage": 0.318979,
+        "precision": 0.985,
+        "wilson95Low": 0.956834,
+        "wilson95High": 0.994886
+      },
+      "selection": {
+        "actions": 78,
+        "successes": 78,
+        "errors": 0,
+        "coverage": 0.302326,
+        "precision": 1,
+        "wilson95Low": 0.953062,
+        "wilson95High": 1
+      },
+      "holdout": {
+        "actions": 206,
+        "successes": 204,
+        "errors": 2,
+        "coverage": 0.286509,
+        "precision": 0.990291,
+        "wilson95Low": 0.965298,
+        "wilson95High": 0.997333,
+        "byRole": {
+          "flat": {
+            "actions": 44,
+            "precision": 1
+          },
+          "entry/topup": {
+            "actions": 98,
+            "precision": 1
+          },
+          "hedge": {
+            "actions": 64,
+            "precision": 0.96875
+          }
+        }
+      },
+      "fullDay": {
+        "actions": 484,
+        "successes": 479,
+        "errors": 5,
+        "coverage": 0.301746,
+        "precision": 0.989669,
+        "wilson95Low": 0.976048,
+        "wilson95High": 0.99558,
+        "byRole": {
+          "flat": {
+            "actions": 89,
+            "precision": 0.988764
+          },
+          "entry/topup": {
+            "actions": 241,
+            "precision": 1
+          },
+          "hedge": {
+            "actions": 154,
+            "precision": 0.974026
+          }
+        }
+      }
+    }
+  ],
+  "caveat": "This is an in-day signal-direction imitation audit. It does not prove stable earnings, execution quality, event-time recall, or future performance."
+}

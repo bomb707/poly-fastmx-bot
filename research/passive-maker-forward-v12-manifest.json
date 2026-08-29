@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "cohort": "v12-timeout10-challenger",
+  "cohortStart": "2026-08-24T07:25:00.000Z",
+  "createdAt": "2026-08-24T07:23:30.000Z",
+  "files": [
+    { "path": "research/passive-maker-pair-selected-v12.json", "sha256": "ef086d9d11563e551e835f26dcae17796ab916a64b481eaced38fc927c048c14" },
+    { "path": "research/passive-maker-walkforward.mjs", "sha256": "2ac8b201a7f01e69f3e91285a9f55cd237a75f4905b22f89c7a3ddfee751d1f6" },
+    { "path": "research/passive-maker-fill-model.mjs", "sha256": "b1404510eb8fbb80815ec2887946e03a54c788a8c51672be0aeff3fadbb55cdf" },
+    { "path": "research/passive-maker-forward-folds.mjs", "sha256": "985a8135bf2926245c1dd3b64f90f07a0ab6757fd89a516f315f5e6b5a7ed5ab" },
+    { "path": "research/collect-market-taker-trades.mjs", "sha256": "eb8e6774a69840e9bc3a57dda1d1073de4c24d39649d99178c8b8244474f6b17" },
+    { "path": "research/market-trade-dedupe.mjs", "sha256": "5c62658424f1c9322c5b2bd4cfb792a8a6afc884a9aa80a39c07323e47472452" },
+    { "path": "research/wallet-3048/collect.mjs", "sha256": "b514316d7e3edaf70a68f542f438470eebae22f5b4ead7ed1784985c6bd13db7" },
+    { "path": "research/wallet-3048/collect-v4-e8-l2.mjs", "sha256": "6842f336c6af9803588bcc83ed7a4ba817e0e2dbba2a46cf1fc67f1b0f51fa0e" },
+    { "path": "research/wallet-3048/collect-v2-controls.mjs", "sha256": "1c3b3eacb1711ad3f6292bde5d9c2bc4c04afa4efc4d8cb076ab15130c7b84b0" },
+    { "path": "research/passive-maker-forward-monitor.mjs", "sha256": "1d9a8f486738ba686f792e87ff70364acc086b756f622e2b42e3f02fcc117bb3" }
+  ]
+}

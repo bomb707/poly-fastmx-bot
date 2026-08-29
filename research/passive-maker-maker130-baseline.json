@@ -1,0 +1,17 @@
+[
+  {
+    "name": "pair90_5x2_timeout10_fifo_arrival_maker130_baseline",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.90,
+    "pairCostCap": 0.90,
+    "orderSize": 5,
+    "minOrderShares": 5,
+    "exposureCap": 10,
+    "targetMakerLatencyMs": 130,
+    "pauseMakerAboveLatencyMs": 0,
+    "takerLatencyMs": 520,
+    "unpairedTimeoutS": 10,
+    "minTimeS": 5,
+    "maxTimeS": 255
+  }
+]

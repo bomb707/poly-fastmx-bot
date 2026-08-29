@@ -1,0 +1,28 @@
+[
+  {
+    "name": "net_edge_pair_q094_ttl750_bounded_complete_postonly_challenger",
+    "signalMode": "twoSided",
+    "postOnly": true,
+    "pairQuoteCap": 0.94,
+    "pairCostCap": 0.94,
+    "balancedInventoryPairBidCap": 0.94,
+    "orderSize": 5,
+    "minOrderShares": 5,
+    "exposureCap": 10,
+    "ttlMs": 750,
+    "cancelLatencyMs": 500,
+    "unpairedTimeoutS": 5,
+    "minTimeS": 5,
+    "maxTimeS": 240,
+    "safeHedgeEveryTick": true,
+    "pairCompleteCap": 1.0,
+    "timeoutCompleteCap": 1.02,
+    "endLiquidateS": 280,
+    "priceMin": 0.12,
+    "priceMax": 0.89,
+    "targetMakerLatencyMs": 130,
+    "pauseMakerAboveLatencyMs": 250,
+    "takerLatencyMs": 520,
+    "makerRebateRate": 0
+  }
+]

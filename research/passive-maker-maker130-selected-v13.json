@@ -1,0 +1,20 @@
+[
+  {
+    "name": "maker130_q088_ttl500_timeout5_rebate20_v13",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.88,
+    "pairCostCap": 0.88,
+    "orderSize": 5,
+    "minOrderShares": 5,
+    "exposureCap": 10,
+    "ttlMs": 500,
+    "unpairedTimeoutS": 5,
+    "minTimeS": 5,
+    "maxTimeS": 150,
+    "safeHedgeEveryTick": true,
+    "pairCompleteCap": 0.97,
+    "timeoutCompleteCap": 1.01,
+    "takerLatencyMs": 520,
+    "makerRebateRate": 0.20
+  }
+]

@@ -1,0 +1,1370 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T14:02:48.611Z",
+  "split": "2026-08-22T00:00:00.000Z",
+  "targetMode": "signed",
+  "method": "regression tree on log(1+signed minimum shares), using only causal public pre-fire features and inventory",
+  "features": [
+    "timeS",
+    "ask",
+    "spread",
+    "pairAsk",
+    "askDepth1",
+    "bidDepth1",
+    "askDepth3",
+    "bidDepth3",
+    "topDepthImbalance",
+    "depth3Imbalance",
+    "topAskShareOfDepth3",
+    "micropriceBias",
+    "sideAskMove1",
+    "sideBidMove1",
+    "sideAskMove3",
+    "sideBidMove3",
+    "sideAskMove5",
+    "sideBidMove5",
+    "sideAskMove10",
+    "sideBidMove10",
+    "askDepth3Change1",
+    "bidDepth3Change1",
+    "askDepth3Change3",
+    "bidDepth3Change3",
+    "askDepth3Change5",
+    "bidDepth3Change5",
+    "bzMove1",
+    "bzMove3",
+    "bzMove5",
+    "bzMove10",
+    "clMove1",
+    "clMove3",
+    "clMove5",
+    "clMove10",
+    "bzGap",
+    "clGap",
+    "absoluteInventory",
+    "orientedInventory",
+    "isHedge",
+    "fifoPairCost",
+    "sinceLastFireS",
+    "sinceSameSideFireS",
+    "coinBtc"
+  ],
+  "samples": {
+    "all": 6025,
+    "train": 3837,
+    "holdout": 2188
+  },
+  "tree": {
+    "id": 0,
+    "depth": 0,
+    "rows": 3837,
+    "medianSize": 9,
+    "meanLogSize": 2.553258533,
+    "size": {
+      "p10": 5,
+      "p25": 6,
+      "p50": 9,
+      "p75": 18,
+      "p90": 38
+    },
+    "field": "orientedInventory",
+    "threshold": -8,
+    "gain": 0.09829449,
+    "left": {
+      "id": 1,
+      "depth": 1,
+      "rows": 779,
+      "medianSize": 18,
+      "meanLogSize": 3.007513026,
+      "size": {
+        "p10": 6,
+        "p25": 9,
+        "p50": 18,
+        "p75": 38,
+        "p90": 66
+      },
+      "field": "ask",
+      "threshold": 0.216,
+      "gain": 0.05056842,
+      "left": {
+        "id": 2,
+        "depth": 2,
+        "rows": 156,
+        "medianSize": 27.5,
+        "meanLogSize": 3.391252048,
+        "size": {
+          "p10": 9,
+          "p25": 15,
+          "p50": 27.5,
+          "p75": 56,
+          "p90": 84.5
+        },
+        "field": "ask",
+        "threshold": 0.06,
+        "gain": 0.11011521,
+        "left": {
+          "id": 3,
+          "depth": 3,
+          "rows": 48,
+          "medianSize": 51.5,
+          "meanLogSize": 3.798289279,
+          "size": {
+            "p10": 19.1,
+            "p25": 25.5,
+            "p50": 51.5,
+            "p75": 71.25,
+            "p90": 97.2
+          }
+        },
+        "right": {
+          "id": 4,
+          "depth": 3,
+          "rows": 108,
+          "medianSize": 22,
+          "meanLogSize": 3.210346613,
+          "size": {
+            "p10": 9,
+            "p25": 13,
+            "p50": 22,
+            "p75": 46.25,
+            "p90": 72.3
+          },
+          "field": "askDepth3",
+          "threshold": 636.91,
+          "gain": 0.05305669,
+          "left": {
+            "id": 5,
+            "depth": 4,
+            "rows": 54,
+            "medianSize": 29,
+            "meanLogSize": 3.39390474,
+            "size": {
+              "p10": 8.3,
+              "p25": 14,
+              "p50": 29,
+              "p75": 54.5,
+              "p90": 87.4
+            }
+          },
+          "right": {
+            "id": 6,
+            "depth": 4,
+            "rows": 54,
+            "medianSize": 17.5,
+            "meanLogSize": 3.026788486,
+            "size": {
+              "p10": 9,
+              "p25": 12.25,
+              "p50": 17.5,
+              "p75": 28.25,
+              "p90": 55.4
+            }
+          }
+        }
+      },
+      "right": {
+        "id": 7,
+        "depth": 2,
+        "rows": 623,
+        "medianSize": 16,
+        "meanLogSize": 2.911424282,
+        "size": {
+          "p10": 5,
+          "p25": 8,
+          "p50": 16,
+          "p75": 33,
+          "p90": 57.8
+        },
+        "field": "ask",
+        "threshold": 0.91,
+        "gain": 0.04743245,
+        "left": {
+          "id": 8,
+          "depth": 3,
+          "rows": 499,
+          "medianSize": 14,
+          "meanLogSize": 2.82070713,
+          "size": {
+            "p10": 5,
+            "p25": 7,
+            "p50": 14,
+            "p75": 30,
+            "p90": 51
+          },
+          "field": "clGap",
+          "threshold": -0.00807587,
+          "gain": 0.03436045,
+          "left": {
+            "id": 9,
+            "depth": 4,
+            "rows": 200,
+            "medianSize": 19.5,
+            "meanLogSize": 3.000390989,
+            "size": {
+              "p10": 6,
+              "p25": 8,
+              "p50": 19.5,
+              "p75": 36.25,
+              "p90": 62.1
+            },
+            "field": "sinceSameSideFireS",
+            "threshold": 132.3412,
+            "gain": 0.08344447,
+            "left": {
+              "id": 10,
+              "depth": 5,
+              "rows": 80,
+              "medianSize": 11,
+              "meanLogSize": 2.708331462,
+              "size": {
+                "p10": 5,
+                "p25": 7,
+                "p50": 11,
+                "p75": 26.5,
+                "p90": 44.7
+              }
+            },
+            "right": {
+              "id": 11,
+              "depth": 5,
+              "rows": 120,
+              "medianSize": 26,
+              "meanLogSize": 3.19509734,
+              "size": {
+                "p10": 6,
+                "p25": 13,
+                "p50": 26,
+                "p75": 44.25,
+                "p90": 66
+              },
+              "field": "bidDepth3Change3",
+              "threshold": 0.436,
+              "gain": 0.05836539,
+              "left": {
+                "id": 12,
+                "depth": 6,
+                "rows": 72,
+                "medianSize": 22.5,
+                "meanLogSize": 3.036714317,
+                "size": {
+                  "p10": 6,
+                  "p25": 9,
+                  "p50": 22.5,
+                  "p75": 41.5,
+                  "p90": 53.9
+                }
+              },
+              "right": {
+                "id": 13,
+                "depth": 6,
+                "rows": 48,
+                "medianSize": 29.5,
+                "meanLogSize": 3.432671875,
+                "size": {
+                  "p10": 10.7,
+                  "p25": 19.75,
+                  "p50": 29.5,
+                  "p75": 56.25,
+                  "p90": 75.9
+                }
+              }
+            }
+          },
+          "right": {
+            "id": 14,
+            "depth": 4,
+            "rows": 299,
+            "medianSize": 12,
+            "meanLogSize": 2.700517258,
+            "size": {
+              "p10": 5,
+              "p25": 7,
+              "p50": 12,
+              "p75": 23.5,
+              "p90": 43.2
+            },
+            "field": "absoluteInventory",
+            "threshold": 33.90625,
+            "gain": 0.01793344,
+            "left": {
+              "id": 15,
+              "depth": 5,
+              "rows": 239,
+              "medianSize": 12,
+              "meanLogSize": 2.650438254,
+              "size": {
+                "p10": 5,
+                "p25": 7,
+                "p50": 12,
+                "p75": 22,
+                "p90": 39.2
+              },
+              "field": "bidDepth3",
+              "threshold": 417.05,
+              "gain": 0.02621739,
+              "left": {
+                "id": 16,
+                "depth": 6,
+                "rows": 72,
+                "medianSize": 14,
+                "meanLogSize": 2.823221592,
+                "size": {
+                  "p10": 6,
+                  "p25": 8,
+                  "p50": 14,
+                  "p75": 26,
+                  "p90": 47.3
+                }
+              },
+              "right": {
+                "id": 17,
+                "depth": 6,
+                "rows": 167,
+                "medianSize": 10,
+                "meanLogSize": 2.575944839,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 10,
+                  "p75": 20,
+                  "p90": 36.2
+                }
+              }
+            },
+            "right": {
+              "id": 18,
+              "depth": 5,
+              "rows": 60,
+              "medianSize": 15,
+              "meanLogSize": 2.899998623,
+              "size": {
+                "p10": 5,
+                "p25": 7,
+                "p50": 15,
+                "p75": 33,
+                "p90": 67
+              }
+            }
+          }
+        },
+        "right": {
+          "id": 19,
+          "depth": 3,
+          "rows": 124,
+          "medianSize": 24.5,
+          "meanLogSize": 3.276487657,
+          "size": {
+            "p10": 6,
+            "p25": 12,
+            "p50": 24.5,
+            "p75": 48,
+            "p90": 84.1
+          },
+          "field": "ask",
+          "threshold": 0.95,
+          "gain": 0.12227188,
+          "left": {
+            "id": 20,
+            "depth": 4,
+            "rows": 60,
+            "medianSize": 17,
+            "meanLogSize": 2.951010705,
+            "size": {
+              "p10": 5,
+              "p25": 9,
+              "p50": 17,
+              "p75": 32.25,
+              "p90": 55.6
+            }
+          },
+          "right": {
+            "id": 21,
+            "depth": 4,
+            "rows": 64,
+            "medianSize": 36,
+            "meanLogSize": 3.5816223,
+            "size": {
+              "p10": 8.6,
+              "p25": 21.25,
+              "p50": 36,
+              "p75": 65.75,
+              "p90": 106.8
+            }
+          }
+        }
+      }
+    },
+    "right": {
+      "id": 22,
+      "depth": 1,
+      "rows": 3058,
+      "medianSize": 8,
+      "meanLogSize": 2.437540988,
+      "size": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 8,
+        "p75": 15,
+        "p90": 29
+      },
+      "field": "timeS",
+      "threshold": 168.4048,
+      "gain": 0.07594948,
+      "left": {
+        "id": 23,
+        "depth": 2,
+        "rows": 2140,
+        "medianSize": 8,
+        "meanLogSize": 2.320661832,
+        "size": {
+          "p10": 5,
+          "p25": 6,
+          "p50": 8,
+          "p75": 13,
+          "p90": 21
+        },
+        "field": "timeS",
+        "threshold": 89.437,
+        "gain": 0.01901149,
+        "left": {
+          "id": 24,
+          "depth": 3,
+          "rows": 1284,
+          "medianSize": 7,
+          "meanLogSize": 2.259628856,
+          "size": {
+            "p10": 5,
+            "p25": 6,
+            "p50": 7,
+            "p75": 12,
+            "p90": 18
+          },
+          "field": "askDepth3",
+          "threshold": 312.836,
+          "gain": 0.01800332,
+          "left": {
+            "id": 25,
+            "depth": 4,
+            "rows": 257,
+            "medianSize": 8,
+            "meanLogSize": 2.388943507,
+            "size": {
+              "p10": 5,
+              "p25": 6,
+              "p50": 8,
+              "p75": 14,
+              "p90": 23
+            },
+            "field": "bidDepth1",
+            "threshold": 350.724,
+            "gain": 0.04506308,
+            "left": {
+              "id": 26,
+              "depth": 5,
+              "rows": 154,
+              "medianSize": 10,
+              "meanLogSize": 2.486989598,
+              "size": {
+                "p10": 5,
+                "p25": 6,
+                "p50": 10,
+                "p75": 17,
+                "p90": 27.4
+              },
+              "field": "sinceLastFireS",
+              "threshold": 22.8272,
+              "gain": 0.08157973,
+              "left": {
+                "id": 27,
+                "depth": 6,
+                "rows": 46,
+                "medianSize": 7.5,
+                "meanLogSize": 2.233162143,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 7.5,
+                  "p75": 11,
+                  "p90": 13.5
+                }
+              },
+              "right": {
+                "id": 28,
+                "depth": 6,
+                "rows": 108,
+                "medianSize": 12,
+                "meanLogSize": 2.595101292,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 12,
+                  "p75": 20,
+                  "p90": 31.3
+                }
+              }
+            },
+            "right": {
+              "id": 29,
+              "depth": 5,
+              "rows": 103,
+              "medianSize": 7,
+              "meanLogSize": 2.242350323,
+              "size": {
+                "p10": 5,
+                "p25": 6,
+                "p50": 7,
+                "p75": 11,
+                "p90": 17
+              },
+              "field": "clMove3",
+              "threshold": 0.00043925,
+              "gain": 0.06072465,
+              "left": {
+                "id": 30,
+                "depth": 6,
+                "rows": 52,
+                "medianSize": 6,
+                "meanLogSize": 2.118625317,
+                "size": {
+                  "p10": 5,
+                  "p25": 5,
+                  "p50": 6,
+                  "p75": 9.25,
+                  "p90": 13
+                }
+              },
+              "right": {
+                "id": 31,
+                "depth": 6,
+                "rows": 51,
+                "medianSize": 8,
+                "meanLogSize": 2.36850131,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 8,
+                  "p75": 13,
+                  "p90": 24
+                }
+              }
+            }
+          },
+          "right": {
+            "id": 32,
+            "depth": 4,
+            "rows": 1027,
+            "medianSize": 7,
+            "meanLogSize": 2.227268714,
+            "size": {
+              "p10": 5,
+              "p25": 6,
+              "p50": 7,
+              "p75": 11,
+              "p90": 16.4
+            },
+            "field": "ask",
+            "threshold": 0.84,
+            "gain": 0.01628772,
+            "left": {
+              "id": 33,
+              "depth": 5,
+              "rows": 925,
+              "medianSize": 7,
+              "meanLogSize": 2.208054422,
+              "size": {
+                "p10": 5,
+                "p25": 5,
+                "p50": 7,
+                "p75": 11,
+                "p90": 16
+              },
+              "field": "bidDepth3",
+              "threshold": 1094.128,
+              "gain": 0.01934376,
+              "left": {
+                "id": 34,
+                "depth": 6,
+                "rows": 555,
+                "medianSize": 7,
+                "meanLogSize": 2.258965611,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 7,
+                  "p75": 11.5,
+                  "p90": 17.6
+                }
+              },
+              "right": {
+                "id": 35,
+                "depth": 6,
+                "rows": 370,
+                "medianSize": 6,
+                "meanLogSize": 2.131687639,
+                "size": {
+                  "p10": 5,
+                  "p25": 5,
+                  "p50": 6,
+                  "p75": 9,
+                  "p90": 14
+                }
+              }
+            },
+            "right": {
+              "id": 36,
+              "depth": 5,
+              "rows": 102,
+              "medianSize": 10,
+              "meanLogSize": 2.401515969,
+              "size": {
+                "p10": 5,
+                "p25": 6.25,
+                "p50": 10,
+                "p75": 13,
+                "p90": 20.8
+              },
+              "field": "sideAskMove1",
+              "threshold": 0.01,
+              "gain": 0.03174958,
+              "left": {
+                "id": 37,
+                "depth": 6,
+                "rows": 57,
+                "medianSize": 9,
+                "meanLogSize": 2.328406275,
+                "size": {
+                  "p10": 5,
+                  "p25": 7,
+                  "p50": 9,
+                  "p75": 12,
+                  "p90": 15
+                }
+              },
+              "right": {
+                "id": 38,
+                "depth": 6,
+                "rows": 45,
+                "medianSize": 12,
+                "meanLogSize": 2.494121581,
+                "size": {
+                  "p10": 5.4,
+                  "p25": 6,
+                  "p50": 12,
+                  "p75": 15,
+                  "p90": 23.2
+                }
+              }
+            }
+          }
+        },
+        "right": {
+          "id": 39,
+          "depth": 3,
+          "rows": 856,
+          "medianSize": 8,
+          "meanLogSize": 2.412211296,
+          "size": {
+            "p10": 5,
+            "p25": 6,
+            "p50": 8,
+            "p75": 14,
+            "p90": 27
+          },
+          "field": "orientedInventory",
+          "threshold": -5,
+          "gain": 0.03011171,
+          "left": {
+            "id": 40,
+            "depth": 4,
+            "rows": 90,
+            "medianSize": 11,
+            "meanLogSize": 2.721034665,
+            "size": {
+              "p10": 5,
+              "p25": 6.25,
+              "p50": 11,
+              "p75": 27,
+              "p90": 47.1
+            },
+            "field": "sinceLastFireS",
+            "threshold": 36.6545,
+            "gain": 0.06841869,
+            "left": {
+              "id": 41,
+              "depth": 5,
+              "rows": 45,
+              "medianSize": 9,
+              "meanLogSize": 2.511955072,
+              "size": {
+                "p10": 5.4,
+                "p25": 6,
+                "p50": 9,
+                "p75": 13,
+                "p90": 38.2
+              }
+            },
+            "right": {
+              "id": 42,
+              "depth": 5,
+              "rows": 45,
+              "medianSize": 18,
+              "meanLogSize": 2.930114258,
+              "size": {
+                "p10": 5.4,
+                "p25": 10,
+                "p50": 18,
+                "p75": 29,
+                "p90": 53.4
+              }
+            }
+          },
+          "right": {
+            "id": 43,
+            "depth": 4,
+            "rows": 766,
+            "medianSize": 8,
+            "meanLogSize": 2.375926566,
+            "size": {
+              "p10": 5,
+              "p25": 6,
+              "p50": 8,
+              "p75": 14,
+              "p90": 24
+            },
+            "field": "absoluteInventory",
+            "threshold": 0,
+            "gain": 0.02467491,
+            "left": {
+              "id": 44,
+              "depth": 5,
+              "rows": 292,
+              "medianSize": 9,
+              "meanLogSize": 2.490593436,
+              "size": {
+                "p10": 5,
+                "p25": 6,
+                "p50": 9,
+                "p75": 16.25,
+                "p90": 30
+              },
+              "field": "pairAsk",
+              "threshold": 1.01,
+              "gain": 0.02473904,
+              "left": {
+                "id": 45,
+                "depth": 6,
+                "rows": 244,
+                "medianSize": 9,
+                "meanLogSize": 2.447150001,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 9,
+                  "p75": 15,
+                  "p90": 29.7
+                }
+              },
+              "right": {
+                "id": 46,
+                "depth": 6,
+                "rows": 48,
+                "medianSize": 14.5,
+                "meanLogSize": 2.711430899,
+                "size": {
+                  "p10": 6,
+                  "p25": 7.75,
+                  "p50": 14.5,
+                  "p75": 22.5,
+                  "p90": 32
+                }
+              }
+            },
+            "right": {
+              "id": 47,
+              "depth": 5,
+              "rows": 474,
+              "medianSize": 7,
+              "meanLogSize": 2.305287904,
+              "size": {
+                "p10": 5,
+                "p25": 6,
+                "p50": 7,
+                "p75": 12,
+                "p90": 21
+              },
+              "field": "ask",
+              "threshold": 0.77,
+              "gain": 0.01756157,
+              "left": {
+                "id": 48,
+                "depth": 6,
+                "rows": 243,
+                "medianSize": 7,
+                "meanLogSize": 2.237102022,
+                "size": {
+                  "p10": 5,
+                  "p25": 5,
+                  "p50": 7,
+                  "p75": 11,
+                  "p90": 18
+                }
+              },
+              "right": {
+                "id": 49,
+                "depth": 6,
+                "rows": 231,
+                "medianSize": 8,
+                "meanLogSize": 2.377015909,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 8,
+                  "p75": 13,
+                  "p90": 21
+                }
+              }
+            }
+          }
+        }
+      },
+      "right": {
+        "id": 50,
+        "depth": 2,
+        "rows": 918,
+        "medianSize": 11,
+        "meanLogSize": 2.710004381,
+        "size": {
+          "p10": 5,
+          "p25": 7,
+          "p50": 11,
+          "p75": 25,
+          "p90": 49.3
+        },
+        "field": "ask",
+        "threshold": 0.97,
+        "gain": 0.04171661,
+        "left": {
+          "id": 51,
+          "depth": 3,
+          "rows": 852,
+          "medianSize": 11,
+          "meanLogSize": 2.665768753,
+          "size": {
+            "p10": 5,
+            "p25": 7,
+            "p50": 11,
+            "p75": 22,
+            "p90": 45
+          },
+          "field": "ask",
+          "threshold": 0.14,
+          "gain": 0.04863459,
+          "left": {
+            "id": 52,
+            "depth": 4,
+            "rows": 90,
+            "medianSize": 21.5,
+            "meanLogSize": 3.146128008,
+            "size": {
+              "p10": 7,
+              "p25": 10,
+              "p50": 21.5,
+              "p75": 45,
+              "p90": 62.5
+            },
+            "field": "bidDepth3Change3",
+            "threshold": 123.01,
+            "gain": 0.07242647,
+            "left": {
+              "id": 53,
+              "depth": 5,
+              "rows": 45,
+              "medianSize": 31,
+              "meanLogSize": 3.363459053,
+              "size": {
+                "p10": 8.4,
+                "p25": 15,
+                "p50": 31,
+                "p75": 55,
+                "p90": 72
+              }
+            },
+            "right": {
+              "id": 54,
+              "depth": 5,
+              "rows": 45,
+              "medianSize": 16,
+              "meanLogSize": 2.928796963,
+              "size": {
+                "p10": 6,
+                "p25": 9,
+                "p50": 16,
+                "p75": 36,
+                "p90": 54.8
+              }
+            }
+          },
+          "right": {
+            "id": 55,
+            "depth": 4,
+            "rows": 762,
+            "medianSize": 10,
+            "meanLogSize": 2.609033408,
+            "size": {
+              "p10": 5,
+              "p25": 6,
+              "p50": 10,
+              "p75": 20,
+              "p90": 37.9
+            },
+            "field": "timeS",
+            "threshold": 244.6528,
+            "gain": 0.02896148,
+            "left": {
+              "id": 56,
+              "depth": 5,
+              "rows": 609,
+              "medianSize": 10,
+              "meanLogSize": 2.5475787,
+              "size": {
+                "p10": 5,
+                "p25": 6,
+                "p50": 10,
+                "p75": 18,
+                "p90": 33
+              },
+              "field": "bidDepth3",
+              "threshold": 982.71,
+              "gain": 0.01339908,
+              "left": {
+                "id": 57,
+                "depth": 6,
+                "rows": 426,
+                "medianSize": 11,
+                "meanLogSize": 2.598414435,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 11,
+                  "p75": 20,
+                  "p90": 34.5
+                }
+              },
+              "right": {
+                "id": 58,
+                "depth": 6,
+                "rows": 183,
+                "medianSize": 9,
+                "meanLogSize": 2.429239776,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 9,
+                  "p75": 14,
+                  "p90": 25.8
+                }
+              }
+            },
+            "right": {
+              "id": 59,
+              "depth": 5,
+              "rows": 153,
+              "medianSize": 14,
+              "meanLogSize": 2.853647247,
+              "size": {
+                "p10": 5,
+                "p25": 8,
+                "p50": 14,
+                "p75": 36,
+                "p90": 57
+              },
+              "field": "ask",
+              "threshold": 0.77,
+              "gain": 0.03074745,
+              "left": {
+                "id": 60,
+                "depth": 6,
+                "rows": 80,
+                "medianSize": 11,
+                "meanLogSize": 2.711206584,
+                "size": {
+                  "p10": 5,
+                  "p25": 6,
+                  "p50": 11,
+                  "p75": 25.25,
+                  "p90": 56.1
+                }
+              },
+              "right": {
+                "id": 61,
+                "depth": 6,
+                "rows": 73,
+                "medianSize": 19,
+                "meanLogSize": 3.009746602,
+                "size": {
+                  "p10": 5.2,
+                  "p25": 9,
+                  "p50": 19,
+                  "p75": 43,
+                  "p90": 59.4
+                }
+              }
+            }
+          }
+        },
+        "right": {
+          "id": 62,
+          "depth": 3,
+          "rows": 66,
+          "medianSize": 25.5,
+          "meanLogSize": 3.281046123,
+          "size": {
+            "p10": 8,
+            "p25": 10,
+            "p50": 25.5,
+            "p75": 53,
+            "p90": 86
+          }
+        }
+      }
+    }
+  },
+  "train": {
+    "rows": 3837,
+    "actual": {
+      "p10": 5,
+      "p25": 6,
+      "p50": 9,
+      "p75": 18,
+      "p90": 38
+    },
+    "predicted": {
+      "p10": 6,
+      "p25": 7,
+      "p50": 9,
+      "p75": 12,
+      "p90": 23
+    },
+    "medianAbsoluteError": 4,
+    "p90AbsoluteError": 24,
+    "medianAbsoluteLogError": 0.356675,
+    "exactTierPct": 41.308,
+    "large16PrecisionPct": 65.875,
+    "large16RecallPct": 38.276,
+    "baselineMedianSize": 9,
+    "baselineMedianAbsoluteError": 4
+  },
+  "holdout": {
+    "rows": 2188,
+    "actual": {
+      "p10": 5,
+      "p25": 6,
+      "p50": 8,
+      "p75": 16,
+      "p90": 34
+    },
+    "predicted": {
+      "p10": 6,
+      "p25": 7,
+      "p50": 9,
+      "p75": 12,
+      "p90": 19
+    },
+    "medianAbsoluteError": 4,
+    "p90AbsoluteError": 22,
+    "medianAbsoluteLogError": 0.405465,
+    "exactTierPct": 40.219,
+    "large16PrecisionPct": 54.408,
+    "large16RecallPct": 38.163,
+    "baselineMedianSize": 9,
+    "baselineMedianAbsoluteError": 4
+  },
+  "largestLeaves": [
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask <= 0.216",
+        "ask <= 0.06"
+      ],
+      "rows": 48,
+      "medianSize": 51.5,
+      "size": {
+        "p10": 19.1,
+        "p25": 25.5,
+        "p50": 51.5,
+        "p75": 71.25,
+        "p90": 97.2
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask > 0.216",
+        "ask > 0.91",
+        "ask > 0.95"
+      ],
+      "rows": 64,
+      "medianSize": 36,
+      "size": {
+        "p10": 8.6,
+        "p25": 21.25,
+        "p50": 36,
+        "p75": 65.75,
+        "p90": 106.8
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS > 168.4048",
+        "ask <= 0.97",
+        "ask <= 0.14",
+        "bidDepth3Change3 <= 123.01"
+      ],
+      "rows": 45,
+      "medianSize": 31,
+      "size": {
+        "p10": 8.4,
+        "p25": 15,
+        "p50": 31,
+        "p75": 55,
+        "p90": 72
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask > 0.216",
+        "ask <= 0.91",
+        "clGap <= -0.00807587",
+        "sinceSameSideFireS > 132.3412",
+        "bidDepth3Change3 > 0.436"
+      ],
+      "rows": 48,
+      "medianSize": 29.5,
+      "size": {
+        "p10": 10.7,
+        "p25": 19.75,
+        "p50": 29.5,
+        "p75": 56.25,
+        "p90": 75.9
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask <= 0.216",
+        "ask > 0.06",
+        "askDepth3 <= 636.91"
+      ],
+      "rows": 54,
+      "medianSize": 29,
+      "size": {
+        "p10": 8.3,
+        "p25": 14,
+        "p50": 29,
+        "p75": 54.5,
+        "p90": 87.4
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS > 168.4048",
+        "ask > 0.97"
+      ],
+      "rows": 66,
+      "medianSize": 25.5,
+      "size": {
+        "p10": 8,
+        "p25": 10,
+        "p50": 25.5,
+        "p75": 53,
+        "p90": 86
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask > 0.216",
+        "ask <= 0.91",
+        "clGap <= -0.00807587",
+        "sinceSameSideFireS > 132.3412",
+        "bidDepth3Change3 <= 0.436"
+      ],
+      "rows": 72,
+      "medianSize": 22.5,
+      "size": {
+        "p10": 6,
+        "p25": 9,
+        "p50": 22.5,
+        "p75": 41.5,
+        "p90": 53.9
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS > 168.4048",
+        "ask <= 0.97",
+        "ask > 0.14",
+        "timeS > 244.6528",
+        "ask > 0.77"
+      ],
+      "rows": 73,
+      "medianSize": 19,
+      "size": {
+        "p10": 5.2,
+        "p25": 9,
+        "p50": 19,
+        "p75": 43,
+        "p90": 59.4
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS <= 168.4048",
+        "timeS > 89.437",
+        "orientedInventory <= -5",
+        "sinceLastFireS > 36.6545"
+      ],
+      "rows": 45,
+      "medianSize": 18,
+      "size": {
+        "p10": 5.4,
+        "p25": 10,
+        "p50": 18,
+        "p75": 29,
+        "p90": 53.4
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask <= 0.216",
+        "ask > 0.06",
+        "askDepth3 > 636.91"
+      ],
+      "rows": 54,
+      "medianSize": 17.5,
+      "size": {
+        "p10": 9,
+        "p25": 12.25,
+        "p50": 17.5,
+        "p75": 28.25,
+        "p90": 55.4
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask > 0.216",
+        "ask > 0.91",
+        "ask <= 0.95"
+      ],
+      "rows": 60,
+      "medianSize": 17,
+      "size": {
+        "p10": 5,
+        "p25": 9,
+        "p50": 17,
+        "p75": 32.25,
+        "p90": 55.6
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS > 168.4048",
+        "ask <= 0.97",
+        "ask <= 0.14",
+        "bidDepth3Change3 > 123.01"
+      ],
+      "rows": 45,
+      "medianSize": 16,
+      "size": {
+        "p10": 6,
+        "p25": 9,
+        "p50": 16,
+        "p75": 36,
+        "p90": 54.8
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask > 0.216",
+        "ask <= 0.91",
+        "clGap > -0.00807587",
+        "absoluteInventory > 33.90625"
+      ],
+      "rows": 60,
+      "medianSize": 15,
+      "size": {
+        "p10": 5,
+        "p25": 7,
+        "p50": 15,
+        "p75": 33,
+        "p90": 67
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS <= 168.4048",
+        "timeS > 89.437",
+        "orientedInventory > -5",
+        "absoluteInventory <= 0",
+        "pairAsk > 1.01"
+      ],
+      "rows": 48,
+      "medianSize": 14.5,
+      "size": {
+        "p10": 6,
+        "p25": 7.75,
+        "p50": 14.5,
+        "p75": 22.5,
+        "p90": 32
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory <= -8",
+        "ask > 0.216",
+        "ask <= 0.91",
+        "clGap > -0.00807587",
+        "absoluteInventory <= 33.90625",
+        "bidDepth3 <= 417.05"
+      ],
+      "rows": 72,
+      "medianSize": 14,
+      "size": {
+        "p10": 6,
+        "p25": 8,
+        "p50": 14,
+        "p75": 26,
+        "p90": 47.3
+      }
+    },
+    {
+      "rules": [
+        "orientedInventory > -8",
+        "timeS <= 168.4048",
+        "timeS <= 89.437",
+        "askDepth3 <= 312.836",
+        "bidDepth1 <= 350.724",
+        "sinceLastFireS > 22.8272"
+      ],
+      "rows": 108,
+      "medianSize": 12,
+      "size": {
+        "p10": 5,
+        "p25": 6,
+        "p50": 12,
+        "p75": 20,
+        "p90": 31.3
+      }
+    }
+  ]
+}

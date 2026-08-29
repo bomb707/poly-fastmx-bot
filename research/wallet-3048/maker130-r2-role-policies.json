@@ -1,0 +1,20 @@
+{
+  "r2Role500": {
+    "gateMode":"tree","treeModel":"role","treeThreshold":0.730809,"entryTreeThreshold":0.730809,"hedgeTreeThreshold":0.800573,"sideChoiceMode":"tree",
+    "cooldownMs":500,"maxLean":300,"catchupThreshold":90,"size90Mode":"tree","sizeTreeThreshold":0.668481,
+    "gapBias":0,"pairCap":null,"pairBonus":0,"pairWeight":0,"templatePairTarget":null,"templatePairBonus":0,
+    "makerTtlMs":1500,"makerFillMode":"queue","makerFillSource":"trades"
+  },
+  "r2Role1000": {
+    "gateMode":"tree","treeModel":"role","treeThreshold":0.730809,"entryTreeThreshold":0.730809,"hedgeTreeThreshold":0.800573,"sideChoiceMode":"tree",
+    "cooldownMs":1000,"maxLean":300,"catchupThreshold":90,"size90Mode":"tree","sizeTreeThreshold":0.668481,
+    "gapBias":0,"pairCap":null,"pairBonus":0,"pairWeight":0,"templatePairTarget":null,"templatePairBonus":0,
+    "makerTtlMs":1500,"makerFillMode":"queue","makerFillSource":"trades"
+  },
+  "r2Role1500": {
+    "gateMode":"tree","treeModel":"role","treeThreshold":0.730809,"entryTreeThreshold":0.730809,"hedgeTreeThreshold":0.800573,"sideChoiceMode":"tree",
+    "cooldownMs":1500,"maxLean":300,"catchupThreshold":90,"size90Mode":"tree","sizeTreeThreshold":0.668481,
+    "gapBias":0,"pairCap":null,"pairBonus":0,"pairWeight":0,"templatePairTarget":null,"templatePairBonus":0,
+    "makerTtlMs":1500,"makerFillMode":"queue","makerFillSource":"trades"
+  }
+}

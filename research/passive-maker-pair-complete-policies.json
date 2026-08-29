@@ -1,0 +1,9 @@
+[
+  { "name": "pair98_q3_noend", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3 },
+  { "name": "pair98_q3_e240_c98", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3, "endCompleteS": 240, "pairCompleteCap": 0.98 },
+  { "name": "pair98_q3_e240_c99", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3, "endCompleteS": 240, "pairCompleteCap": 0.99 },
+  { "name": "pair98_q3_e240_c100", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3, "endCompleteS": 240, "pairCompleteCap": 1.00 },
+  { "name": "pair98_q3_e270_c98", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3, "endCompleteS": 270, "pairCompleteCap": 0.98 },
+  { "name": "pair98_q3_e270_c99", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3, "endCompleteS": 270, "pairCompleteCap": 0.99 },
+  { "name": "pair98_q3_e270_c100", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3, "endCompleteS": 270, "pairCompleteCap": 1.00 }
+]

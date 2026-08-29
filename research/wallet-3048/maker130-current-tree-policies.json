@@ -1,0 +1,82 @@
+{
+  "currentTree070": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.70, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue"
+  },
+  "currentTree075": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue"
+  },
+  "currentTree080": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.80, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue"
+  },
+  "currentTree075Pair100": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0, "hedgePairCap": 1.0,
+    "makerTtlMs": 10000, "makerFillMode": "queue"
+  },
+  "currentTree075PairWeight025": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.75, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0.25,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue"
+  },
+  "currentHazard075": {
+    "gateMode": "hazard", "treeThreshold": 0.75, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue"
+  },
+  "currentTree080Trades": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.80, "sideChoiceMode": "tree",
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "makerFillSource": "trades"
+  },
+  "currentTree080Hazard055Trades": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.80, "hazardTreeThreshold": 0.55,
+    "sideChoiceMode": "tree", "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 1500, "makerFillMode": "queue", "makerFillSource": "trades"
+  },
+  "currentTree080Hazard070Trades": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.80, "hazardTreeThreshold": 0.70,
+    "sideChoiceMode": "tree", "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 1500, "makerFillMode": "queue", "makerFillSource": "trades"
+  },
+  "currentTree080Hazard080Trades": {
+    "gateMode": "tree", "treeModel": "all", "treeThreshold": 0.80, "hazardTreeThreshold": 0.80,
+    "sideChoiceMode": "tree", "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90,
+    "size90Mode": "tree", "sizeTreeThreshold": 0.54,
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 1500, "makerFillMode": "queue", "makerFillSource": "trades"
+  }
+}

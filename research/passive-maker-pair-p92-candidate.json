@@ -1,0 +1,14 @@
+[
+  {
+    "name": "pair92_q3_adaptive_candidate",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.92,
+    "pairCostCap": 0.92,
+    "exposureCap": 3,
+    "takerLatencyMs": 520,
+    "minTimeS": 5,
+    "highLatencyThresholdMs": 4000,
+    "highLatencyMinTimeS": 60,
+    "maxTimeS": 255
+  }
+]

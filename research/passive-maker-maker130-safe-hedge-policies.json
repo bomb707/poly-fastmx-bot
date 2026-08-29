@@ -1,0 +1,86 @@
+[
+  {
+    "name": "safe_pair90_ttl3000_timeout10_cap097",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.97, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout10_cap098",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.98, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout10_cap099",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout10_cap100",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 1.00, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl1500_timeout10_cap098",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 1500, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.98, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl1500_timeout10_cap099",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 1500, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair88_ttl3000_timeout10_cap099",
+    "signalMode": "twoSided", "pairQuoteCap": 0.88, "pairCostCap": 0.88,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair92_ttl3000_timeout10_cap099",
+    "signalMode": "twoSided", "pairQuoteCap": 0.92, "pairCostCap": 0.92,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout5_cap099",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 5, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout15_cap099",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 10,
+    "ttlMs": 3000, "unpairedTimeoutS": 15, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout10_cap099_exposure5",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 5,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  },
+  {
+    "name": "safe_pair90_ttl3000_timeout10_cap099_exposure15",
+    "signalMode": "twoSided", "pairQuoteCap": 0.90, "pairCostCap": 0.90,
+    "orderSize": 5, "minOrderShares": 5, "exposureCap": 15,
+    "ttlMs": 3000, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255,
+    "safeHedgeEveryTick": true, "pairCompleteCap": 0.99, "takerLatencyMs": 520
+  }
+]

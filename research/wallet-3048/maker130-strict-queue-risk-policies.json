@@ -1,0 +1,65 @@
+{
+  "strictQueueForce240Cap100": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 240, "forceHedgePairCap": 1.0
+  },
+  "strictQueueForce240Cap101": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 240, "forceHedgePairCap": 1.01
+  },
+  "strictQueueForce240Cap102": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 240, "forceHedgePairCap": 1.02
+  },
+  "strictQueueForce260Cap100": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 260, "forceHedgePairCap": 1.0
+  },
+  "strictQueueForce260Cap101": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 260, "forceHedgePairCap": 1.01
+  },
+  "strictQueueForce260Cap102": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 260, "forceHedgePairCap": 1.02
+  },
+  "strictQueueForce280Cap100": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 280, "forceHedgePairCap": 1.0
+  },
+  "strictQueueForce280Cap101": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 280, "forceHedgePairCap": 1.01
+  },
+  "strictQueueForce280Cap102": {
+    "gateMode": "absolute", "askDepthMax": 400, "depthImbalanceMin": 0, "depletionMax": -300,
+    "cooldownMs": 1500, "maxLean": 180, "catchupThreshold": 90, "size90Mode": "hedge",
+    "gapBias": 0, "pairCap": null, "pairBonus": 0, "pairWeight": 0,
+    "templatePairTarget": null, "templatePairBonus": 0,
+    "makerTtlMs": 10000, "makerFillMode": "queue", "forceHedgeAtS": 280, "forceHedgePairCap": 1.02
+  }
+}

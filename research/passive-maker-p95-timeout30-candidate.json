@@ -1,0 +1,15 @@
+[
+  {
+    "name": "pair95_q3_timeout30_adaptive_candidate",
+    "signalMode": "twoSided",
+    "pairQuoteCap": 0.95,
+    "pairCostCap": 0.95,
+    "exposureCap": 3,
+    "takerLatencyMs": 520,
+    "unpairedTimeoutS": 30,
+    "minTimeS": 5,
+    "highLatencyThresholdMs": 4000,
+    "highLatencyMinTimeS": 60,
+    "maxTimeS": 255
+  }
+]

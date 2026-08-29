@@ -1,0 +1,9 @@
+[
+  { "name": "p95_q3_t180", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 180 },
+  { "name": "p95_q3_t210", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 210 },
+  { "name": "p95_q3_t240", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 240 },
+  { "name": "p95_q3_t255", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 255 },
+  { "name": "p95_q3_t270", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 270 },
+  { "name": "p95_q3_t280", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 280 },
+  { "name": "p95_q3_t285", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "maxTimeS": 285 }
+]

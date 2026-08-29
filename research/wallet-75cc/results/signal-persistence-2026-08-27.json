@@ -1,0 +1,724 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-27T06:37:16.966Z",
+  "target": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "hypothesis": "uninterrupted CLOB-midpoint/Binance direction agreement is a sequential evidence gate",
+  "samples": {
+    "fit": 2750,
+    "validation": 1076,
+    "holdout": 2186,
+    "freshAug27": 294
+  },
+  "selection": "Aug21 validation only: maximum coverage with >=98% precision and >=30 actions",
+  "selected": {
+    "config": {
+      "midLookbackMs": 3000,
+      "midMin": 0.01,
+      "binanceLookbackMs": 3000,
+      "binanceMinPct": 0.01,
+      "persistenceMs": 0
+    },
+    "fit": {
+      "actions": 751,
+      "successes": 617,
+      "errors": 134,
+      "coverage": 0.273091,
+      "precision": 0.821571
+    },
+    "validation": {
+      "actions": 511,
+      "successes": 383,
+      "errors": 128,
+      "coverage": 0.474907,
+      "precision": 0.749511
+    },
+    "holdout": {
+      "actions": 695,
+      "successes": 582,
+      "errors": 113,
+      "coverage": 0.317932,
+      "precision": 0.83741
+    },
+    "freshAug27": {
+      "actions": 84,
+      "successes": 82,
+      "errors": 2,
+      "coverage": 0.285714,
+      "precision": 0.97619
+    }
+  },
+  "rows": [
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 0
+      },
+      "fit": {
+        "actions": 836,
+        "successes": 685,
+        "errors": 151,
+        "coverage": 0.304,
+        "precision": 0.819378
+      },
+      "validation": {
+        "actions": 494,
+        "successes": 352,
+        "errors": 142,
+        "coverage": 0.459108,
+        "precision": 0.712551
+      },
+      "holdout": {
+        "actions": 748,
+        "successes": 616,
+        "errors": 132,
+        "coverage": 0.342177,
+        "precision": 0.823529
+      },
+      "freshAug27": {
+        "actions": 96,
+        "successes": 91,
+        "errors": 5,
+        "coverage": 0.326531,
+        "precision": 0.947917
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 250
+      },
+      "fit": {
+        "actions": 696,
+        "successes": 553,
+        "errors": 143,
+        "coverage": 0.253091,
+        "precision": 0.79454
+      },
+      "validation": {
+        "actions": 413,
+        "successes": 288,
+        "errors": 125,
+        "coverage": 0.383829,
+        "precision": 0.697337
+      },
+      "holdout": {
+        "actions": 631,
+        "successes": 510,
+        "errors": 121,
+        "coverage": 0.288655,
+        "precision": 0.808241
+      },
+      "freshAug27": {
+        "actions": 82,
+        "successes": 78,
+        "errors": 4,
+        "coverage": 0.278912,
+        "precision": 0.95122
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 500
+      },
+      "fit": {
+        "actions": 609,
+        "successes": 477,
+        "errors": 132,
+        "coverage": 0.221455,
+        "precision": 0.783251
+      },
+      "validation": {
+        "actions": 359,
+        "successes": 241,
+        "errors": 118,
+        "coverage": 0.333643,
+        "precision": 0.671309
+      },
+      "holdout": {
+        "actions": 539,
+        "successes": 428,
+        "errors": 111,
+        "coverage": 0.246569,
+        "precision": 0.794063
+      },
+      "freshAug27": {
+        "actions": 71,
+        "successes": 67,
+        "errors": 4,
+        "coverage": 0.241497,
+        "precision": 0.943662
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 750
+      },
+      "fit": {
+        "actions": 533,
+        "successes": 411,
+        "errors": 122,
+        "coverage": 0.193818,
+        "precision": 0.771107
+      },
+      "validation": {
+        "actions": 328,
+        "successes": 214,
+        "errors": 114,
+        "coverage": 0.304833,
+        "precision": 0.652439
+      },
+      "holdout": {
+        "actions": 472,
+        "successes": 366,
+        "errors": 106,
+        "coverage": 0.215919,
+        "precision": 0.775424
+      },
+      "freshAug27": {
+        "actions": 63,
+        "successes": 59,
+        "errors": 4,
+        "coverage": 0.214286,
+        "precision": 0.936508
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 1000
+      },
+      "fit": {
+        "actions": 468,
+        "successes": 358,
+        "errors": 110,
+        "coverage": 0.170182,
+        "precision": 0.764957
+      },
+      "validation": {
+        "actions": 303,
+        "successes": 195,
+        "errors": 108,
+        "coverage": 0.281599,
+        "precision": 0.643564
+      },
+      "holdout": {
+        "actions": 426,
+        "successes": 324,
+        "errors": 102,
+        "coverage": 0.194876,
+        "precision": 0.760563
+      },
+      "freshAug27": {
+        "actions": 56,
+        "successes": 54,
+        "errors": 2,
+        "coverage": 0.190476,
+        "precision": 0.964286
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 1500
+      },
+      "fit": {
+        "actions": 365,
+        "successes": 269,
+        "errors": 96,
+        "coverage": 0.132727,
+        "precision": 0.736986
+      },
+      "validation": {
+        "actions": 251,
+        "successes": 151,
+        "errors": 100,
+        "coverage": 0.233271,
+        "precision": 0.601594
+      },
+      "holdout": {
+        "actions": 349,
+        "successes": 261,
+        "errors": 88,
+        "coverage": 0.159652,
+        "precision": 0.747851
+      },
+      "freshAug27": {
+        "actions": 47,
+        "successes": 45,
+        "errors": 2,
+        "coverage": 0.159864,
+        "precision": 0.957447
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 2000
+      },
+      "fit": {
+        "actions": 299,
+        "successes": 215,
+        "errors": 84,
+        "coverage": 0.108727,
+        "precision": 0.719064
+      },
+      "validation": {
+        "actions": 213,
+        "successes": 124,
+        "errors": 89,
+        "coverage": 0.197955,
+        "precision": 0.58216
+      },
+      "holdout": {
+        "actions": 279,
+        "successes": 201,
+        "errors": 78,
+        "coverage": 0.12763,
+        "precision": 0.72043
+      },
+      "freshAug27": {
+        "actions": 35,
+        "successes": 34,
+        "errors": 1,
+        "coverage": 0.119048,
+        "precision": 0.971429
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 3000
+      },
+      "fit": {
+        "actions": 157,
+        "successes": 115,
+        "errors": 42,
+        "coverage": 0.057091,
+        "precision": 0.732484
+      },
+      "validation": {
+        "actions": 128,
+        "successes": 75,
+        "errors": 53,
+        "coverage": 0.118959,
+        "precision": 0.585938
+      },
+      "holdout": {
+        "actions": 161,
+        "successes": 116,
+        "errors": 45,
+        "coverage": 0.073651,
+        "precision": 0.720497
+      },
+      "freshAug27": {
+        "actions": 12,
+        "successes": 11,
+        "errors": 1,
+        "coverage": 0.040816,
+        "precision": 0.916667
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 5000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 5000
+      },
+      "fit": {
+        "actions": 44,
+        "successes": 31,
+        "errors": 13,
+        "coverage": 0.016,
+        "precision": 0.704545
+      },
+      "validation": {
+        "actions": 51,
+        "successes": 29,
+        "errors": 22,
+        "coverage": 0.047398,
+        "precision": 0.568627
+      },
+      "holdout": {
+        "actions": 56,
+        "successes": 44,
+        "errors": 12,
+        "coverage": 0.025618,
+        "precision": 0.785714
+      },
+      "freshAug27": {
+        "actions": 3,
+        "successes": 3,
+        "errors": 0,
+        "coverage": 0.010204,
+        "precision": 1
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 0
+      },
+      "fit": {
+        "actions": 751,
+        "successes": 617,
+        "errors": 134,
+        "coverage": 0.273091,
+        "precision": 0.821571
+      },
+      "validation": {
+        "actions": 511,
+        "successes": 383,
+        "errors": 128,
+        "coverage": 0.474907,
+        "precision": 0.749511
+      },
+      "holdout": {
+        "actions": 695,
+        "successes": 582,
+        "errors": 113,
+        "coverage": 0.317932,
+        "precision": 0.83741
+      },
+      "freshAug27": {
+        "actions": 84,
+        "successes": 82,
+        "errors": 2,
+        "coverage": 0.285714,
+        "precision": 0.97619
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 250
+      },
+      "fit": {
+        "actions": 610,
+        "successes": 486,
+        "errors": 124,
+        "coverage": 0.221818,
+        "precision": 0.796721
+      },
+      "validation": {
+        "actions": 422,
+        "successes": 303,
+        "errors": 119,
+        "coverage": 0.392193,
+        "precision": 0.718009
+      },
+      "holdout": {
+        "actions": 566,
+        "successes": 462,
+        "errors": 104,
+        "coverage": 0.25892,
+        "precision": 0.816254
+      },
+      "freshAug27": {
+        "actions": 72,
+        "successes": 70,
+        "errors": 2,
+        "coverage": 0.244898,
+        "precision": 0.972222
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 500
+      },
+      "fit": {
+        "actions": 523,
+        "successes": 409,
+        "errors": 114,
+        "coverage": 0.190182,
+        "precision": 0.782027
+      },
+      "validation": {
+        "actions": 361,
+        "successes": 253,
+        "errors": 108,
+        "coverage": 0.335502,
+        "precision": 0.700831
+      },
+      "holdout": {
+        "actions": 482,
+        "successes": 383,
+        "errors": 99,
+        "coverage": 0.220494,
+        "precision": 0.794606
+      },
+      "freshAug27": {
+        "actions": 60,
+        "successes": 58,
+        "errors": 2,
+        "coverage": 0.204082,
+        "precision": 0.966667
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 750
+      },
+      "fit": {
+        "actions": 455,
+        "successes": 347,
+        "errors": 108,
+        "coverage": 0.165455,
+        "precision": 0.762637
+      },
+      "validation": {
+        "actions": 323,
+        "successes": 218,
+        "errors": 105,
+        "coverage": 0.300186,
+        "precision": 0.674923
+      },
+      "holdout": {
+        "actions": 415,
+        "successes": 321,
+        "errors": 94,
+        "coverage": 0.189844,
+        "precision": 0.773494
+      },
+      "freshAug27": {
+        "actions": 51,
+        "successes": 49,
+        "errors": 2,
+        "coverage": 0.173469,
+        "precision": 0.960784
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 1000
+      },
+      "fit": {
+        "actions": 389,
+        "successes": 293,
+        "errors": 96,
+        "coverage": 0.141455,
+        "precision": 0.753213
+      },
+      "validation": {
+        "actions": 295,
+        "successes": 194,
+        "errors": 101,
+        "coverage": 0.274164,
+        "precision": 0.657627
+      },
+      "holdout": {
+        "actions": 370,
+        "successes": 282,
+        "errors": 88,
+        "coverage": 0.169259,
+        "precision": 0.762162
+      },
+      "freshAug27": {
+        "actions": 47,
+        "successes": 45,
+        "errors": 2,
+        "coverage": 0.159864,
+        "precision": 0.957447
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 1500
+      },
+      "fit": {
+        "actions": 285,
+        "successes": 203,
+        "errors": 82,
+        "coverage": 0.103636,
+        "precision": 0.712281
+      },
+      "validation": {
+        "actions": 226,
+        "successes": 136,
+        "errors": 90,
+        "coverage": 0.210037,
+        "precision": 0.60177
+      },
+      "holdout": {
+        "actions": 281,
+        "successes": 206,
+        "errors": 75,
+        "coverage": 0.128545,
+        "precision": 0.733096
+      },
+      "freshAug27": {
+        "actions": 35,
+        "successes": 33,
+        "errors": 2,
+        "coverage": 0.119048,
+        "precision": 0.942857
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 2000
+      },
+      "fit": {
+        "actions": 221,
+        "successes": 153,
+        "errors": 68,
+        "coverage": 0.080364,
+        "precision": 0.692308
+      },
+      "validation": {
+        "actions": 180,
+        "successes": 101,
+        "errors": 79,
+        "coverage": 0.167286,
+        "precision": 0.561111
+      },
+      "holdout": {
+        "actions": 213,
+        "successes": 148,
+        "errors": 65,
+        "coverage": 0.097438,
+        "precision": 0.694836
+      },
+      "freshAug27": {
+        "actions": 22,
+        "successes": 21,
+        "errors": 1,
+        "coverage": 0.07483,
+        "precision": 0.954545
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 3000
+      },
+      "fit": {
+        "actions": 87,
+        "successes": 59,
+        "errors": 28,
+        "coverage": 0.031636,
+        "precision": 0.678161
+      },
+      "validation": {
+        "actions": 84,
+        "successes": 50,
+        "errors": 34,
+        "coverage": 0.078067,
+        "precision": 0.595238
+      },
+      "holdout": {
+        "actions": 96,
+        "successes": 70,
+        "errors": 26,
+        "coverage": 0.043916,
+        "precision": 0.729167
+      },
+      "freshAug27": {
+        "actions": 3,
+        "successes": 3,
+        "errors": 0,
+        "coverage": 0.010204,
+        "precision": 1
+      }
+    },
+    {
+      "config": {
+        "midLookbackMs": 3000,
+        "midMin": 0.01,
+        "binanceLookbackMs": 3000,
+        "binanceMinPct": 0.01,
+        "persistenceMs": 5000
+      },
+      "fit": {
+        "actions": 25,
+        "successes": 15,
+        "errors": 10,
+        "coverage": 0.009091,
+        "precision": 0.6
+      },
+      "validation": {
+        "actions": 33,
+        "successes": 20,
+        "errors": 13,
+        "coverage": 0.030669,
+        "precision": 0.606061
+      },
+      "holdout": {
+        "actions": 29,
+        "successes": 24,
+        "errors": 5,
+        "coverage": 0.013266,
+        "precision": 0.827586
+      },
+      "freshAug27": {
+        "actions": 1,
+        "successes": 1,
+        "errors": 0,
+        "coverage": 0.003401,
+        "precision": 1
+      }
+    }
+  ],
+  "conclusion": {
+    "heldout98": false,
+    "freshAug2798": false,
+    "promote": false,
+    "note": "Fresh Aug27 is exact high/medium native-V2 order-fire inference, not public second-resolution time."
+  }
+}

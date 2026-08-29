@@ -1,0 +1,10 @@
+[
+  { "name": "pair96_q1", "signalMode": "twoSided", "pairQuoteCap": 0.96, "pairCostCap": 0.96, "exposureCap": 1 },
+  { "name": "pair97_q1", "signalMode": "twoSided", "pairQuoteCap": 0.97, "pairCostCap": 0.97, "exposureCap": 1 },
+  { "name": "pair98_q1", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 1 },
+  { "name": "pair99_q1", "signalMode": "twoSided", "pairQuoteCap": 0.99, "pairCostCap": 0.99, "exposureCap": 1 },
+  { "name": "pair98_q2", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 2 },
+  { "name": "pair98_q3", "signalMode": "twoSided", "pairQuoteCap": 0.98, "pairCostCap": 0.98, "exposureCap": 3 },
+  { "name": "pair99_q2", "signalMode": "twoSided", "pairQuoteCap": 0.99, "pairCostCap": 0.99, "exposureCap": 2 },
+  { "name": "pair99_q3", "signalMode": "twoSided", "pairQuoteCap": 0.99, "pairCostCap": 0.99, "exposureCap": 3 }
+]

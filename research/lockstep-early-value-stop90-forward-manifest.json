@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "cohortStart": "2026-08-25T01:30:00.000Z",
+  "mode": "research-only-no-orders",
+  "files": [
+    {
+      "path": "research/lockstep-early-value-stop90-challenger.json",
+      "sha256": "16bb9db881f77b71e5105ad081f59f8da1221c9b38bddcc9a2b9dd59982335f3"
+    },
+    {
+      "path": "research/lockstep-v2-v4-paired-backtest.mjs",
+      "sha256": "8c0ddacbcff4b92d084815be63ca207ed9666a90992c168f194e50d2f3d0f05c"
+    },
+    {
+      "path": "research/lockstep-forward-policy-monitor.mjs",
+      "sha256": "53e71c0d48182776e2d86375fb06afcae79259446a5f151e8df6e28988b8eec1"
+    },
+    {
+      "path": "research/passive-maker-forward-folds.mjs",
+      "sha256": "985a8135bf2926245c1dd3b64f90f07a0ab6757fd89a516f315f5e6b5a7ed5ab"
+    },
+    {
+      "path": "engine/strategy.js",
+      "sha256": "e8f7ac10f9f0830c4fa61a935b60610f17fbfe4b64e9f42f6340c30b2b2021c8"
+    }
+  ]
+}
