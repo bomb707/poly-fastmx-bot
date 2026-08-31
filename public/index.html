@@ -756,7 +756,7 @@
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="STRATEGY — which trading strategy the bot runs (backtest + live). Selectable while the bot is STOPPED; the config below belongs to the selected strategy. Add more in engine/strategies/.">strategy</span>
-        <label class="cfgsel" title="Select the strategy used by live simulation, backview, and backtest."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option><option value="wallet3048">Target wallet 3048</option></select></label>
+        <label class="cfgsel" title="Select the strategy used by live simulation, backview, and backtest."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option><option value="wallet3048">Target wallet 3048</option><option value="paircomp">Pair completion</option></select></label>
         <span style="font-size:10px;color:var(--txt2);line-height:1.45">FastMX uses dual momentum. Target wallet 3048 uses the report's Binance-led cross-and-rest, FIFO-pair, and bounded-inventory reconstruction.</span>
       </div>
       <div class="scfg-section" id="walletStrategyInfo" style="display:none">
@@ -1382,9 +1382,12 @@ const realLatByOid={};   // LIVE real fill latency (ms) by shadow order oid — 
 function shadowParams(){
   const nv=(id,def)=>{ const el=document.getElementById(id); const v=el?parseFloat(el.value):NaN; return Number.isFinite(v)?v:def; };   // preserves a legit 0 (unlike `||def`)
   const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-  const selectedStrategy=document.getElementById("strategySelect")?.value==="wallet3048"?"wallet3048":"helpme";
-  if(selectedStrategy==="wallet3048") return {
-    STRATEGY:"wallet3048",
+  const rawStrategy=document.getElementById("strategySelect")?.value;
+  const selectedStrategy=(rawStrategy==="wallet3048"||rawStrategy==="paircomp")?rawStrategy:"helpme";
+  // Strategies with their own parameter block take only the framework knobs from this panel; their own
+  // defaults come from engine/strategies/<name>.js STRAT and can be overridden per-run from research scripts.
+  if(selectedStrategy!=="helpme") return {
+    STRATEGY:selectedStrategy,
     WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
     LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),
     MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
@@ -3414,9 +3417,10 @@ function setSessFrom(v){
     if(trendToggle.checked&&binanceToggle) binanceToggle.checked=true;
   });
   const syncStrategySections=()=>{
-    const wallet=document.getElementById("strategySelect")?.value==="wallet3048";
-    document.querySelectorAll(".helpme-only").forEach(el=>{el.style.display=wallet?"none":"";});
-    const info=document.getElementById("walletStrategyInfo"); if(info)info.style.display=wallet?"":"none";
+    const sel=document.getElementById("strategySelect")?.value;
+    const other=(sel==="wallet3048"||sel==="paircomp");
+    document.querySelectorAll(".helpme-only").forEach(el=>{el.style.display=other?"none":"";});
+    const info=document.getElementById("walletStrategyInfo"); if(info)info.style.display=(sel==="wallet3048")?"":"none";
   };
   window.syncStrategySections=syncStrategySections;
   syncStrategySections();
@@ -4068,11 +4072,21 @@ async function sessRun(){
     sessRunning=false; clearInterval(sessTimer); sessSetRunningUi(false);
     if(!r || r.error){ $s("sessStatus").textContent="error: "+((r&&r.error)||"no result"); return; }
     $s("sessCfg").innerHTML=sessCfgSummary(r)+(P&&typeof sessShadowCfg==="function"?`<br>${sessShadowCfg(P)}`:"");
-    $s("sessStatus").innerHTML=`${r.windowsUsed} windows used / ${r.windowsRequested} in range · ${new Date(r.start*1000).toLocaleString()} → ${new Date(r.end*1000).toLocaleString()}`;
+    $s("sessStatus").innerHTML=`${r.windowsUsed} windows used / ${r.windowsRequested} in range · ${new Date(r.start*1000).toLocaleString()} → ${new Date(r.end*1000).toLocaleString()}`+sessHaltNote(r.shadow);
     $s("sessCards").innerHTML=(SHOW_TRACKER?sessCard("Tracker","t",r.bot):"")+(r.shadow?sessCard("Shadow","s",r.shadow):"");
     drawSessCurve(r);
     sessPage=0; renderSessWindows(r);
   };
+  // A MAX_SESSION_LOSS breach freezes the shadow for EVERY remaining window in the range; those windows then
+  // report $0 and are indistinguishable from "traded and broke even". Say so loudly instead of hiding it.
+  function sessHaltNote(sh){
+    if(!sh || !sh.halted) return "";
+    const frozen = sh.haltedWindows||0, after = sh.haltedAfter||0;
+    return `<br><span style="color:#ffb454;font-weight:800">⚠ SHADOW HALTED</span>`
+      +` after <b>${after}</b> traded window${after===1?"":"s"} — session loss cap $${sh.maxSessionLoss} was breached,`
+      +` so <b>${frozen}</b> later window${frozen===1?"":"s"} were frozen and report $0.`
+      +` Aggregates below cover only the first ${after}. Set the session-stop field to 0 to measure the strategy.`;
+  }
   window._sessResolve=render;
   window._sessPartial=onSessPartial;
   // Server returns immediately {started,runId}; the full result arrives over WS (session_result / session_partial).
