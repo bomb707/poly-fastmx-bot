@@ -43,7 +43,8 @@ That's it — it's instantly available to backtest, live-sim, and real-live.
 - `lockstep.js` — Lockstep adapter over `../strategy.js` (the implementation stays there, live-critical & unchanged)
 - `gap_predictor.js` — imported Gap Predictor profile (linear completed-round gap lock + taker hedge with a
   fee-inclusive 0.03/share profit floor)
-- `wallet3048.js` — selectable implementation of `TARGET_WALLET_STRATEGY_ANALYSIS.md`: causal 0.5-second Binance-led
-  fair value, prebuilt 50/150-share cross-and-rest rungs, enforced FIFO lot caps, economic cancel/reprice, partial fills,
+- `wallet3048.js` — selectable implementation of `TARGET_WALLET_STRATEGY_ANALYSIS.md`: causal 2.5-second Binance-versus-Polymarket catch-up
+  plus low-price initial value, 50-share active rungs, full-fill-safe passive 150-share complement reservoirs, bounded payout-floor drawdown,
+  enforced FIFO lot caps, economic cancel/reprice, partial fills, decision-time accounting of unflushed maker accrual, and duplicate-repair reservation,
   time-varying inventory/worst-case limits, and the final-30-second cancellation cutoff
 - `_template.js` — skeleton to copy

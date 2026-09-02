@@ -30,6 +30,7 @@ npm run research:wallet3048:capital -- data/wallet-3048-r2 data/wallet-3048/trad
 npm run research:wallet3048:menu -- data/wallet-3048-r2
 npm run research:wallet3048:validate-capital -- data/wallet-3048 data/wallet-3048-r2
 npm run research:wallet3048:test
+npm run research:wallet3048:inventory-ledger -- data/live-ticks data/research/wallet3048-inventory-ledger 6 1788105600
 ```
 
 One of `BAPI_V4_KEY`, `BAPI_V3_KEY`, `BAPI_KEY`, or `BACKTEST_API_KEY` is required for v4 collection.
@@ -54,5 +55,8 @@ One of `BAPI_V4_KEY`, `BAPI_V3_KEY`, `BAPI_KEY`, or `BACKTEST_API_KEY` is requir
 - `data/wallet-3048-r2/frozen-capital-validation.{json,md}`: old, frozen models evaluated after the size change.
 - `data/wallet-3048-r2/menu-topology.{json,md}`: one-cent signed ladder, retry cells, and wave topology.
 - `data/wallet-3048-r2/frozen-scale-backtest.json`: latest untouched Q=25 behavior/economics replay, including queue-aware remainder diagnostics.
+- `data/research/wallet3048-inventory-ledger/inventory-ledger.json.gz`: exact receipt-level inventory, payout, IF-UP/IF-DOWN, average-price, and marginal-order ledger.
+- `data/research/wallet3048-inventory-ledger/parent-executions.csv`: flat execution audit with before/after inventory, reverse-calculated price/size, and 2.5-second Binance/CLOB context.
+- `data/research/wallet3048-inventory-ledger/inventory-ledger.md`: multi-window summary plus inventory-vector matches for manually transcribed screenshots.
 
 The full-range top-book cache covers 2,505 settled control markets. The original E8 deep-book cache contains all 250 resolved markets in that interval; the R2 cache contains 382 later resolved markets. Always use `include_orderbook=true` asks; v4 `priceUp` and `priceDown` are midpoint-style fields, not executable prices.

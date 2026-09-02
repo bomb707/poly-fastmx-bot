@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "note": "Manual image transcriptions. Target checkpoints are matched to receipt-ledger prefixes by inventory metrics, not the displayed cursor time.",
+  "checkpoints": [
+    {
+      "slug": "btc-updown-5m-1788105000",
+      "displayTInto": 285,
+      "target": {
+        "upShares": 1745.3,
+        "downShares": 1555.0,
+        "averageUp": 0.478,
+        "averageDown": 0.367,
+        "totalCost": 1422.84,
+        "ifUp": 322.50,
+        "ifDown": 132.11
+      },
+      "shadow": {
+        "displayTInto": 298.967,
+        "upShares": 447.1,
+        "downShares": 428.9,
+        "averageUp": 0.647,
+        "averageDown": 0.365,
+        "displayCostExcludingModeledFee": 445.70,
+        "ifUp": -7.60,
+        "ifDown": -25.80
+      }
+    },
+    {
+      "slug": "btc-updown-5m-1788104100",
+      "displayTInto": 298.111,
+      "target": {
+        "upShares": 1489.6,
+        "downShares": 1628.1,
+        "averageUp": 0.347,
+        "averageDown": 0.646,
+        "totalCost": 1590.14,
+        "ifUp": -100.53,
+        "ifDown": 37.99
+      },
+      "shadow": {
+        "displayTInto": 298.111,
+        "upShares": 453.8,
+        "downShares": 411.0,
+        "averageUp": 0.322,
+        "averageDown": 0.696,
+        "displayCostExcludingModeledFee": 432.41,
+        "ifUp": 14.55,
+        "ifDown": -28.45
+      }
+    }
+  ]
+}

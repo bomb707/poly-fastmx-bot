@@ -13,6 +13,34 @@ import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
 import { recordFill, recordSession } from "../sources/db.js";   // MongoDB record store (mode-split collections)
 import { verbose, verboseOn } from "../logging/verbose.js";     // diagnostic trace (verbose switch) → pm2 logs
 
+/** Durable evidence payload used by target-vs-shadow inventory reconstruction. */
+export function buildLiveTickArchive(w, winSide, cfg) {
+  const winningShares = winSide === "Up" ? (+w.upShares || 0) : (+w.downShares || 0);
+  return {
+    schema: 2,
+    slug: w.slug,
+    ws: w.windowStart,
+    winSide,
+    cfg,
+    openBz: w.openBinance,
+    openCl: w.openChainlink ?? null,
+    ticks: w.recTicks || [],
+    // BBA-only archives cannot reproduce decisions made with live L2 depth.
+    // Preserve the exact simulated fills, including reason and decision time.
+    shadowFills: Array.isArray(w.fills) ? w.fills : [],
+    shadowSummary: {
+      upShares: +w.upShares || 0,
+      downShares: +w.downShares || 0,
+      cost: +w.cost || 0,
+      fee: +w.fee || 0,
+      merged: +w.mergedRealized || 0,
+      ifUp: (+w.upShares || 0) - (+w.cost || 0) - (+w.fee || 0),
+      ifDown: (+w.downShares || 0) - (+w.cost || 0) - (+w.fee || 0),
+      actualPnl: winningShares - (+w.cost || 0) - (+w.fee || 0) + (+w.mergedRealized || 0),
+    },
+  };
+}
+
 export function createShadow(onEvent = () => {}, uiActive = () => true) {
   /** @type {Map<string, object>} */
   const windows = new Map();
@@ -499,9 +527,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       try {
         const dir = path.join(config.dataDir, "live-ticks");
         fs.mkdirSync(dir, { recursive: true });
-        const payload = { slug, ws: w.windowStart, winSide, cfg: w.cfgAtOpen || cfgStamp(),
-          openBz: w.openBinance,
-          openCl: w.openChainlink ?? null, ticks: w.recTicks };
+        const payload = buildLiveTickArchive(w, winSide, w.cfgAtOpen || cfgStamp());
         fs.writeFile(path.join(dir, `${slug}.json`), JSON.stringify(payload), () => {});
         fs.readdir(dir, (e, files) => { if (e) return;
           const epoch = (f) => +(f.replace(".json", "").split("-").pop()) || 0;   // sort by WINDOW EPOCH → correct across markets (btc/eth/…), not filename alpha

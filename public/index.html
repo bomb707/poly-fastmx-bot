@@ -761,7 +761,7 @@
       </div>
       <div class="scfg-section" id="walletStrategyInfo" style="display:none">
         <span class="scfg-grp">target wallet policy</span>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">T+4–&lt;270s · causal 0.5s Binance signal · 50/150-share $0.01–$0.99 GTC rungs · 250ms release cadence · lot-aware pair/loss-cap repair · economic cancel/reprice.</span>
+        <span style="font-size:10px;color:var(--txt2);line-height:1.45">T+4–&lt;270s · 2.5s catch-up plus low-price value entry · standard 50-share orders · passive 150-share complement reservoirs · payout-floor/FIFO risk control · broad directional overlay disabled pending validation.</span>
       </div>
       <div class="scfg-section helpme-only">
         <span class="scfg-grp" title="MOMENTUM — CLOB and Binance are direction sources; at least one must remain enabled. Binance trend is the poly-mom regime filter and requires Binance momentum.">momentum</span>
@@ -1469,6 +1469,16 @@ function roundSection(){ const r=liveRound; if(!r) return '';
 // FastMX inventory leg role → property-menu label (shared by the single-fill AND grouped popups). Returns
 // null for non-entry/hedge fills so the caller can fall back.
 function legLabel(leg, reason){
+  if(reason==='w3048-passive-reservoir') return `<span style="color:#ffcc66;font-weight:700">150 passive reservoir</span> <span class="legs">· full-fill-safe complement rung</span>`;
+  if(reason==='w3048-inventory-emergency') return `<span style="color:#ff9f43;font-weight:700">150 emergency rebalance</span> <span class="legs">· lower lean + improve worst case</span>`;
+  if(reason==='w3048-large-pair-completion') return `<span style="color:#19e3a0;font-weight:700">150 FIFO pair</span> <span class="legs">· profitable complete-set conversion</span>`;
+  if(reason==='w3048-strong-catchup') return `<span style="color:#7fd0ff;font-weight:700">150 strong catch-up</span> <span class="legs">· 2.5s Binance/Poly divergence</span>`;
+  if(reason==='w3048-strong-overlay') return `<span style="color:#7fd0ff;font-weight:700">150 strong overlay</span> <span class="legs">· experimental directional residual</span>`;
+  if(reason==='w3048-initial-catchup') return `<span style="color:#7fd0ff;font-weight:700">50 initial catch-up</span> <span class="legs">· lagging outcome entry</span>`;
+  if(reason==='w3048-initial-value') return `<span style="color:#7fd0ff;font-weight:700">50 initial value</span> <span class="legs">· low-priced fee-adjusted edge</span>`;
+  if(reason==='w3048-pair-completion') return `<span style="color:#19e3a0;font-weight:700">50 FIFO pair</span> <span class="legs">· profitable complete-set conversion</span>`;
+  if(reason==='w3048-loss-cap-repair') return `<span style="color:#ff9f43;font-weight:700">50 loss repair</span> <span class="legs">· risk-adjusted complement</span>`;
+  if(reason==='w3048-directional-reinforcement') return `<span style="color:#7fd0ff;font-weight:700">50 reinforcement</span> <span class="legs">· renewed lagging-outcome edge</span>`;
   if(leg==='hedge'){
     // hedge outcome: STOP = the leg FAILED (stop-out, loss); PULL/CEILING = the leg SUCCEEDED (locked profit)
     const st = reason==='stop'    ? {t:'FAIL',    c:'#ff5d7a', d:'via STOP · leg went wrong (adverse)'}
@@ -1651,10 +1661,12 @@ function popHtml(d,pinned){
   // Entry adds directional inventory; hedge/repair buys the underweight side.
   // wallet3048 records FIFO pair economics but can repair above a $1 pair cost.
   const legHtml = legLabel(d.leg, d.reason) || (d.leg||d.kind||na);
+  const wSig=d&&d.signal&&d.signal.sizeMode?d.signal:null;
   // ORDER section — real on-chain order for the tracker; simulated for the shadow (no chain order).
   const orderSec = !_isBot
     ? `<div class="dhead">order · simulated</div>`
       +prow('leg',legHtml)
+      +(wSig?prow('size mode',wSig.sizeMode):'')
       +(d.leg==='hedge'&&d.cyclePnl!=null?prow('cycle P&L',`<span class="${cls(d.cyclePnl)}">${sgn(d.cyclePnl,2)}</span> <span class="legs">· lock ${fmt(d.cycleEntryPx,3)} + ${fmt(d.effPx,3)} = ${fmt((d.cycleEntryPx||0)+(d.effPx||0),3)}</span>`):'')
       +prow('view','single fill')
       +prow('type', _mk?'GTC <span class="legs">· resting maker (postOnly=true, sim)</span>':'GTC <span class="legs">· marketable taker (postOnly=false, sim)</span>')
@@ -1709,6 +1721,13 @@ function popHtml(d,pinned){
     +prow('fee','$'+fmt(fee!=null?fee:0,3)+(fee>0.0005?(_isBot?' (in cost)':' (modeled)'):''))
     +prow(_isSell?'proceeds':'cost','$'+fmt(d.usdc,2))
     +latencyRow(d.oid, d.decidedT, d.tInto)
+    +(wSig?`<div class="psep"></div><div class="dhead">wallet 3048 decision</div>`
+      +prow('Binance 2.5s',sgn((wSig.momentumFast||0)*100,4)+'%')
+      +prow('Poly Up / Down',`${sgn(wSig.polyUpMove,4)} / ${sgn(wSig.polyDownMove,4)}`)
+      +prow('lag direction',wSig.lagDirection||'none')
+      +prow('fair / edge',`${fmt(wSig.fairSide,4)} / ${sgn(wSig.expectedEdge,4)}`)
+      +prow('FIFO pair cost',wSig.pairCost==null?'n/a':fmt(wSig.pairCost,4))
+      +prow('lean before / after',`${fmt(wSig.priorLean,2)} / ${fmt(wSig.projectedLean,2)}`):'')
     +`<div class="psep"></div><div class="dhead">market @ fill</div>`
     +prow('binance',`${priceFmt(d.bz)} <span class="${cls(d.bzGap)}">${sgn(d.bzGap,2)} (${sgn(d.bzGapPct,3)}%)</span>`)
     +prow('chainlink',`${priceFmt(d.cl)} <span class="${cls(d.clGap)}">${sgn(d.clGap,2)} (${sgn(d.clGapPct,3)}%)</span>`)

@@ -179,6 +179,138 @@ volatility, fair value, or cancel/reprice logic—but the evidence does not iden
 the latest fast Binance update before the slower Chainlink TWAP and Polymarket book
 fully adjust.
 
+### 1.2 Implemented 2.5-second catch-up policy (operator specification)
+
+The selectable `wallet3048` implementation retains the strict operator-specified
+catch-up signal, but specification v4 separates it from the broader behavior observed
+in the August 30, 8:20-8:25 AM ET transaction reconstruction:
+
+```text
+UP catch-up candidate:
+    Binance 2.5-second log return >= normal threshold
+    and the UP microprice change over 2.5 seconds <= 0
+
+DOWN catch-up candidate:
+    Binance 2.5-second log return <= -normal threshold
+    and the DOWN microprice change over 2.5 seconds <= 0
+```
+
+This remains the strongest definition of “undervalued.” The target wallet did not,
+however, require it for every order in the reconstructed window. Specification v4
+therefore also permits one 50-share **initial-value** parent when the token costs no
+more than `$0.55` and its fee-adjusted modeled edge is at least `$0.025/share`. Such an
+order is labeled value, not catch-up, and only one initial parent may remain outstanding
+before a fill confirms inventory.
+
+This 2.5-second horizon is a **policy choice**, not a reinterpretation of the measured
+2.494-second match-to-Polygon-block lag. The latter is reporting/settlement latency and
+does not prove a constant 2.5-2.7-second Binance-to-CLOB price delay. A local audit of
+377 cached native-L2 BTC windows nevertheless found a useful conditional catch-up:
+
+| Absolute Binance 2.5s return | Observations | Lagging token higher 2.7s later | Mean 2.7s token change |
+|---:|---:|---:|---:|
+| >= 0.00005 | 3,621 | 57.6% | +0.00697 |
+| >= 0.000075 | 1,653 | 62.4% | +0.01149 |
+| >= 0.00010 | 920 | 61.2% | +0.01401 |
+
+These are overlapping event observations, not independent trades, and exclude fees,
+spread, queueing and selection effects. A chronological policy comparison found that
+`0.000075` reduced losses in all three time-ordered thirds versus `0.00005`.
+Consequently `0.000075` is the provisional normal threshold and `0.00010` the
+provisional strong threshold; the order still has
+to pass the fee-adjusted fair-value, depth and risk gates.
+
+The implemented size and inventory policy is:
+
+```text
+50 shares: standard order parent
+
+150 shares, for one of:
+    passive-reservoir:
+        complement order rests below the current ask for up to 30 seconds
+        and a hypothetical full fill at the signed limit reduces absolute lean
+        and strictly improves worst-case settlement PnL
+        and the FIFO pair edge is at least 0.020/share
+
+    strong-catchup:
+        an existing inventory core is present
+        strong persistent 2.5s Binance/Polymarket divergence
+        and >= 0.035 expected edge per share
+
+    large-pair-completion:
+        at least 150 unmatched FIFO shares
+        and the full complement satisfies the pair-profit cap
+
+    inventory-emergency:
+        the complement is not a profitable pair at the current ask
+        and current lean >= 75 shares
+        and projected lean strictly decreases
+        and projected worst-case PnL strictly improves
+        and risk-adjusted edge is nonnegative
+```
+
+For quantities `qU`, `qD`, total fee-inclusive cost `C`, order size `x=150`,
+and fee-inclusive unit cost `c`, the emergency checks are:
+
+```text
+lean_before = abs(qU - qD)
+worst_before = min(qU, qD) - C
+
+lean_after = abs(qU + x*[side=UP] - qD - x*[side=DOWN])
+worst_after = min(qU + x*[side=UP], qD + x*[side=DOWN]) - C - x*c
+
+accept only if:
+    lean_after < lean_before
+    and worst_after > worst_before
+```
+
+The 75-share floor follows from fixed-size geometry: a fully filled 150-share complement cannot
+strictly reduce absolute imbalance when the starting imbalance is below 75 shares.
+It is not by itself sufficient; the projected post-trade checks decide the order.
+
+Pending GTC orders are not counted as guaranteed hedges. Risk is evaluated over all
+four fill/no-fill corners for outstanding UP and DOWN reservations. A new order must
+pass the worst settlement PnL and maximum lean across those scenarios. The engine also
+tracks the best settlement floor already achieved and limits a directional drawdown
+from that peak to `$100` early, tightening to `$60` late.
+
+The target-like broad directional overlay is implemented behind
+`W3048_DIRECTIONAL_OVERLAY_ON`, but is disabled by default. It materially worsened both
+chronological replay partitions, so it is not mathematically justified for application.
+Strict lag reinforcement and risk-reducing complement operations remain active.
+
+#### Specification-v4 local replay status
+
+The exact August 30 screenshot window is a useful mechanism test. On its recorded V2
+full-L2 feed, the default implementation made its first decision at `T+8.126s`, versus
+the target's independently inferred first fire at approximately `T+7.775s`. It finished
+with 297 UP, 280.27 DOWN and `$273.47` fee-inclusive modeled cost:
+
+```text
+if UP:   +$23.53
+if DOWN:  +$6.80
+actual DOWN result: +$6.80 (2.49% modeled ROI)
+```
+
+This captures the paired payout behavior without copying the target's later, successful
+but hindsight-sensitive DOWN residual. It does not reproduce the target's full profit.
+
+Across 378 cached complete native-L2 BTC windows, the final default produced 7,930 fill
+records in 370 traded markets, including 82 filled passive-reservoir parents. Modeled
+cost was `$105,477.83`, PnL was `-$744.92`, and ROI was `-0.71%`. Chronological thirds
+were `-$353.98`, `+$122.49`, and `-$513.43`; the result is not robust.
+
+| Ablation/screen | Modeled PnL | ROI on modeled cost |
+|---|---:|---:|
+| Final v4 default; overlay disabled, reservoirs enabled | -$744.92 | -0.71% |
+| Broad overlay at 0.050 minimum edge | -$1,983.87 | -1.60% |
+| Broad overlay disabled; passive reservoirs disabled | -$782.44 | -0.72% |
+
+This is an implementation/diagnostic result, not evidence of deployable profitability.
+The strategy remains simulation-only. The reservoir result is too small and unstable
+to establish independent edge; fair-value coefficients, maker queue priority, cancel
+timing, capital limits and pair conversion require untouched forward validation.
+
 ## 2. Evidence hierarchy
 
 | Level | Meaning | Examples in this report |
@@ -1098,3 +1230,101 @@ then monetizes part of the position through complementary purchases while allowi
 bounded directional remainder. Its advantage is the combination of signal, prepared
 execution, price discipline, partial-fill handling, and risk-aware inventory—not one
 secret predictor or guaranteed queue privilege.
+
+## 19. Receipt-level inventory-consumption audit (August 30)
+
+The new `research/wallet-3048/inventory-ledger.mjs` audit reconstructs each parent-order
+execution from the exact Polygon `OrderFilled` receipt rather than assuming that one
+public row equals one order. After every execution it records:
+
+- UP shares, DOWN shares, and signed share delta;
+- gross and all-in UP/DOWN averages;
+- total cost, fees, paired shares, and guaranteed payout;
+- IF-UP, IF-DOWN, worst-case profit, actual settled PnL, and every marginal change;
+- the decoded 50/150 parent size and limit;
+- the algebraic reverse calculation from cumulative shares and averages;
+- causal 2.5-second Binance and CLOB context at execution;
+- construction-time context separately from execution time.
+
+For six consecutive local windows, `1788104100` through `1788105600`, the wallet used
+263 exact parent orders and 645 receipt executions: 468 maker and 177 taker events.
+It consumed $6,978.71 all-in capital and settled at +$328.44, or +4.7063%. Four of six
+windows were profitable, but only one finished positive under both outcomes. Gross
+average pair cost was below $1 in five windows and all-in average pair cost was below
+$1 in four.
+
+The inventory path is not a monotone hedge. Its lean crossed sides 31 times. Maker
+events repaired the current lean 224/468 times, and takers repaired it 103/177 times.
+The remaining events expanded the current exposure. The worst intrawindow payout floor
+ranged from -$101.41 to -$276.68 in five of the six windows, so the target accepts large
+temporary settlement risk rather than enforcing a continuously positive payout.
+
+The parent-size evidence also changes the interpretation of "emergency": 168 parents
+were 50-share orders and 95 were 150-share orders. A 150 parent's first fill repaired
+inventory 52 times and expanded it 42 times. Median realized fill was only 76 shares,
+so 150 is a reservoir/menu capacity as well as an urgent execution size; it is not an
+emergency-only semantic label.
+
+### Inventory-vector timestamp correction
+
+The August 30 11:50 screenshot displays t+285 but shows UP 1,745.3, DOWN 1,555.0,
+averages .478/.367, cost $1,422.84, IF-UP +$322.50, and IF-DOWN +$132.11. Matching
+those values against every receipt-ledger prefix identifies sequence 157 at t+262:
+
+- exact UP 1,745.339189;
+- exact DOWN 1,554.956045;
+- averages .477543/.367259;
+- all-in cost $1,422.844086;
+- IF-UP +$322.495103;
+- IF-DOWN +$132.111959.
+
+Thus the wallet UI checkpoint lagged the displayed market cursor by approximately 23
+seconds. The earlier `1788104100` screenshot similarly matches its receipt inventory at
+t+276 while the display cursor is t+298.1. Signal attribution must therefore begin by
+matching the inventory vector; the displayed chart time cannot be treated as execution
+or request time.
+
+In the 11:50 checkpoint, the gross pair average was .844802 and the all-in pair average
+was .856038. The target earned +$132.11 when DOWN won, while the implemented shadow
+shown in the paired screenshot had gross pair average 1.012 and lost $25.80. In the
+earlier `1788104100` UP-winning window the result reversed: target -$100.53 versus
+shadow +$14.55. This demonstrates why one screenshot is insufficient and why the
+inventory/payout transition, not apparent execution time, is the primary reconstruction
+unit.
+
+Only 29/645 execution contexts satisfy the strict 2.5-second Binance-first and
+CLOB-not-yet-aligned definition. For maker executions even this is descriptive rather
+than causal because request/fire time is not public. The median construction-to-first-
+fill delay is 73.813 seconds for 50-share parents and 79.011 seconds for 150-share
+parents. Those delays support staged action menus, but do not prove that an order rested
+continuously for the entire interval.
+
+## 20. Forward schema-2 audit and wallet3048 specification 5
+
+Twenty-five schema-2 shadow windows were collected in three consecutive cohorts. Exact
+receipt reconstruction covered 1,975 target execution events and exact simulated-fill
+archives were available for all 25 windows. The target returned -4.4261% on all-in
+capital and the implemented shadow returned -4.7181%; neither result establishes a
+positive expectation. The final seven-window cohort was materially different: target
++2.6792% versus shadow -12.2693%, dominated by shadow window `1788121500`.
+
+In that window a 5.985-share DOWN maker partial was followed by four concurrent
+50-share UP loss-cap repairs. Resting simulation had already accrued UP shares in
+`makerShares`, but the aggregated fill had not yet been flushed into the recorded-fill
+ledger. The strategy therefore repeatedly evaluated stale confirmed inventory and
+ended with 200 UP against 5.985 DOWN, losing $139.51 when DOWN won.
+
+Specification 5 corrects the decision state without inventing execution history:
+
+- unflushed maker accrual is treated as confirmed shares and cost for FIFO pairing,
+  inventory lean, and all fill/no-fill risk corners;
+- only the unfilled resting remainder remains an optional pending reservation;
+- a pending complement parent reserves its confirmed shortage, preventing another
+  parent from repairing the same imbalance twice;
+- the 50-share standard parent remains unchanged, so a single full fill may cross a
+  sub-50-share lean only when the existing spend, lean, loss, and payout-floor checks
+  all pass.
+
+This is a safety/accounting correction, not evidence for increasing 150-share usage or
+for treating the 2.5-second Binance lag as the target's dominant trigger. New forward
+windows are required after the specification-5 process reload.
