@@ -760,11 +760,11 @@
         <span class="scfg-grp" title="STRATEGY — FastMX runs the wallet-75cc-derived policy in backtest and live simulation.">strategy</span>
         <input id="strategySelect" type="hidden" value="target75cc">
         <span class="strategy-fixed">FastMX · wallet-75cc logic</span>
-        <span id="strategyDescription" style="font-size:10px;color:var(--txt2);line-height:1.45">Experimental two-sided imitation; exact release parity is not recovered</span>
+        <span id="strategyDescription" style="font-size:10px;color:var(--txt2);line-height:1.45">Two-sided imitation with causal trend/noise confidence and dynamic residual sizing; simulation only</span>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="ORDER POLICY — strategy-specific release, sizing, and inventory-transition controls.">order policy</span>
-        <span class="cfg-note target-only">Fitted imitation controls—not claimed wallet settings. Dynamic sizing and both-side inventory transitions are automatic.</span>
+        <span class="cfg-note target-only">Fitted imitation controls—not claimed wallet settings. Causal multi-timescale trend/noise gating, confidence-downscaled sizing, and both-side inventory transitions are automatic.</span>
         <label class="cfgsel" title="LIVE ORDER TYPE — GTC crosses immediately, then the bot cancels any unfilled remainder; FAK fills available liquidity and atomically cancels the rest. This affects real-live automatic orders only; simulation/backtest remains fixed-USD FAK.">live order type
           <select id="sigLiveOrderTypeInput" class="momsel"><option value="FAK" selected>FAK</option><option value="GTC">GTC + cancel remainder</option></select>
         </label>
@@ -3994,6 +3994,8 @@ function sessShadowCfg(P){
     +` · ${P.T_MAX_CELL_USES??1} use/cell · ${P.T_START_S??4}–${P.T_STOP_S??286}s`
     +` · residual-tree ×${P.T_RESIDUAL_SCALE??1} · order ${P.T_MIN_ORDER_SH??5}–${P.T_MAX_ORDER_SH??227}sh`
     +` · gross ≤${P.T_MAX_GROSS_SH??300}sh · cross ≥${P.T_CROSS_THRESHOLD??0.485064}`
+    +` · trend/noise ${P.T_REGIME_ON===false?'off':'on'} · edge ≥${P.T_REGIME_MIN_EDGE??0}`
+    +` · confidence size ${P.T_REGIME_SIZE_FLOOR??0.5}×–${P.T_REGIME_SIZE_CEILING??1}×`
     +` · cooldown ${P.T_COOLDOWN_MS??4000}ms · fixed-USD FAK · cap menu ≤${P.LIMIT??0.99}`
     +` · latency ${P.LATENCY_MS||0}ms</span>`; }
 function smoney(v){ return (v>=0?"+$":"−$")+Math.abs(v).toFixed(2); }

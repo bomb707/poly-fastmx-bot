@@ -3,13 +3,13 @@
 _Audit date: 2026-09-02; live public-data re-review through approximately 11:19Z_  
 _Target: `0x75cc3b63a2f2423085e10706c78b494017b93ce1`_  
 _Scope: original reconstruction on BTC 5-minute Up/Down markets; live re-review expanded to BTC/ETH/SOL/XRP 5-minute and BTC 15-minute markets; repository commit `537b9ca`_  
-_Status: exact discovery dataset and autonomous policy implemented; parity/P&L gates failed; simulation-only_
+_Status: autonomous policy plus causal trend/noise risk layer implemented; partial-OOS P&L gate still failed; simulation-only_
 
 ## Executive verdict
 
-FastMX now runs the autonomous `target75cc` strategy as its sole runtime policy. It evaluates both outcome-token menus, selects a one-cent price-cap cell, buys with a fixed-USDC taker intent, dynamically targets post-action residual inventory, and chooses partial reduction versus a full inventory cross. The former Helpme implementation remains only as an offline historical comparison artifact.
+FastMX now runs the autonomous `target75cc` strategy as its sole runtime policy. It evaluates both outcome-token menus, selects a one-cent price-cap cell, applies a causal trend/noise and fee-adjusted value gate, buys with a fixed-USDC taker intent, dynamically targets post-action residual inventory, and chooses partial reduction versus a full inventory cross. Confidence can reduce the residual target from 1.00× toward 0.50×, but cannot lever it above the existing model target. The former Helpme implementation remains only as an offline historical comparison artifact.
 
-It is still **not an identical clone**. Exact autonomous release parity is only 24.35% F1 on the untouched discovery holdout and 23.47% on the partial next-week sample. The runtime policy loses after modeled fees in both periods. Public filled orders expose what filled, but not the wallet's private menu creation state, canceled orders, confidence, or release program; those missing variables are material. The truthful status is a stable behavioral imitation that fails the promotion gate.
+It is still **not an identical clone**. Exact autonomous release parity remains only 24.35% F1 on the untouched discovery holdout and 23.47% on the partial next-week sample because the new layer filters the existing release stream rather than recovering the target's private release program. The enhanced policy is positive on one-day validation and one-day discovery holdout, but still loses $33.85 after modeled fees on the frozen 1,651-market partial-OOS period. Public filled orders expose what filled, but not the wallet's private menu creation state, canceled orders, confidence, or release program; those missing variables are material. The truthful status is an improved simulation candidate that still fails the promotion gate.
 
 The target's taker behavior is well supported for the two local cohorts: all 12,963 decoded orders in the first cohort and all 14,971 in the second were BUY orders found in the taker tuple of the V2 `matchOrders` settlement transaction and joined to public fills. This confirms marketable taker behavior for those observed BTC 5-minute fills. It does **not** identify the API order type (FAK/FOK/GTC), because that lifetime instruction is not encoded in the signed V2 order tuple, and it does not reveal orders that never filled.
 
@@ -63,18 +63,22 @@ The residual is positive for an entry/top-up or cross and negative for a partial
 
 Focused tests prove that a flat qualifying signal produces a nine-share modeled entry in the fixture, and the following opposite menu selection produces a fourteen-share reversal that covers the nine-share old-side imbalance and leaves a five-share new-side residual. Other tests cover partial reduction, gross-cap abstention, parameter validation, model provenance, and preservation of the Helpme baseline.
 
-The exact runtime replay correctly **fails the exact-clone/profitability gate**:
+The original autonomous replay correctly **failed the exact-clone/profitability gate**. A second controlled experiment then added the causal trend/noise layer while holding the BAPI windows, latency, fixed-USDC FAK fill model, and fees constant:
 
 | Cached interval | Coverage | Policy | PnL | Worst market | Actions/traded market | Both-side markets | Opposite actions | Size p50 / p90 |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
 | Aug 20–27 discovery | 74.80% | observed target actions | +$1,081.33 | -$125.92 | 7.27 | 67.56% | 34.52% | 8 / 29 |
 | Aug 20–27 discovery | 74.80% | Helpme baseline | -$2,316.10 | -$137.25 | 7.67 | 0% | 0% | 7 / 7 |
 | Aug 20–27 discovery | 74.80% | `target75cc` | -$1,932.78 | -$79.53 | 4.45 | 57.83% | 32.59% | 9 / 19 |
+| Aug 20–27 discovery | 74.80% | enhanced `target75cc` | -$137.89 | -$18.56 | — | — | — | — |
 | Aug 27–Sep 2 partial OOS | 92.96% | observed target actions | +$2,886.51 | -$131.59 | 6.85 | 58.39% | 26.85% | 12 / 48 |
 | Aug 27–Sep 2 partial OOS | 92.96% | Helpme baseline | -$1,413.94 | -$136.13 | 5.27 | 0% | 0% | 7 / 7 |
 | Aug 27–Sep 2 partial OOS | 92.96% | `target75cc` | -$1,190.50 | -$83.50 | 3.85 | 51.38% | 28.46% | 9 / 19 |
+| Aug 27–Sep 2 partial OOS | 92.96% | enhanced `target75cc` | -$33.85 | -$22.06 | — | — | — | — |
 
-The dynamic policy fixes stranded one-sided exposure and lowers the worst individual bot loss, but remains decisively loss-making while the observed target is positive on the same complete markets. Its autonomous event parity is also weak: discovery holdout precision 19.35%, recall 32.84%, F1 24.35%; frozen partial-OOS precision 18.77%, recall 31.32%, F1 23.47%. Side accuracy conditional on a ±2-second timing match is about 90–92%, but exact cap recovery is only 12–14%. Market-level P&L correlation is 0.027 on discovery and 0.072 on partial OOS. Applying the target's inventory mechanics to an approximate release stream does not reproduce its edge. The repeatable comparison command is [`research/backtest-target75cc.mjs`](research/backtest-target75cc.mjs).
+The enhanced policy cuts partial-OOS loss by 97.2%, maximum settlement-boundary drawdown from $1,300.52 to $91.45, and worst-window loss from $83.50 to $22.06. It does so by rejecting about 77% of the original fills and reducing accepted residual targets according to confidence. Partial-OOS profit factor is still only 0.9686, however, and pullback entries are not independently profitable across validation and OOS. The full controlled report, ablations, reversal/noise diagnostics, and pullback MAE/MFE audit are in [`trend-noise-reversal-2026-09-02.md`](research/wallet-75cc/results/trend-noise-reversal-2026-09-02.md).
+
+Autonomous event parity also remains weak: discovery holdout precision 19.35%, recall 32.84%, F1 24.35%; frozen partial-OOS precision 18.77%, recall 31.32%, F1 23.47%. Side accuracy conditional on a ±2-second timing match is about 90–92%, but exact cap recovery is only 12–14%. Market-level P&L correlation is 0.027 on discovery and 0.072 on partial OOS. Filtering the approximate release stream reduces losses but does not reproduce the target's edge. The repeatable comparison command is [`research/backtest-target75cc.mjs`](research/backtest-target75cc.mjs).
 
 ## Current implemented FastMX strategy — exact runtime logic
 
@@ -89,6 +93,10 @@ This section describes what the repository executes now. It is an implementation
 | Global cooldown | 4,000 ms | Minimum time between fired decisions, regardless of side. | Validation-selected release policy. |
 | Release cutoff | 0.900 | The highest-scoring Up/Down menu candidate must reach this probability. | Validation-selected fitted value. |
 | Cell uses | 1 | Each `side:cent-cap` cell can fire once per market window. | Validation-selected approximation. |
+| Trend/noise probability / edge | 0.500 / 0 | Rejects a release candidate unless its modeled win probability is at least 0.50 and exceeds ask plus modeled fee. | Validation-selected economic gate. |
+| Reversal / confirmed-reversal probability | 0.500 / 0.700 | The first is the executable counter-trend gate; the second is a diagnostic class boundary only. | Validation-selected gate / interpretation boundary. |
+| Dominant / short-score threshold | 0.200 / 0.080 | Separates continuation, short pullback, temporary noise, and counter-trend structure. | Local causal classifier thresholds. |
+| Confidence residual scaling | 0.50×–1.00× | Downscales the residual-tree target as fee-adjusted confidence falls; never increases it. | Validation-selected risk scaling. |
 | Residual scale | 1.0 | Multiplies the residual-tree prediction before rounding. | Trained calibration. |
 | Cross cutoff | 0.485064 | Opposite-side selection crosses inventory when the cross-tree score reaches this value. | Fitted classification threshold. |
 | Minimum / maximum order | 5 / 227 shares | Rejects smaller changes and clamps larger model requests. | Observed floor / discovery-support safety clamp. |
@@ -120,10 +128,12 @@ For decisions, **effective inventory includes both fills and pending minimum sha
 4. **Construct one candidate per side.** For each of Up and Down, start at the current ask rounded upward to a cent. Search upward through 0.99 for the first cap whose `side:cent` cell has remaining uses. Thus an ask already on a cent can use that exact cap; the implementation does not blindly add one cent.
 5. **Score release candidates.** A frozen standardized logistic model scores the Up candidate and Down candidate independently. The higher score wins; ties prefer the lower cap, then the lexical side name. Available ask depth through the cap is recorded for diagnostics but does not determine release or requested size.
 6. **Apply release cutoff.** If neither side has an eligible menu cell, or the winning score is below 0.900, no order is emitted.
-7. **Predict the desired residual.** A frozen regression tree predicts a non-negative absolute post-action residual, which is rounded to whole shares and multiplied by `T_RESIDUAL_SCALE`.
-8. **Classify the inventory transition.** If the chosen side is currently behind, a second tree decides between a partial hedge and a full reversal. If the side is flat or already ahead, the action is an entry or top-up and the cross tree is not used.
-9. **Calculate and clamp size.** The order covers the distance from current oriented inventory to desired oriented inventory, then is capped by 227 shares and the remaining planned gross room. A result below five shares abstains.
-10. **Fire a fixed-budget BUY.** The decision emits a marketable FAK BUY with cent cap `C`, minimum shares `q`, and `budgetUsd = C × q`. The selected menu cell is consumed when the decision fires, even if the later simulated FAK receives no fill.
+7. **Evaluate causal trend/noise and value.** A separate frozen model estimates the selected side's win probability from information timestamped no later than the decision. The candidate must have probability at least 0.50 and `probability - ask - feePerShare >= 0`; otherwise it abstains with `target-regime-rejected`.
+8. **Classify market structure.** Multi-timescale token paths produce `TREND_CONTINUATION`, `TEMPORARY_NOISE`, `PULLBACK_ENTRY_OPPORTUNITY`, `POSSIBLE_REVERSAL`, `CONFIRMED_REVERSAL`, or `UNCERTAIN`. The 0.70 confirmed-reversal boundary is diagnostic; a stronger reversal veto was rejected on validation because it worsened complete-path PnL and could strand old exposure.
+9. **Predict and confidence-scale the desired residual.** A frozen regression tree predicts a non-negative absolute post-action residual. Fee-adjusted confidence scales it within 0.50×–1.00× before rounding; it is never levered above the prior tree target.
+10. **Classify the inventory transition.** If the chosen side is currently behind, a second tree decides between a partial hedge and a full reversal. If the side is flat or already ahead, the action is an entry or top-up and the cross tree is not used.
+11. **Calculate and clamp size.** The order covers the distance from current oriented inventory to desired oriented inventory, then is capped by 227 shares and the remaining planned gross room. A result below five shares abstains.
+12. **Fire a fixed-budget BUY.** The decision emits a marketable FAK BUY with cent cap `C`, minimum shares `q`, and `budgetUsd = C × q`. The selected menu cell is consumed when the decision fires, even if the later simulated FAK receives no fill.
 
 The release model uses 59 columns grouped as follows:
 
@@ -137,6 +147,8 @@ The release model uses 59 columns grouped as follows:
 
 Six additional schema fields—executable-run duration, time since global/same-side fire, absolute inventory, oriented inventory, and opposite inventory—are populated but have **zero weights** in the frozen release model. Consequently, filled/pending inventory does not directly choose Up versus Down in the current release score. Inventory affects the action only after a side wins, through residual sizing and partial-versus-cross classification.
 
+The trend/noise research evaluated 112 causal columns over 0.5, 1, 2, 3, 5, 10, 15, 30, and 60 seconds: token ask/bid/mid paths, Binance and TWAP paths and basis, acceleration, persistence, path efficiency, volatility-normalized moves, trailing-range position, discount from the local high, spread, depth imbalance, and depth-pressure changes. Validation log loss selected time/price/pair context plus the token path. Adding the direct Binance/TWAP/basis group reduced validation AUC from 0.8124 to 0.7974; adding all features reduced it to 0.7953. Direct rejected inputs remain computed for diagnostics but have zero frozen weight. Two small composite `dominantScore`/`shortScore` inputs still blend token, Binance, and TWAP movement, so external feeds are not literally absent from the selected model. The BAPI cache does not contain aggressor-attributed trade flow, so depth changes are not described as buy/sell aggression.
+
 The sizing and transition trees use a smaller private-state-aware feature set: elapsed seconds, selected-side ask/spread and pair ask, top-one/top-three depths, imbalance, top ask's share of depth, one- and five-second depth changes, ten-second bid/Binance movement, side-oriented Chainlink gap from open, absolute/oriented inventory, hedge flag, FIFO estimated pair cost, and time since global and same-side fire. The exact frozen tree nodes and hashes are in [`target75cc-model.js`](engine/strategies/target75cc-model.js); the exact standardized release coefficients and hashes are in [`target75cc-release-model.js`](engine/strategies/target75cc-release-model.js).
 
 ### Inventory transition and sizing equations
@@ -146,7 +158,9 @@ Let `U` and `D` be effective Up and Down shares, including pending minimum share
 ```text
 net inventory       I = U - D
 oriented inventory  x = s × I
-predicted residual  R = round(max(0, residualTree(features) × residualScale))
+base residual       B = max(0, residualTree(features) × residualScale)
+confidence scale    k = 0.50 + 0.50 × sqrt(fee-adjusted confidence)
+predicted residual  R = round(B × k)
 ```
 
 The desired oriented inventory is:
@@ -189,16 +203,19 @@ There are two important state/execution boundaries:
 
 ### Decision observability
 
-Every call leaves a machine-readable gate in `state.strategyStatus`: outside interval, cadence, cooldown, no menu cell, below release threshold, gross cap, residual already satisfied, or fired. A fired record also stores the chosen side/cap/cell, release score and model hash, predicted and desired residual, oriented/absolute inventory, cross score and hash, uncapped/capped size, action role (`entry`, `topup`, `hedge`, or `reversal`), and all sizing-tree features. The window settlement record snapshots the active configuration and a histogram of these gates, so a later replay can identify the actual policy settings rather than relying on the current UI.
+Every call leaves a machine-readable gate in `state.strategyStatus`: outside interval, cadence, cooldown, no menu cell, below release threshold, regime unavailable/rejected, gross cap, residual already satisfied, or fired. A fired record also stores the chosen side/cap/cell, release score and model hash, regime class/probability/edge/confidence/model hash, dominant and short scores, base and scaled residual, oriented/absolute inventory, cross score and hash, uncapped/capped size, action role (`entry`, `topup`, `hedge`, or `reversal`), and all sizing/tree/regime features. The window settlement record snapshots the active configuration and a histogram of these gates, so a later replay can identify the actual policy settings rather than relying on the current UI.
 
 ### What this implementation does not reproduce
 
 - It does not know the wallet's private pre-signed order menu, canceled and unfilled attempts, confidence state, bankroll, or cross-product inventory.
 - It is calibrated only to BTC five-minute reconstruction data even though the target trades several assets and intervals.
 - It approximates release with public book/spot/TWAP features; exact autonomous release parity remains about 24% F1.
+- The trend/noise layer is trained on candidates emitted by that approximate release policy; it reduces bad exposure but does not repair release-time parity.
+- Its selected model is dominated by public price/time context and token price paths. Direct Binance/TWAP/basis and snapshot-depth additions failed validation; only the small blended dominant/short scores retain external-feed information.
+- Pullback entries were positive on the one-day discovery holdout but negative on validation and partial OOS, so pullback profitability is not established.
 - FAK, 520 ms latency, 227 maximum order, 300 gross ceiling, and the session stop are local execution/risk assumptions, not recovered wallet constants.
 - It buys both directions across time, but it is not a guaranteed two-leg arbitrage strategy and does not force outcome-neutral exposure.
-- It remains simulation-only because same-market replay P&L and promotion metrics failed.
+- It remains simulation-only because partial-OOS PnL is still negative and the promotion metrics failed.
 
 ## Live wallet re-review — expanded scope
 
@@ -371,7 +388,7 @@ The exact default calculations in [`engine/strategies/helpme.js`](engine/strateg
 
 9. Opposite-inventory behavior is disabled in the effective profile. Optional code can either retain a one-share old-side lead or, under stricter confirmation, cross the old imbalance and leave ten shares on the new side. Neither branch is an empirically complete target model.
 
-The Helpme baseline has no sells, stop losses, take profits, expected-value gates, bankroll sizing, session/time-of-day specialization, volatility sizing, pair-cost rule, TWAP signal, microprice/imbalance signal, or maximum market exposure. The target policy adds model-based inventory sizing and a planned gross-share ceiling, but still inherits the other omissions. The $25 circuit breaker only sees realized window PnL after settlement, so it cannot contain a large loss building inside the current five-minute window.
+The Helpme baseline has no sells, stop losses, take profits, expected-value gates, bankroll sizing, session/time-of-day specialization, volatility sizing, pair-cost rule, TWAP signal, microprice/imbalance signal, or maximum market exposure. The current target policy adds model-based inventory sizing, a fee-adjusted expected-value gate, multi-timescale trend/noise confidence, and a planned gross-share ceiling. It still has no active sell/stop-loss/take-profit, bankroll allocation, or session specialization. The $25 circuit breaker only sees realized window PnL after settlement, so it cannot contain a large loss building inside the current five-minute window.
 
 ## External and local data inventory
 
@@ -451,6 +468,9 @@ The target strategy now uses the following narrower configuration. “Fitted” 
 | Residual scale | `1.0` | Fitted sizing-tree calibration. Order size is dynamic; exact action medians/p90s were 8/29 and 12/48 shares in discovery/partial OOS. |
 | Cross cutoff | `0.485064` | Chronological holdout calibration for partial reduction versus inventory crossing. Both behaviors are directly observed; this probability cutoff is model-specific. |
 | Release cutoff | `0.900` | Selected by discovery-validation timing F1 for the autonomous public-feature release model. It is not an observed wallet threshold. |
+| Trend/noise probability / minimum edge | `0.500 / 0` | Candidate must clear 0.50 and fee-adjusted expected edge `p - ask - fee >= 0`; validation-selected local policy, not a wallet constant. |
+| Reversal / confirmed label | `0.500 / 0.700` | 0.50 permits a counter-trend action after the value gate; 0.70 changes its diagnostic label only. |
+| Confidence residual range | `0.50×–1.00×` | Validation-selected downscaling of the residual-tree target; no confidence leverage above baseline. |
 | Evaluation cadence | `250ms` | Replay/runtime sampling resolution. Public fills do not expose the wallet's internal evaluation loop. |
 | Global cooldown | `4000ms` | Validation-selected approximation. It is not a wallet fact: observed inter-action times reached zero for simultaneous opposite-side action groups, with p1 about 351ms and medians about 9.1s / 6.6s. |
 | Uses per side/cent cell | `1` | Validation-selected approximation. Roughly 3% of observed filled cells repeated, up to three times in discovery and four in partial OOS. |
@@ -461,7 +481,7 @@ The target strategy now uses the following narrower configuration. “Fitted” 
 | Modeled latency | `520ms` | Local fill-simulation assumption, not an inferred target parameter. |
 | Session stop | `$25` default | Local circuit breaker, not cloned wallet logic. |
 
-The release model consumes causal CLOB depth/price, Binance spot, Chainlink/TWAP, basis, time, and multiple 1/3/5/15/30/60-second changes. It does not use the old threshold chain. The dashboard exposes one fixed FastMX strategy identity and only the wallet-model controls; the persisted runtime schema rejects legacy Helpme parameters.
+The release model consumes causal CLOB depth/price, Binance spot, Chainlink/TWAP, basis, time, and multiple 1/3/5/15/30/60-second changes. The second-stage trend/noise layer evaluates horizons from 500ms through 60s, applies fee-adjusted value, and confidence-scales size. Neither uses the old threshold chain. The dashboard exposes one fixed FastMX strategy identity and only the wallet-model controls; the persisted runtime schema rejects legacy Helpme parameters.
 
 ### What is and is not cloned today
 
@@ -479,6 +499,7 @@ Assumed rather than cloned:
 
 - 520ms as the target decision-to-fill latency;
 - the fitted public-feature release model and its score/cadence/cell-use policy as a proxy for the private release program;
+- the fitted trend/noise probability, structural labels, and fee-adjusted confidence curve as a local risk filter rather than recovered wallet state;
 - FAK as the target's exact order type;
 - autonomous enumeration of executable one-cent cap cells;
 - the 5–227 per-order and 300 planned-gross safety bounds;
@@ -505,12 +526,12 @@ Not cloned:
 | Price cap | Ask plus 1 cent, ceiled to a cent, max 0.98. | Target cap median 0.78 with wide, time-varying headroom; signed caps extend to 0.99. | Partial shape only. |
 | Size | Fixed cap × 7-share budget. | Dynamic residual target; p90 minimum shares 29–37 and p99 92–125 in saved weeks. | Material mismatch. |
 | Execution | Fixed-USDC FAK replay at T+520ms; strict visible walk in historical simulator. | Marketable taker confirmed. Exact lifetime and decision latency unknown. | Taker style cloned; details assumed. |
-| Opposite signal | Skip by default; optional partial hedge/reversal. | 30.49% of older reconstructed actions are opposite inventory. | Default cannot reproduce target. |
-| Position management | Add aligned entries; no exposure/order cap, sell, or target residual. | Target behaves like dynamic inventory rebalancing. | Material mismatch. |
+| Opposite signal | Skip by default; optional partial hedge/reversal. | 30.49% of older reconstructed actions are opposite inventory. | Replacement target policy can reduce or cross; parity remains approximate. |
+| Position management | Add aligned entries; no exposure/order cap, sell, or target residual. | Target behaves like dynamic inventory rebalancing. | Replacement adds target residual and planned cap; exact sizing still mismatches. |
 | Exit logic | Settlement only; optional complete-set merge infrastructure is not active in Helpme. | Saved cohorts have no observed sells, supporting buy-and-settle behavior for filled trades. | Broadly consistent, but missing unfilled/canceled evidence. |
 | Session control | Global $25 realized-loss breaker after settlement. | No target session policy recovered. | Risk control, not clone logic. |
 | Time/session | No ET session specialization. | Strong time-dependent sizing and likely behavior differences. | Missing. |
-| Regime adaptation | One Binance trend/countertrend gate. | Weekly policy models contain broader book/price/basis state, but no end-to-end validation. | Assumed and incomplete. |
+| Regime adaptation | One Binance trend/countertrend gate. | Public multi-timescale price/book/feed state is informative, but the private state is unknown. | Replacement causal layer improves risk in end-to-end replay; partial OOS still loses. |
 | Liquidity | Minimum four shares within cap. | Target fire inference uses cap executability, runs, depth and consumption. | Too shallow/simple. |
 | Fees | Generic 700bps crypto formula; no venue rounding or market fee lookup in main engine. | Official crypto formula matches, but fee application to target activity is inconsistent. | Formula right; accounting/config incomplete. |
 | Drawdown | Session curve at settlement boundaries. | Requested daily/session/max drawdowns require intrawindow deployment/equity accounting. | Inadequate metric. |
@@ -560,7 +581,7 @@ The earlier `usdcSize` uncertainty is no longer a high-severity blocker for curr
 
 ## Existing verification results
 
-The repository's configured test command now passes all 78 Node tests; the focused target suite passes 9/9. These tests cover many local invariants—including strict historical L2 walking, current Helpme gates, target two-sided transitions, private-state exclusion, circuit-breaker generation, WebSocket depth updates, order status, and resolution URLs—but cannot test private wallet state.
+The repository's configured test command now passes all 84 Node tests. The added target tests cover model provenance, exact causal feature invariance when future snapshots are mutated, regime classification, economic rejection/admission, and parameter validation. The broader suite still covers strict historical L2 walking, current Helpme gates, target two-sided transitions, private-state exclusion, circuit-breaker generation, WebSocket depth updates, order status, and resolution URLs, but cannot test private wallet state.
 
 Existing research must be interpreted narrowly:
 
@@ -572,6 +593,8 @@ Existing research must be interpreted narrowly:
 - Weekly hazard burst AUC is 0.64–0.68 out of sample. The second weekly multi-head policy file contains fitted coefficients but no stored evaluation metrics or end-to-end fills/PnL table.
 
 The new exact-week artifacts add a stable observable cap-ranking result and an autonomous replay, but still do not support profitability or a 98% behavior-clone claim. The selected observable model has pairwise AUC 0.868 and only 11.38% exact top-cell recovery on discovery holdout. Autonomous holdout timing F1 is 24.35%; partial-OOS timing F1 is 23.47%.
+
+The causal trend/noise model was fitted on Aug 20–24 baseline candidates, selected on Aug 25, and left Aug 26 untouched. Context plus token path achieved validation/holdout AUC 0.8124/0.8182 and log loss 0.4775/0.4767. In integrated replay the enhanced policy produced +$41.40 on validation, +$37.95 on the untouched one-day holdout, and -$33.85 on frozen partial OOS versus -$92.05, -$273.62, and -$1,190.50 for the prior runtime policy. The OOS result is a large risk reduction, not profitability proof.
 
 ## Proposed ET sessions
 
@@ -670,6 +693,6 @@ For the whole week, every UTC day, and each ET session, report both target and b
 
 ## Current conclusion
 
-The audit establishes a solid factual core—BUY-only observed activity, taker settlement role, fixed-budget signed orders, a two-sided cent-cap menu, dynamic sizing, and inventory rebalancing. The new simulation policy implements all of those observable components and no longer depends on FastMX. Model/data provenance and autonomous parity are now reproducible on the exact discovery interval.
+The audit establishes a solid factual core—BUY-only observed activity, taker settlement role, fixed-budget signed orders, a two-sided cent-cap menu, dynamic sizing, and inventory rebalancing. The simulation policy implements all of those observable components. It now also uses a causal, no-lookahead trend/noise probability and fee-adjusted value gate plus confidence-downscaled residual sizing. Model/data provenance, ablations, autonomous parity, and the controlled baseline comparison are reproducible.
 
-It nevertheless fails the user's “identical” requirement and the economic gate. On the same 1,508 complete discovery markets, observed target actions model to +$1,081.33 while the autonomous runtime loses $1,932.78. On 1,651 partial-OOS markets, the target produces +$2,886.51 while the runtime loses $1,190.50. No configuration wording can bridge that difference. Keep execution hard-locked to simulation, finish the OOS week after Sep 3, and do not claim completion unless an additional source reveals the wallet's private release/menu state or a materially stronger causal model passes the frozen gates.
+It nevertheless fails the user's “identical” requirement and the economic gate. On the same 1,508 complete discovery markets, observed target actions model to +$1,081.33 while the original autonomous runtime loses $1,932.78 and the enhanced version loses $137.89. On 1,651 partial-OOS markets, the target produces +$2,886.51, the original runtime loses $1,190.50, and the enhancement still loses $33.85. The new layer sharply reduces losses, drawdown, false reversals, and trade count, but partial-OOS profit factor remains below one and pullbacks are not stable. Keep execution hard-locked to simulation, finish the OOS week after Sep 3, and do not claim completion unless an additional source reveals the wallet's private release/menu state or a materially stronger causal model passes the frozen gates.

@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { DEFAULT_STRATEGY, getStrategy, listStrategies } from "./index.js";
 import { MODEL_META } from "./target75cc-model.js";
 import { RELEASE_META, RELEASE_MODEL, RELEASE_POLICY } from "./target75cc-release-model.js";
+import { REGIME_META } from "./target75cc-regime-model.js";
+import { REGIME_CLASSES, interpretRegime } from "./target75cc-regime.js";
+import { regimeFeatures } from "./target75cc-regime-features.js";
 import { STRAT, step, validateParams } from "./target75cc.js";
 
 function book(ask, bid = ask - 0.02, depth = 100) {
@@ -38,6 +41,7 @@ const FAST = {
   T_RELEASE_THRESHOLD: 0,
   T_COOLDOWN_MS: 0,
   T_DECISION_STEP_MS: 50,
+  T_REGIME_ON: false,
 };
 
 function primeAndEnter(s, P = FAST) {
@@ -58,6 +62,52 @@ test("tracked model metadata preserves the chronological holdout evidence", () =
   assert.equal(RELEASE_POLICY.threshold, 0.9);
   assert.equal(RELEASE_META.rankMetrics.holdout.pairAuc, 0.867988);
   assert.equal(RELEASE_META.autonomousParity.holdout.timingF1Pct, 24.347);
+  assert.equal(REGIME_META.selection.selectedFeatureSet, "tokenPath");
+  assert.match(REGIME_META.baselinePolicySha256, /^[a-f0-9]{64}$/);
+  assert.ok(REGIME_META.metrics.holdout.auc > .8);
+});
+
+test("trend/noise features cannot read a future snapshot", () => {
+  const snapshot = (ms, ask, bz) => ({ ms, bz, cl: bz,
+    Up: { ask, bid: ask - .01, askDepth1: 10, askDepth3: 30, bidDepth1: 12, bidDepth3: 32 },
+    Down: { ask: 1.01 - ask, bid: 1 - ask, askDepth1: 12, askDepth3: 32, bidDepth1: 10, bidDepth3: 30 } });
+  const prior = snapshot(5_000, .52, 100), current = snapshot(10_000, .55, 101);
+  const futureA = snapshot(20_000, .99, 150), futureB = snapshot(20_000, .01, 50);
+  const args = { current, tk: { t: 10, openBinance: 100, openChainlink: 100 },
+    side: "Up", clockMs: 10_000 };
+  const left = regimeFeatures({ ...args, history: [prior, current, futureA] });
+  const right = regimeFeatures({ ...args, history: [prior, current, futureB] });
+  assert.deepEqual(left.vector, right.vector);
+});
+
+test("counter-trend classification distinguishes noise, possible reversal, and confirmed reversal", () => {
+  const raw = { dominantScore: -.6, shortScore: .4 };
+  const P = { ...STRAT, T_REGIME_MIN_PROBABILITY: .5, T_REGIME_MIN_EDGE: 0,
+    T_REGIME_REVERSAL_MIN_PROBABILITY: .5, T_REGIME_CONFIRMED_REVERSAL_PROBABILITY: .7 };
+  assert.equal(interpretRegime(raw, .4, .3, P).classification, REGIME_CLASSES.TEMPORARY_NOISE);
+  assert.equal(interpretRegime(raw, .6, .3, P).classification, REGIME_CLASSES.POSSIBLE_REVERSAL);
+  assert.equal(interpretRegime(raw, .8, .3, P).classification, REGIME_CLASSES.CONFIRMED_REVERSAL);
+  assert.equal(interpretRegime({ dominantScore: .6, shortScore: -.4 }, .6, .7, P).classification,
+    REGIME_CLASSES.TEMPORARY_NOISE);
+  const pullback = interpretRegime({ dominantScore: .6, shortScore: -.4 }, .8, .3, P);
+  assert.equal(pullback.classification, REGIME_CLASSES.PULLBACK_ENTRY_OPPORTUNITY);
+  assert.ok(pullback.sizeScale >= .5 && pullback.sizeScale <= 1);
+});
+
+test("trend/noise gate can reject or admit the same release candidate", () => {
+  const rejectedState = state();
+  const reject = { ...FAST, T_REGIME_ON: true, T_REGIME_MIN_PROBABILITY: 1,
+    T_REGIME_MIN_EDGE: 1, T_REGIME_REVERSAL_MIN_PROBABILITY: 1 };
+  assert.deepEqual(primeAndEnter(rejectedState, reject), []);
+  assert.equal(rejectedState.gateReason, "target-regime-rejected");
+
+  const acceptedState = state();
+  const accept = { ...FAST, T_REGIME_ON: true, T_REGIME_MIN_PROBABILITY: 0,
+    T_REGIME_MIN_EDGE: -1, T_REGIME_REVERSAL_MIN_PROBABILITY: 0 };
+  const [order] = primeAndEnter(acceptedState, accept);
+  assert.ok(order);
+  assert.ok(order.signal.regimeClass);
+  assert.ok(Number.isFinite(order.signal.sideProbability));
 });
 
 test("observable release model gives private target state zero weight", () => {
@@ -137,4 +187,7 @@ test("target parameter validation rejects unsafe bounds", () => {
   assert.throws(() => validateParams({ ...STRAT, T_CROSS_THRESHOLD: 2 }), /cross threshold/);
   assert.throws(() => validateParams({ ...STRAT, T_RELEASE_THRESHOLD: 2 }), /release threshold/);
   assert.throws(() => validateParams({ ...STRAT, T_RESIDUAL_SCALE: 0 }), /residual scale/);
+  assert.throws(() => validateParams({ ...STRAT, T_REGIME_MIN_PROBABILITY: 2 }), /T_REGIME_MIN_PROBABILITY/);
+  assert.throws(() => validateParams({ ...STRAT, T_REGIME_SIZE_FLOOR: 2,
+    T_REGIME_SIZE_CEILING: 1 }), /regime size bounds/);
 });

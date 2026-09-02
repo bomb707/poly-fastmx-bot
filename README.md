@@ -12,11 +12,11 @@ Simulation-only BTC five-minute strategy reconstruction for target wallet
 
 ## FastMX runtime policy
 
-FastMX now runs `target75cc` as its only runtime strategy. It replaces both the disproven fixed seven-share action and the inherited momentum trigger. Every 250ms it independently evaluates the next unused executable one-cent cap cell on both Up and Down, selects the strongest public-feature score above 0.900, and applies a 4-second release cooldown. It then predicts the desired inventory residual and chooses an aligned entry/top-up, a partial opposite-side reduction, a full inventory crossing, or abstention. Every emitted order retains the target's observed fixed-USDC BUY encoding: `budget = cap × signed minimum shares`, so price improvement may fill additional shares.
+FastMX now runs `target75cc` as its only runtime strategy. It replaces both the disproven fixed seven-share action and the inherited momentum trigger. Every 250ms it independently evaluates the next unused executable one-cent cap cell on both Up and Down, selects the strongest public-feature score above 0.900, and applies a 4-second release cooldown. A second causal model then rejects candidates without at least 0.50 win probability and nonnegative edge after ask and modeled fee. Accepted decisions use fee-adjusted confidence to scale the existing residual target within 0.50×–1.00×, then choose an aligned entry/top-up, partial opposite-side reduction, full inventory crossing, or abstention. Every emitted order retains the target's observed fixed-USDC BUY encoding: `budget = cap × signed minimum shares`, so price improvement may fill additional shares.
 
-The partial-versus-cross tree and residual tree are frozen in `engine/strategies/target75cc-model.js`; the release model is frozen in `engine/strategies/target75cc-release-model.js`, all with source/evaluation hashes. Configurable parameters are `T_RELEASE_THRESHOLD`, `T_DECISION_STEP_MS`, `T_COOLDOWN_MS`, `T_MAX_CELL_USES`, `T_START_S`, `T_STOP_S`, `T_RESIDUAL_SCALE`, `T_CROSS_THRESHOLD`, `T_MIN_ORDER_SH`, `T_MAX_ORDER_SH`, and `T_MAX_GROSS_SH`. They are labeled as fitted model values, engine resolution, or local safety guards; they are not presented as observed constants from the wallet. The old momentum fields, fixed base shares, and hedge/reversal toggles have been removed from the runtime UI and persisted runtime schema.
+The partial-versus-cross tree and residual tree are frozen in `engine/strategies/target75cc-model.js`; the release model is frozen in `engine/strategies/target75cc-release-model.js`; and the no-lookahead trend/noise feature and scoring layers are in `engine/strategies/target75cc-regime-features.js`, `engine/strategies/target75cc-regime-model.js`, and `engine/strategies/target75cc-regime.js`. Each stores source/evaluation hashes or deterministic model metadata. The old momentum fields, fixed base shares, and hedge/reversal toggles have been removed from the runtime UI and persisted runtime schema.
 
-The exact private release rule is not recovered. The autonomous observable model reaches only 24.35% timing F1 on discovery holdout and 23.47% on partial OOS, and its runtime replay is loss-making. It is a two-sided behavioral imitation, not an exact or profitable clone, and remains hard-locked to simulation. The former Helpme implementation is retained only for reproducible offline research.
+The exact private release rule is not recovered. The autonomous observable model reaches only 24.35% timing F1 on discovery holdout and 23.47% on partial OOS. The trend/noise layer cuts partial-OOS loss from $1,190.50 to $33.85, drawdown from $1,300.52 to $91.45, and worst-window loss from $83.50 to $22.06, but profit factor remains below one. It is an improved two-sided behavioral imitation, not an exact or profitable clone, and remains hard-locked to simulation. The controlled report is `research/wallet-75cc/results/trend-noise-reversal-2026-09-02.md`; Helpme remains only for reproducible offline research.
 
 ## Retired Helpme research baseline (not runtime-selectable)
 
@@ -94,6 +94,7 @@ The dashboard draws bid and ask as step functions because quotes remain constant
 npm install
 npm run test:depth
 npm run test:strategy
+node research/wallet-75cc/fit-trend-noise-model.mjs
 TARGET_EXACT_FIRE_FILE=data/wallet-75cc/exact-2026-08-20_2026-08-27/exact-fire-dataset.json.gz \
   node research/backtest-target75cc.mjs 2026-08-20T00:00:00Z 2026-08-27T00:00:00Z
 node --test engine/simrun.helpme.test.mjs src/sources/history.test.mjs

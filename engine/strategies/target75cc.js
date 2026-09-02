@@ -7,6 +7,7 @@
 
 import { CROSS_TREE, MODEL_META, RESIDUAL_TREE } from "./target75cc-model.js";
 import { RELEASE_META, RELEASE_MODEL, RELEASE_POLICY } from "./target75cc-release-model.js";
+import { evaluateRegime, REGIME_POLICY } from "./target75cc-regime.js";
 
 export const NAME = "target75cc";
 export const LABEL = "FastMX · wallet-75cc logic";
@@ -32,6 +33,18 @@ export const STRAT = {
   T_MIN_ORDER_SH: 5,
   T_MAX_ORDER_SH: 227,
   T_MAX_GROSS_SH: 300,
+  T_REGIME_ON: true,
+  T_REGIME_DIAGNOSTICS: false,
+  T_REGIME_MIN_PROBABILITY: REGIME_POLICY.minimumProbability,
+  T_REGIME_MIN_EDGE: REGIME_POLICY.minimumEdge,
+  T_REGIME_REVERSAL_MIN_PROBABILITY: REGIME_POLICY.reversalMinimumProbability,
+  T_REGIME_CONFIRMED_REVERSAL_PROBABILITY: REGIME_POLICY.confirmedReversalProbability,
+  T_REGIME_PULLBACK_MIN_PROBABILITY: REGIME_POLICY.pullbackMinimumProbability,
+  T_REGIME_DOMINANT_THRESHOLD: REGIME_POLICY.dominantThreshold,
+  T_REGIME_SHORT_THRESHOLD: REGIME_POLICY.shortCounterThreshold,
+  T_REGIME_CONFIDENCE_SIZING: true,
+  T_REGIME_SIZE_FLOOR: REGIME_POLICY.confidenceScaleFloor,
+  T_REGIME_SIZE_CEILING: REGIME_POLICY.confidenceScaleCeiling,
   T_LIVE_ORDER_TYPE: "FAK",
   MAX_SESSION_LOSS: 25,
 };
@@ -341,6 +354,18 @@ export function validateParams(P = STRAT) {
   if (!(number(P.T_STOP_S, 286) > number(P.T_START_S, 4))) {
     throw new RangeError("target active interval requires stop > start");
   }
+  for (const [name, fallback] of [["T_REGIME_MIN_PROBABILITY", .5],
+    ["T_REGIME_REVERSAL_MIN_PROBABILITY", .5],
+    ["T_REGIME_CONFIRMED_REVERSAL_PROBABILITY", .7],
+    ["T_REGIME_PULLBACK_MIN_PROBABILITY", .5]]) {
+    if (!(number(P[name], fallback) >= 0 && number(P[name], fallback) <= 1)) {
+      throw new RangeError(`${name} must be between zero and one`);
+    }
+  }
+  if (!(number(P.T_REGIME_SIZE_FLOOR, .5) > 0
+    && number(P.T_REGIME_SIZE_CEILING, 1.5) >= number(P.T_REGIME_SIZE_FLOOR, .5))) {
+    throw new RangeError("target regime size bounds require 0 < floor <= ceiling");
+  }
   return true;
 }
 
@@ -385,10 +410,31 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
     return [];
   }
 
+  const regime = (P.T_REGIME_ON || P.T_REGIME_DIAGNOSTICS) ? evaluateRegime({ history: model.featureHistory, current, tk,
+    side: candidate.side, clockMs, P }) : null;
+  if (P.T_REGIME_ON && (!regime || !regime.allowed)) {
+    setStatus(state, null, {
+      gate: !regime ? "target-regime-unavailable" : "target-regime-rejected",
+      side: candidate.side,
+      releaseScore: candidate.score,
+      releaseThreshold,
+      regimeClass: regime?.classification ?? null,
+      sideProbability: regime?.sideProbability ?? null,
+      expectedEdge: regime?.expectedEdge ?? null,
+      noiseProbability: regime?.noiseProbability ?? null,
+      reversalProbability: regime?.reversalProbability ?? null,
+      dominantScore: regime?.dominantScore ?? null,
+      shortScore: regime?.shortScore ?? null,
+    });
+    return [];
+  }
+
   const side = candidate.side;
   const features = targetFeatures(state, model, tk, current, side, clockMs);
   const residualScale = number(P.T_RESIDUAL_SCALE, 1);
-  const predictedResidual = Math.max(0, Math.round(predict(RESIDUAL_TREE, features) * residualScale));
+  const basePredictedResidual = Math.max(0, predict(RESIDUAL_TREE, features) * residualScale);
+  const confidenceSizeScale = P.T_REGIME_ON ? number(regime?.sizeScale, 1) : 1;
+  const predictedResidual = Math.max(0, Math.round(basePredictedResidual * confidenceSizeScale));
   const oppositeSignal = features.orientedInventory < -EPS;
   const crossScore = oppositeSignal ? predict(CROSS_TREE, features) : null;
   const crosses = oppositeSignal
@@ -442,11 +488,22 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       releaseThreshold,
       capDepth: round4(candidate.available),
       menuCell: candidate.cell,
+      regimeModelSha256: regime?.modelSha256 ?? null,
+      regimeClass: regime?.classification ?? null,
+      sideProbability: regime == null ? null : round4(regime.sideProbability),
+      expectedEdge: regime == null ? null : round4(regime.expectedEdge),
+      noiseProbability: regime == null ? null : round4(regime.noiseProbability),
+      reversalProbability: regime == null ? null : round4(regime.reversalProbability),
+      dominantScore: regime == null ? null : round4(regime.dominantScore),
+      shortScore: regime == null ? null : round4(regime.shortScore),
+      confidence: regime == null ? null : round4(regime.confidence),
+      confidenceSizeScale: round4(confidenceSizeScale),
     },
     model: {
       residualSha256: MODEL_META.residualSha256,
       crossSha256: MODEL_META.crossSha256,
       predictedResidual,
+      basePredictedResidual: round4(basePredictedResidual),
       desiredOrientedShares,
       orientedInventory: round4(features.orientedInventory),
       absoluteInventory: round4(features.absoluteInventory),
@@ -457,6 +514,8 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       features: Object.fromEntries(Object.entries(features)
         .filter(([key]) => key !== "inventory")
         .map(([key, value]) => [key, finite(value) ? round4(value) : value])),
+      regimeFeatures: regime ? Object.fromEntries(Object.entries(regime.features)
+        .map(([key, value]) => [key, finite(value) ? round4(value) : value])) : null,
     },
   };
   model.cellUses.set(candidate.cell, (model.cellUses.get(candidate.cell) || 0) + 1);
@@ -475,6 +534,10 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
     predictedResidual, desiredOrientedShares,
     orientedInventory: features.orientedInventory,
     crossScore, crossThreshold: number(P.T_CROSS_THRESHOLD, MODEL_META.crossThreshold),
+    regimeClass: regime?.classification ?? null,
+    sideProbability: regime?.sideProbability ?? null,
+    expectedEdge: regime?.expectedEdge ?? null,
+    confidenceSizeScale,
     upShares: features.inventory.up, downShares: features.inventory.down,
     net: features.inventory.net,
     modelOrderCount: model.orderCount,
