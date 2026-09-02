@@ -1,15 +1,28 @@
 # FastMX current state
 
-_Updated: 2026-08-27 UTC_
+_Updated: 2026-09-02 UTC_
 
-- Runtime: `poly-fastmx-simulation`, online under PM2
+- Runtime profile: `poly-fastmx-simulation`; no matching PM2 process was running at final verification
 - Dashboard: `https://dev-fastmx.polywinbot.com`
 - Local port: `4520`
 - Execution: hard-locked simulation; no real orders
 - Target wallet: `0x75cc3b63a2f2423085e10706c78b494017b93ce1`
-- Active strategy: only `helpme`, in `engine/strategies/helpme.js`
+- Sole FastMX runtime strategy: `target75cc`, in `engine/strategies/target75cc.js`
+- Retired offline baseline: `helpme`, retained only for historical research
 
-The active policy exposes two direction-source toggles and the `poly-mom-bot` Binance trend-regime toggle. CLOB midpoint velocity uses
+FastMX now runs `target75cc` as its only runtime policy. It removes fixed-seven-share execution and the old momentum release chain, independently evaluating the next unused executable one-cent cell on both Up and Down menus using a frozen causal public-feature model. The validation-selected defaults are release score 0.900, 250ms evaluation cadence, 4,000ms cooldown, and one use per side/cap cell from T+4 through T+286. It then uses the chronological residual-size tree to calculate desired post-action inventory and the transition tree to choose partial reduction versus crossing. Its signed-order range is 5–227 shares, residual scale is 1.0, cross cutoff is 0.485064, and planned gross-inventory ceiling is 300 shares. Orders remain fixed-USDC marketable FAK BUY intents, matching the observed target encoding at the level public data supports.
+
+The complete implemented decision path, feature groups, inventory equations, execution semantics, gate names, and known boundary behavior are documented under [Current implemented FastMX strategy — exact runtime logic](TARGET_WALLET_STRATEGY_ANALYSIS.md#current-implemented-fastmx-strategy--exact-runtime-logic).
+
+Those numbers have explicit provenance: 0.900/4,000ms/one-use and 0.485064 are fitted model-policy values; 250ms is engine resolution; T+4..286 is the frozen search support; five shares is the observed order floor; 227 and 300 are local model/risk clamps; and FAK, 520ms latency, and the session stop are assumptions or safeguards. None is evidence that the private target code contains the same named parameter. The dashboard and persisted schema now contain only this policy's controls.
+
+Sizing/transition artifacts retain source hashes in `engine/strategies/target75cc-model.js`; the observable release model and discovery/evaluation hashes are frozen in `engine/strategies/target75cc-release-model.js`. Original chronological holdouts reported 3.446799-share median residual error versus 7.401494 for the constant baseline and 0.792915 AUC for partial-versus-cross selection. The exact-week release model reports 0.867988 pairwise AUC but only 11.377% top-cell recovery on untouched discovery holdout.
+
+This is not an exact target clone. Discovery holdout autonomous timing parity is 19.345% precision, 32.837% recall, and 24.347% F1; frozen partial OOS is 18.769% / 31.323% / 23.473%. Runtime replay loses $1,932.78 on 1,508 complete discovery markets and $1,190.50 on 1,651 partial-OOS markets, while observed target actions produce +$1,081.33 and +$2,886.51 respectively. Market-level P&L correlations are only 0.027 and 0.072. Execution remains hard-locked to simulation.
+
+## Retired Helpme baseline (offline research only)
+
+The FastMX candidate/baseline exposes two direction-source toggles and the `poly-mom-bot` Binance trend-regime toggle. CLOB midpoint velocity uses
 `mid(now) - mid(at-or-before now - lookback)`, with `mid = (best bid + best ask) / 2`, a required configurable
 lookback fixed at the required `3000` ms default and a fitted absolute threshold of `0.02`. Binance gap momentum uses the dev-tool raw-dollar formula
 `(priceNow-open)-(pricePrior-open) = priceNow-pricePrior`, with a three-second lookback and
@@ -20,8 +33,8 @@ clock and a causal 60-second Binance clock in the same direction. Weak/range tre
 the fast signal unchanged, matching `poly-mom-bot`. Trend is not a standalone direction source and requires Binance
 momentum. UI and server validation guarantee at least one fast source is enabled and enforce that dependency.
 `H_BINANCE_GAP_AGREE_ON` independently applies the `poly-mom-bot` window-gap rule: selected velocity direction
-must agree with Binance spot versus the five-minute Binance open. It is currently off.
-Every distinct qualified signal aligned with flat/current inventory creates a seven-share entry. Two independent
+must agree with Binance spot versus the five-minute Binance open. Its code default is off.
+In the Helpme baseline, every distinct qualified signal aligned with flat/current inventory creates a seven-share entry. Two independent
 opposite-signal controls are available: partial hedge retains at least a one-share old-side lead, while reversal
 requires CLOB + Binance fast momentum + strong trailing trend + window-gap confirmation, crosses only an old
 imbalance up to 25 shares, and targets a ten-share new-side residual. Inventory orders are exact-share sized and
@@ -31,9 +44,7 @@ per-window inventory-loss branches remain removed. Cooldown remains the sole rel
 The external session circuit breaker remains at `-$25`.
 Chainlink, ask differentials, imbalance, microprice, and weighted scores are not direction gates.
 
-Current deployed PM2 profile: CLOB velocity OFF, Binance velocity ON at `3000ms/$5`, Binance trend regime ON at
-`30s/0.05%` with `60s/0.075%` countertrend confirmation, window-gap agreement ON, active through `T+300`,
-`2000ms` cooldown, hedge OFF, and reversal OFF.
+The checked-in PM2 profile runs `target75cc` with the frozen two-sided-menu defaults listed above. FastMX cannot select Helpme at runtime; opposite-side behavior comes from the frozen transition model.
 
 Each simulated/backtested automatic BUY is a fixed-USDC FAK: `budget = signed cap × minimum shares`. Modeled matching is delayed 520 ms,
 walks the future visible L2 ladder, can receive more shares through price improvement, books partials at actual
@@ -43,7 +54,7 @@ Real execution remains disabled in the PM2 process, but the isolated live execut
 August 27. It now reads market-specific tick/minimum constraints, signs a true fixed-USD CLOB V2 market order
 for FAK, prewarms that signer path, computes and fsync-journals the deterministic order ID before POST in the
 probe harness, and maintains a renewable two-socket HTTPS reserve. The dashboard's **live order type** selector
-chooses GTC with immediate unfilled-remainder cancellation or FAK and persists across restarts; GTC is the default,
+chooses GTC with immediate unfilled-remainder cancellation or FAK and persists across restarts; FAK is the target-policy default,
 while `LIVE_TAKER_ORDER_TYPE` remains the legacy/fallback setting. This live-only choice cannot change the frozen
 FAK simulation/backtest model. Three matched GTC
 probes averaged 276.97 ms versus 516.45 ms for two matched FAK probes. Every prepared hash matched the venue

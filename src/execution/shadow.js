@@ -1,4 +1,4 @@
-// Live Helpme simulation harness. Runs the reconstructed strategy on the same
+// Live strategy simulation harness. Runs the selected strategy on the same
 // Binance, RTDS, and Polymarket CLOB data displayed by the dashboard.
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +18,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   const windows = new Map();
   let liveParams = {};             // UI overrides merged over STRAT (set by setParams; defaults until then)
   let curStrat = getStrategy(DEFAULT_STRATEGY);
-  let mergedP = { ...curStrat.STRAT, LIVE_FILLS: false };      // Helpme is permanently shadow-only.
+  let mergedP = { ...curStrat.STRAT, LIVE_FILLS: false };      // Active strategy is permanently shadow-only.
                                    //   config-object spread on EVERY book update). Read-only in the hot path.
   const circuitBreaker = createSessionCircuitBreaker(
     () => (mergedP && mergedP.MAX_SESSION_LOSS != null) ? (+mergedP.MAX_SESSION_LOSS || 0) : (config.maxSessionLoss || 0),
@@ -34,7 +34,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       w = { slug, windowStart, openBinance, winSide: null, upShares: 0, downShares: 0, cost: 0, fee: 0,
             upCost: 0, downCost: 0, mergedRealized: 0, mergedUsd: 0, fills: [], settled: false,
             breakerGeneration: circuitBreaker.stamp(),
-            // strategy state (self-initialized by Helpme on the first tick)
+            // strategy state (self-initialized by the selected policy on the first tick)
             orders: [], seq: 0, lastTickMs: null,
             // Per-window cadence and gate diagnostics.
             vDiag: { open: false, tickN: 0, dtSum: 0, dtMax: 0, gate: {} } };
@@ -73,19 +73,14 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       w.seq = Math.max(w.seq, +event.oid || 0);
     }
     if (decisions.size) {
-      const model = w.helpme = { history: [], historyHead: 0, lastSignalKey: null,
-        lastOrderMs: -Infinity, orderCount: decisions.size };
       for (const event of decisions.values()) {
         const ask = Number(event.decPx), explicitCap = Number(event.limitPx);
         const cap = Number.isFinite(explicitCap) && explicitCap > 0 ? explicitCap
           : Number.isFinite(ask) && ask > 0
-            ? Math.min(+mergedP.LIMIT || .99,
-              Math.ceil((ask + Math.max(0, +mergedP.H_CAP_HEADROOM || 0) - 1e-9) * 100) / 100)
+            ? Math.min(+mergedP.LIMIT || .99, Math.ceil((ask - 1e-9) * 100) / 100)
             : null;
         w.orders.push({ oid: event.oid, side: event.side, limit: cap, kind: event.leg || "entry",
           budgetUsd: event.budgetUsd ?? null, filledUsd: 0, placedT: event.tInto ?? null });
-        const eventMs = Number(event.ts);
-        if (Number.isFinite(eventMs)) model.lastOrderMs = Math.max(model.lastOrderMs, eventMs);
       }
     }
     w.hydrated = true;
@@ -142,33 +137,21 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   function cfgStamp() {
     const P = mergedP;
     return {
-      strategy: DEFAULT_STRATEGY,
+      strategy: curStrat.NAME,
       latencyMs: P.LATENCY_MS || 0,
-      baseOrderShares: P.H_BASE_ORDER_SH,
-      cooldownMs: P.H_COOLDOWN_MS,
-      activeFromS: P.H_START_S,
-      stopAtS: P.H_STOP_S,
-      clobMidVelocityOn: P.H_CLOB_MID_VELOCITY_ON,
-      midVelocityLookbackMs: P.H_MID_VELOCITY_LOOKBACK_MS,
-      midVelocityMin: P.H_MID_VELOCITY_MIN,
-      binanceGapMomentumOn: P.H_BINANCE_GAP_MOMENTUM_ON,
-      binanceGapVelocityLookbackMs: P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS,
-      binanceGapVelocityMin: P.H_BINANCE_GAP_VELOCITY_MIN,
-      binanceTrendOn: P.H_BINANCE_TREND_ON,
-      binanceTrendLookbackSec: P.H_BINANCE_TREND_LOOKBACK_SEC,
-      binanceTrendMinPct: P.H_BINANCE_TREND_MIN_PCT,
-      binanceCountertrendLookbackSec: P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC,
-      binanceCountertrendMinPct: P.H_BINANCE_COUNTERTREND_MIN_PCT,
-      binanceGapAgreeOn: P.H_BINANCE_GAP_AGREE_ON,
-      hedgeOn: P.H_HEDGE_ON,
-      hedgeRetainShares: P.H_HEDGE_RETAIN_SH,
-      reversalOn: P.H_REVERSAL_ON,
-      reversalResidualShares: P.H_REVERSAL_RESIDUAL_SH,
-      reversalMaxImbalanceShares: P.H_REVERSAL_MAX_IMBALANCE_SH,
-      priceMin: P.H_MIN_ASK,
-      priceMax: P.H_MAX_ASK,
-      capHeadroom: P.H_CAP_HEADROOM,
-      liveOrderType: P.H_LIVE_ORDER_TYPE || config.liveTakerOrderType,
+      sizingModel: "target-residual-tree",
+      cooldownMs: P.T_COOLDOWN_MS,
+      activeFromS: P.T_START_S,
+      stopAtS: P.T_STOP_S,
+      targetResidualScale: P.T_RESIDUAL_SCALE,
+      targetCrossThreshold: P.T_CROSS_THRESHOLD,
+      targetReleaseThreshold: P.T_RELEASE_THRESHOLD,
+      targetDecisionStepMs: P.T_DECISION_STEP_MS,
+      targetMaxCellUses: P.T_MAX_CELL_USES,
+      targetMinOrderShares: P.T_MIN_ORDER_SH,
+      targetMaxOrderShares: P.T_MAX_ORDER_SH,
+      targetMaxGrossShares: P.T_MAX_GROSS_SH,
+      liveOrderType: P.T_LIVE_ORDER_TYPE || config.liveTakerOrderType,
       limit: P.LIMIT,
       apiVer: config.backtestApiVersion,
       mode: config.executionMode,
@@ -182,6 +165,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const w = getW(slug, windowStart, openBinance);
     if (w.settled || !up || !down) return;
     const P = mergedP;
+    w.strategyName = curStrat.NAME;
     if (tInto >= config.windowSec) return;
 
     const dtMs = w.lastTickMs != null ? Math.max(1, nowMs - w.lastTickMs) : 120;
@@ -189,7 +173,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, tInto, bz: bzPrice, cl: clPrice, nowMs };   // latest book (for MANUAL buys)
     activeSlug = slug;
 
-    // STRATEGY + FILL — the entry-only strategy returns decisions for this tick.
+    // STRATEGY + FILL — the selected policy returns BUY decisions for this tick.
     const bzGap = (bzPrice != null && w.openBinance != null) ? bzPrice - w.openBinance : null;   // for @-fill stamps + seed trigger
     const bzGapPct = (bzGap != null && w.openBinance) ? (bzGap / w.openBinance) * 100 : null;
     const clGap = (clPrice != null && openChainlink != null) ? clPrice - openChainlink : null;
@@ -427,14 +411,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     w.recTicks = null;
     w.pendingFills = [];
     w.lastAsk = null;
-    if (w.helpme) {
-      w.helpme.history = [];
-      w.helpme.historyHead = 0;
-      w.helpme.binanceHistory = [];
-      w.helpme.binanceHistoryHead = 0;
-      w.helpme.cells?.clear?.();
-      w.helpme.execSide?.clear?.();
-    }
     const ab = {
       slug, windowStart: w.windowStart, winSide, status: "resolved", ts: Math.floor(Date.now() / 1000),
       sim: { pnl: r2(pnl), winSh: r2(winSh), upShares: r2(w.upShares), downShares: r2(w.downShares),
@@ -500,12 +476,15 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   }
 
   function setParams(obj) { if (obj && typeof obj === "object") {
-    const allowed = new Set(Object.keys(curStrat.STRAT));
-    const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)));
-    const nextLiveParams = { ...liveParams, ...clean, STRATEGY: DEFAULT_STRATEGY };
+    // FastMX intentionally has one live/shadow policy. Legacy strategies remain
+    // available to explicit offline research, never to runtime configuration.
     const nextStrat = getStrategy(DEFAULT_STRATEGY);
+    const allowed = new Set(Object.keys(nextStrat.STRAT));
+    const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)));
+    const sameStrategy = nextStrat.NAME === curStrat.NAME;
+    const nextLiveParams = { ...(sameStrategy ? liveParams : {}), ...clean, STRATEGY: nextStrat.NAME };
     const nextMerged = { ...nextStrat.STRAT, ...nextLiveParams,
-      STRATEGY: DEFAULT_STRATEGY, LIVE_FILLS: false };
+      STRATEGY: nextStrat.NAME, LIVE_FILLS: false };
     nextStrat.validateParams?.(nextMerged);
     liveParams = nextLiveParams;
     curStrat = nextStrat;
@@ -560,12 +539,12 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     } catch {}
   }
 
-  // Live Helpme decision status for the dashboard header.
+  // Live active-strategy decision status for the dashboard header.
   function liveStatus() {
     const w = activeSlug ? windows.get(activeSlug) : null;
     if (!w || w.settled) return null;
-    if (w.helpmeStatus) return { strategy: DEFAULT_STRATEGY, ...w.helpmeStatus };
-    return { strategy: DEFAULT_STRATEGY, gate: w.gateReason || null };
+    if (w.strategyStatus) return { strategy: w.strategyName || curStrat.NAME, ...w.strategyStatus };
+    return { strategy: w.strategyName || curStrat.NAME, gate: w.gateReason || null };
   }
   return { tick, settle, prune, recordPending, hydrateWindow, windows, setParams, getParams,
     recordRealFill, cancelLivePending, resetBreaker, breakerState,

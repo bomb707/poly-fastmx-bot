@@ -22,6 +22,7 @@ test("recorded:false replay keeps entries fixed-USD and opposing hedges exact-sh
     tick(71.52, 0.43, 0.44, 98.9, undefined, [[0.44, 20]]),
   ];
   const fills = simulateFills({ ticks, openBinance: 100, openPrice: 100, windowStart: 0 }, {
+    STRATEGY: "helpme",
     LATENCY_MS: 520, STALE_GAP_MS: 10000, H_COOLDOWN_MS: 0,
     H_MID_VELOCITY_MIN: 0.01,
     H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 5000, H_BINANCE_GAP_VELOCITY_MIN: 0.01,
@@ -46,5 +47,5 @@ test("BBA-only historical ticks cannot fabricate Helpme L2 liquidity", () => {
     { t: 65, upAsk: 0.52, dnAsk: 0.48, bz: 100.1, cl: 100 },
   ];
   assert.deepEqual(simulateFills({ ticks, openBinance: 100, openPrice: 100 },
-    { LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
+    { STRATEGY: "helpme", LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
 });

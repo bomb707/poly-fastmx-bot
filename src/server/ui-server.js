@@ -287,22 +287,7 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
     if (url === "/api/ui-config") {   // dashboard's own control snapshot (opaque id→value blob) — persisted for restore on load
       const q = new URL(req.url, "http://x").searchParams;
       const raw = q.get("ui"); let ui = null; try { ui = raw ? JSON.parse(raw) : null; } catch {}
-      if (ui && typeof ui === "object") {
-        if (!("sigBinanceTrendLookbackSecInput" in ui)) {
-          ui.sigBinanceTrendLookbackSecInput = "30";
-        }
-        delete ui.sigBinanceTrendLookbackInput;
-        // A pre-deployment tab lacks the two countertrend controls and still
-        // carries the retired 5m/0% hard-agreement values. Preserve its toggle
-        // choice, but migrate the feature's parameters to poly-mom defaults.
-        if (!("sigBinanceCountertrendLookbackInput" in ui)
-          || !("sigBinanceCountertrendMinInput" in ui)) {
-          ui.sigBinanceTrendMinInput = "0.05";
-          ui.sigBinanceCountertrendLookbackInput = "60";
-          ui.sigBinanceCountertrendMinInput = "0.075";
-        }
-        patchConfigStore({ ui });
-      }
+      if (ui && typeof ui === "object") patchConfigStore({ ui });
       res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ ok: true })); return;
     }
     // Session backtest: START in the background and return immediately (same pattern as /api/estimate-momentum).
@@ -434,14 +419,6 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       if (raw && setShadowParams) {
         try {
           const p = JSON.parse(raw);
-          if (!("H_BINANCE_TREND_LOOKBACK_SEC" in p)) p.H_BINANCE_TREND_LOOKBACK_SEC = 30;
-          delete p.H_BINANCE_TREND_LOOKBACK_MIN;
-          if (!("H_BINANCE_COUNTERTREND_LOOKBACK_SEC" in p)
-            || !("H_BINANCE_COUNTERTREND_MIN_PCT" in p)) {
-            p.H_BINANCE_TREND_MIN_PCT = 0.05;
-            p.H_BINANCE_COUNTERTREND_LOOKBACK_SEC = 60;
-            p.H_BINANCE_COUNTERTREND_MIN_PCT = 0.075;
-          }
           setShadowParams(p);
           patchConfigStore({ shadowParams: getShadowParams ? getShadowParams() : p });
         } catch (error) {

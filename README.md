@@ -5,11 +5,20 @@ Simulation-only BTC five-minute strategy reconstruction for target wallet
 
 - Dashboard: `https://dev-fastmx.polywinbot.com` or `http://localhost:4520`
 - PM2 process: `poly-fastmx-simulation`
-- Strategy: `engine/strategies/helpme.js`
+- FastMX runtime strategy: `engine/strategies/target75cc.js`
+- Retired offline baseline: `engine/strategies/helpme.js`
 - Mode: locked to simulation in code and process configuration
 - Isolated runtime data: `data/fastmx-live` and `logs/fastmx-live`
 
-## Active policy
+## FastMX runtime policy
+
+FastMX now runs `target75cc` as its only runtime strategy. It replaces both the disproven fixed seven-share action and the inherited momentum trigger. Every 250ms it independently evaluates the next unused executable one-cent cap cell on both Up and Down, selects the strongest public-feature score above 0.900, and applies a 4-second release cooldown. It then predicts the desired inventory residual and chooses an aligned entry/top-up, a partial opposite-side reduction, a full inventory crossing, or abstention. Every emitted order retains the target's observed fixed-USDC BUY encoding: `budget = cap × signed minimum shares`, so price improvement may fill additional shares.
+
+The partial-versus-cross tree and residual tree are frozen in `engine/strategies/target75cc-model.js`; the release model is frozen in `engine/strategies/target75cc-release-model.js`, all with source/evaluation hashes. Configurable parameters are `T_RELEASE_THRESHOLD`, `T_DECISION_STEP_MS`, `T_COOLDOWN_MS`, `T_MAX_CELL_USES`, `T_START_S`, `T_STOP_S`, `T_RESIDUAL_SCALE`, `T_CROSS_THRESHOLD`, `T_MIN_ORDER_SH`, `T_MAX_ORDER_SH`, and `T_MAX_GROSS_SH`. They are labeled as fitted model values, engine resolution, or local safety guards; they are not presented as observed constants from the wallet. The old momentum fields, fixed base shares, and hedge/reversal toggles have been removed from the runtime UI and persisted runtime schema.
+
+The exact private release rule is not recovered. The autonomous observable model reaches only 24.35% timing F1 on discovery holdout and 23.47% on partial OOS, and its runtime replay is loss-making. It is a two-sided behavioral imitation, not an exact or profitable clone, and remains hard-locked to simulation. The former Helpme implementation is retained only for reproducible offline research.
+
+## Retired Helpme research baseline (not runtime-selectable)
 
 The strategy has two independently switchable causal direction signals plus
 the `poly-mom-bot` Binance trend regime:
@@ -44,11 +53,9 @@ the `poly-mom-bot` Binance trend regime:
    a hedge accidentally. All modeled orders match future visible L2 after 520 ms.
 10. The session circuit breaker remains an external emergency stop and defaults to `-$25`.
 
-The PM2 environment currently deploys Binance velocity ON, CLOB velocity OFF, the trend regime and window-gap
-agreement ON, a `0–300s` entry window, and a `2000ms` cooldown. Partial hedge and strong reversal are OFF.
+The checked-in PM2 environment runs the sole FastMX `target75cc` policy and supplies the frozen `4–286s`, 0.900 threshold, 250ms cadence, 4000ms cooldown, and one-use-per-cell menu policy. Runtime configuration cannot switch back to Helpme.
 
-The Order Release panel also exposes a **live order type** selector. `GTC + cancel remainder` is the measured-faster
-default for real automatic execution; `FAK` is available for atomic immediate-or-cancel behavior. The selection is
+The Order Release panel also exposes a **live order type** selector. `FAK` is the target-policy default for atomic immediate-or-cancel behavior; `GTC + cancel remainder` remains available. The selection is
 durable and live-only, so it does not silently alter recorded:false or backtest accounting.
 
 The exact trailing-day fit covers 2026-08-26 11:25 UTC through 2026-08-27 11:25 UTC. That historical study used
@@ -64,16 +71,15 @@ positive). That result does not validate the new entry-every-signal action rule 
 The current paired inventory replay is in
 `research/wallet-75cc/results/fastmx-inventory-mode-backtest-2026-08-27.md`: partial hedging worsened fit and
 holdout, while reversal improved holdout but worsened fit and the combined period. Neither control was promoted.
-FastMX therefore remains an instrumented forward simulation, not a profitability or exact-clone claim. Only `helpme` is registered internally at runtime;
-copied experimental strategies are not selectable by this app.
+The application therefore remains an instrumented forward simulation, not a profitability or exact-clone claim. Only the wallet-75cc policy is exposed and accepted by the FastMX runtime; Helpme and other experiments remain offline research artifacts.
 
 ## Feeds
 
 | Feed | Endpoint | Use |
 |---|---|---|
-| Binance spot websocket + boundary REST open | `wss://stream.binance.com:9443/...` | raw-dollar velocity, current-window gap, and poly-mom trailing trend/countertrend regime |
-| Polymarket RTDS | `wss://ws-live-data.polymarket.com` | settlement-aligned dashboard/reference data; not a strategy signal |
-| Polymarket CLOB market websocket | `wss://ws-subscriptions-clob.polymarket.com/ws/market` | switchable midpoint-velocity family plus executable depth |
+| Binance spot websocket + boundary REST open | `wss://stream.binance.com:9443/...` | current/window-open spot plus frozen multi-horizon release features |
+| Polymarket RTDS | `wss://ws-live-data.polymarket.com` | Chainlink/TWAP level, gap, movement, and settlement-aligned reference data |
+| Polymarket CLOB market websocket | `wss://ws-subscriptions-clob.polymarket.com/ws/market` | executable cap cells, price/depth, imbalance, microprice, and multi-horizon changes |
 | Polymarket Gamma/data APIs | official public APIs | market metadata and public wallet activity |
 | Backtest v2 metadata API | configured `BACKTEST_API` | open/final/settlement metadata |
 | Backtest v2 orderbook API | configured `BAPI_V2_OB_BASE` | coherent 50 ms full-L2 frames, replayed causally at 120 ms |
@@ -88,6 +94,8 @@ The dashboard draws bid and ask as step functions because quotes remain constant
 npm install
 npm run test:depth
 npm run test:strategy
+TARGET_EXACT_FIRE_FILE=data/wallet-75cc/exact-2026-08-20_2026-08-27/exact-fire-dataset.json.gz \
+  node research/backtest-target75cc.mjs 2026-08-20T00:00:00Z 2026-08-27T00:00:00Z
 node --test engine/simrun.helpme.test.mjs src/sources/history.test.mjs
 npm start
 ```

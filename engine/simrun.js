@@ -1,4 +1,4 @@
-// Backtest one window by replaying the registered Helpme strategy tick by tick.
+// Backtest one window by replaying the selected registered strategy tick by tick.
 // Pure ESM.
 import { fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
@@ -15,9 +15,9 @@ const REF_MS = 120;   // reference tick for fill-speed normalization (matches st
 const STALE_GAP_MS = 6000;
 
 /**
- * Replay one window through the same Helpme step function used by the live simulation.
+ * Replay one window through the same selected strategy used by the live simulation.
  * @param {{ticks:Array<{t,upAsk,upBid,dnAsk,dnBid,bz?}>, openBinance:number}} d
- * @param {object} [params] UI overrides merged over the Helpme defaults
+ * @param {object} [params] UI overrides merged over the selected strategy defaults
  */
 // Down-sample ticks to a grid at `ms`. `mode`:
 //   "last" (DEFAULT) — keep the LAST tick per bucket. Mirrors the live periodic sampler ("read latest state every N ms"),

@@ -1,6 +1,7 @@
 import { config } from "./config/config.js";
-import { STRAT } from "../engine/strategies/helpme.js";
+import { DEFAULT_STRATEGY, getStrategy } from "../engine/strategies/index.js";
 import { initSessionLog, setLogWindow, logConfigChange, logFeedEvent, refreshEnvSnapshot, setStrategySnapshot } from "./logging/sessionLog.js";
+const STRAT = getStrategy(DEFAULT_STRATEGY).STRAT;
 initSessionLog(config.logDir, { config, strat: STRAT, maxMb: config.logMaxMb, instance: config.instanceName });   // per-INSTANCE per-run session dir + per-window logs + config history — do this FIRST
 import { createLiveState, pruneTokens } from "./util/state.js";
 import { startRtdsChainlinkFeed } from "./feeds/rtdsChainlinkWs.js";
@@ -422,11 +423,10 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
     try { ui.circuitBreaker(e); } catch {}
   }
 }, () => !!(ui && ui.hasClients && ui.hasClients())) : null;   // uiActive → shadow skips the UI-only ladder payload when no browser is watching
-// Restore the last-applied Helpme strategy parameters from the config store.
+// Restore the last-applied FastMX wallet-model parameters from the config store.
 if (shadow && _savedCfg.shadowParams && typeof _savedCfg.shadowParams === "object") shadow.setParams(_savedCfg.shadowParams);
 // General strategy-param override for unattended runs (pm2): a JSON blob of
-// current Helpme STRAT keys. Unknown/obsolete keys are discarded.
-//   SHADOW_PARAMS_JSON='{"H_CLOB_MID_VELOCITY_ON":true,"H_MID_VELOCITY_LOOKBACK_MS":3000,"H_MID_VELOCITY_MIN":0.02,"H_BINANCE_GAP_MOMENTUM_ON":true,"H_BINANCE_GAP_VELOCITY_LOOKBACK_MS":3000,"H_BINANCE_GAP_VELOCITY_MIN":5,"H_BINANCE_TREND_ON":true,"H_BINANCE_TREND_LOOKBACK_SEC":30,"H_BINANCE_TREND_MIN_PCT":0.05,"H_BINANCE_COUNTERTREND_LOOKBACK_SEC":60,"H_BINANCE_COUNTERTREND_MIN_PCT":0.075,"H_BINANCE_GAP_AGREE_ON":false,"LATENCY_MS":520}'
+// current target75cc STRAT keys. Unknown/obsolete keys are discarded.
 if (shadow && process.env.SHADOW_PARAMS_JSON) {
   try {
     const p = JSON.parse(process.env.SHADOW_PARAMS_JSON);

@@ -20,8 +20,12 @@ const coins = String(process.env.W75CC_COINS || TARGET_COINS.join(","))
   .split(",").map((coin) => coin.trim().toUpperCase()).filter(Boolean);
 const base = String(process.env.BAPI_V4_BASE || "https://bapi-v4.polywinbot.com").replace(/\/+$/, "");
 const key = String(process.env.BAPI_V4_KEY || process.env.BAPI_V3_KEY || process.env.BAPI_KEY || process.env.BACKTEST_API_KEY || "").trim();
-if (!key) throw new Error("Set BAPI_V4_KEY / BAPI_V3_KEY / BAPI_KEY / BACKTEST_API_KEY");
-const v4Headers = { Accept: "application/json", "X-API-Key": key, Authorization: `Bearer ${key}` };
+// A private V4 index is faster, but is not required for a reproducible public
+// reconstruction. Without its key, enumerate canonical five-minute Gamma
+// slugs and continue with the same condition-sharded Data API collection.
+const v4Headers = key
+  ? { Accept: "application/json", "X-API-Key": key, Authorization: `Bearer ${key}` }
+  : null;
 const concurrency = Math.max(1, Number(process.env.W75CC_COLLECT_CONCURRENCY || 10));
 const stamp = (ms) => new Date(ms).toISOString().replace(/:/g, "_").replace(/\.\d{3}Z$/, "Z");
 const output = path.resolve(process.argv[4] || path.join("data", "wallet-75cc", `trades-${stamp(fromMs)}_${stamp(toMs)}.json`));
@@ -45,6 +49,13 @@ async function jsonFetch(url, options = {}, attempt = 0) {
 }
 
 async function listMarketsForCoin(coin) {
+  if (!v4Headers) {
+    const starts = [];
+    for (let ms = Math.ceil(fromMs / 300_000) * 300_000; ms < toMs; ms += 300_000) starts.push(ms);
+    console.log(JSON.stringify({ phase: "gamma-market-enumerator", coin, candidates: starts.length }));
+    const rows = await pool(starts, async (ms) => gammaMarket(coin, ms), `gamma-${coin.toLowerCase()}`);
+    return rows.filter(Boolean);
+  }
   const markets = [];
   for (let page = 1; ; page++) {
     const url = new URL("markets", `${base}/`);

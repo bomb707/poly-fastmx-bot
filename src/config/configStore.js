@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { STRAT } from "../../engine/strategies/helpme.js";
+import { strategyParamKeys } from "../../engine/strategies/index.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FILE = process.env.RUNTIME_CONFIG_FILE || path.resolve(HERE, "..", "..", "data", "runtime-config.json");
@@ -17,13 +17,11 @@ const FILE = process.env.RUNTIME_CONFIG_FILE || path.resolve(HERE, "..", "..", "
 let store = {};
 
 const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigSessStopInput", "sigLatencyInput",
-  "sigLiveOrderTypeInput", "sigClobMidOn", "sigMidVelocityLookbackInput", "sigMidVelocityMinInput",
-  "sigBinanceGapOn", "sigBinanceGapLookbackInput", "sigBinanceGapMinInput",
-  "sigBinanceTrendOn", "sigBinanceTrendLookbackSecInput", "sigBinanceTrendMinInput",
-  "sigBinanceCountertrendLookbackInput", "sigBinanceCountertrendMinInput", "sigBinanceGapAgreeOn",
-  "sigHedgeOn", "sigReversalOn",
-  "sigStartInput", "sigStopInput", "sigBaseOrderInput", "sigReleaseCooldownInput", "verboseInput"]);
-const SHADOW_KEYS = new Set(Object.keys(STRAT));
+  "sigLiveOrderTypeInput", "sigTargetCooldownInput",
+  "sigTargetResidualScaleInput", "sigTargetCrossThresholdInput", "sigTargetMinOrderInput",
+  "sigTargetReleaseThresholdInput", "sigTargetDecisionStepInput", "sigTargetMaxCellUsesInput",
+  "sigTargetStartInput", "sigTargetStopInput", "sigTargetMaxOrderInput", "sigTargetMaxGrossInput", "verboseInput"]);
+const SHADOW_KEYS = strategyParamKeys();
 
 function sanitizeStore(value) {
   const src = value && typeof value === "object" ? value : {};
