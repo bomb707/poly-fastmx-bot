@@ -19,6 +19,7 @@
     "research:wallet75cc:exact-fires": "node research/wallet-75cc/build-exact-fire-dataset.mjs",
     "research:wallet75cc:fit-release": "node research/wallet-75cc/fit-observable-cap-policy.mjs",
     "research:wallet75cc:fit-trend-noise": "node research/wallet-75cc/fit-trend-noise-model.mjs",
+    "research:wallet75cc:session-confidence": "node research/wallet-75cc/evaluate-session-entry-confidence.mjs",
     "research:wallet75cc:evaluate-menu": "node research/wallet-75cc/evaluate-observable-menu.mjs",
     "research:wallet75cc:export-model": "node research/wallet-75cc/export-observable-model.mjs",
     "research:wallet75cc:backtest": "node research/backtest-target75cc.mjs",

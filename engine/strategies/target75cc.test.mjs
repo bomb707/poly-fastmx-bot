@@ -7,6 +7,7 @@ import { REGIME_META } from "./target75cc-regime-model.js";
 import { REGIME_CLASSES, interpretRegime } from "./target75cc-regime.js";
 import { regimeFeatures } from "./target75cc-regime-features.js";
 import { STRAT, step, validateParams } from "./target75cc.js";
+import { SESSION_ENTRY_MIN_PROBABILITY, resolveSessionEntryConfidence } from "./target75cc-session-policy.js";
 
 function book(ask, bid = ask - 0.02, depth = 100) {
   return {
@@ -110,6 +111,31 @@ test("trend/noise gate can reject or admit the same release candidate", () => {
   assert.ok(Number.isFinite(order.signal.sideProbability));
 });
 
+test("entry-confidence threshold resolves from the window's UTC session", () => {
+  assert.equal(resolveSessionEntryConfidence({ winHour: 5 }).sessionId, "utc04_08");
+  assert.equal(resolveSessionEntryConfidence({ winHour: 5 }).minimumProbability, .75);
+  assert.equal(resolveSessionEntryConfidence({ windowStart: Date.parse("2026-08-26T09:00:00Z") / 1_000 })
+    .minimumProbability, .65);
+  assert.equal(resolveSessionEntryConfidence({ winHour: 5, enabled: false, fallback: .5 })
+    .minimumProbability, .5);
+});
+
+test("runtime applies different probability floors to the same candidate by session", () => {
+  const schedule = Object.fromEntries(Object.keys(SESSION_ENTRY_MIN_PROBABILITY).map((id) => [id, 0]));
+  schedule.utc08_12 = 1;
+  const P = { ...FAST, T_REGIME_ON: true, T_REGIME_SESSION_ON: true,
+    T_REGIME_SESSION_MIN_PROBABILITY: schedule, T_REGIME_MIN_EDGE: -1,
+    T_REGIME_REVERSAL_MIN_PROBABILITY: 0 };
+  const asiaTick = { ...tick(5, .52, .48, 101), winHour: 5 };
+  const [accepted] = step(state(), asiaTick, P, 120, 5_000);
+  assert.equal(accepted.signal.entryConfidenceSession, "utc04_08");
+  assert.equal(accepted.signal.entryConfidenceThreshold, 0);
+  const europeState = state();
+  assert.deepEqual(step(europeState, { ...asiaTick, winHour: 9 }, P, 120, 5_000), []);
+  assert.equal(europeState.strategyStatus.entryConfidenceSession, "utc08_12");
+  assert.equal(europeState.strategyStatus.entryConfidenceThreshold, 1);
+});
+
 test("observable release model gives private target state zero weight", () => {
   for (const name of RELEASE_META.excluded) {
     assert.equal(RELEASE_MODEL.weights[RELEASE_MODEL.featureNames.indexOf(name)], 0, name);
@@ -188,6 +214,9 @@ test("target parameter validation rejects unsafe bounds", () => {
   assert.throws(() => validateParams({ ...STRAT, T_RELEASE_THRESHOLD: 2 }), /release threshold/);
   assert.throws(() => validateParams({ ...STRAT, T_RESIDUAL_SCALE: 0 }), /residual scale/);
   assert.throws(() => validateParams({ ...STRAT, T_REGIME_MIN_PROBABILITY: 2 }), /T_REGIME_MIN_PROBABILITY/);
+  assert.throws(() => validateParams({ ...STRAT, T_REGIME_SESSION_ON: "yes" }), /must be boolean/);
+  assert.throws(() => validateParams({ ...STRAT, T_REGIME_SESSION_MIN_PROBABILITY:
+    { ...SESSION_ENTRY_MIN_PROBABILITY, utc04_08: 2 } }), /utc04_08/);
   assert.throws(() => validateParams({ ...STRAT, T_REGIME_SIZE_FLOOR: 2,
     T_REGIME_SIZE_CEILING: 1 }), /regime size bounds/);
 });

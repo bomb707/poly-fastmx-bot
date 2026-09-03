@@ -153,6 +153,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       targetMaxGrossShares: P.T_MAX_GROSS_SH,
       trendNoiseModelOn: P.T_REGIME_ON,
       trendNoiseMinProbability: P.T_REGIME_MIN_PROBABILITY,
+      trendNoiseSessionPolicyOn: P.T_REGIME_SESSION_ON,
+      trendNoiseSessionMinProbability: P.T_REGIME_SESSION_MIN_PROBABILITY,
       trendNoiseMinEdge: P.T_REGIME_MIN_EDGE,
       trendNoiseReversalMinProbability: P.T_REGIME_REVERSAL_MIN_PROBABILITY,
       trendNoiseConfirmedReversalProbability: P.T_REGIME_CONFIRMED_REVERSAL_PROBABILITY,

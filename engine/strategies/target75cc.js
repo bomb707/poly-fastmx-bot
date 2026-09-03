@@ -8,6 +8,8 @@
 import { CROSS_TREE, MODEL_META, RESIDUAL_TREE } from "./target75cc-model.js";
 import { RELEASE_META, RELEASE_MODEL, RELEASE_POLICY } from "./target75cc-release-model.js";
 import { evaluateRegime, REGIME_POLICY } from "./target75cc-regime.js";
+import { ENTRY_CONFIDENCE_SESSIONS, SESSION_ENTRY_MIN_PROBABILITY,
+  resolveSessionEntryConfidence } from "./target75cc-session-policy.js";
 
 export const NAME = "target75cc";
 export const LABEL = "FastMX · wallet-75cc logic";
@@ -36,6 +38,8 @@ export const STRAT = {
   T_REGIME_ON: true,
   T_REGIME_DIAGNOSTICS: false,
   T_REGIME_MIN_PROBABILITY: REGIME_POLICY.minimumProbability,
+  T_REGIME_SESSION_ON: true,
+  T_REGIME_SESSION_MIN_PROBABILITY: SESSION_ENTRY_MIN_PROBABILITY,
   T_REGIME_MIN_EDGE: REGIME_POLICY.minimumEdge,
   T_REGIME_REVERSAL_MIN_PROBABILITY: REGIME_POLICY.reversalMinimumProbability,
   T_REGIME_CONFIRMED_REVERSAL_PROBABILITY: REGIME_POLICY.confirmedReversalProbability,
@@ -362,6 +366,20 @@ export function validateParams(P = STRAT) {
       throw new RangeError(`${name} must be between zero and one`);
     }
   }
+  if (P.T_REGIME_SESSION_ON !== true && P.T_REGIME_SESSION_ON !== false) {
+    throw new TypeError("T_REGIME_SESSION_ON must be boolean");
+  }
+  if (!P.T_REGIME_SESSION_MIN_PROBABILITY
+    || typeof P.T_REGIME_SESSION_MIN_PROBABILITY !== "object"
+    || Array.isArray(P.T_REGIME_SESSION_MIN_PROBABILITY)) {
+    throw new TypeError("T_REGIME_SESSION_MIN_PROBABILITY must be a session map");
+  }
+  for (const session of ENTRY_CONFIDENCE_SESSIONS) {
+    const value = number(P.T_REGIME_SESSION_MIN_PROBABILITY[session.id]);
+    if (!(value >= 0 && value <= 1)) {
+      throw new RangeError(`T_REGIME_SESSION_MIN_PROBABILITY.${session.id} must be between zero and one`);
+    }
+  }
   if (!(number(P.T_REGIME_SIZE_FLOOR, .5) > 0
     && number(P.T_REGIME_SIZE_CEILING, 1.5) >= number(P.T_REGIME_SIZE_FLOOR, .5))) {
     throw new RangeError("target regime size bounds require 0 < floor <= ceiling");
@@ -410,14 +428,21 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
     return [];
   }
 
+  const entryConfidence = resolveSessionEntryConfidence({ winHour: tk.winHour,
+    windowStart: state.windowStart, enabled: P.T_REGIME_SESSION_ON,
+    schedule: P.T_REGIME_SESSION_MIN_PROBABILITY,
+    fallback: number(P.T_REGIME_MIN_PROBABILITY, REGIME_POLICY.minimumProbability) });
+  const regimeParams = { ...P, T_REGIME_MIN_PROBABILITY: entryConfidence.minimumProbability };
   const regime = (P.T_REGIME_ON || P.T_REGIME_DIAGNOSTICS) ? evaluateRegime({ history: model.featureHistory, current, tk,
-    side: candidate.side, clockMs, P }) : null;
+    side: candidate.side, clockMs, P: regimeParams }) : null;
   if (P.T_REGIME_ON && (!regime || !regime.allowed)) {
     setStatus(state, null, {
       gate: !regime ? "target-regime-unavailable" : "target-regime-rejected",
       side: candidate.side,
       releaseScore: candidate.score,
       releaseThreshold,
+      entryConfidenceSession: entryConfidence.sessionId,
+      entryConfidenceThreshold: entryConfidence.minimumProbability,
       regimeClass: regime?.classification ?? null,
       sideProbability: regime?.sideProbability ?? null,
       expectedEdge: regime?.expectedEdge ?? null,
@@ -486,6 +511,9 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       releaseModelSha256: RELEASE_META.modelSha256,
       releaseScore: round4(candidate.score),
       releaseThreshold,
+      entryConfidenceSession: entryConfidence.sessionId,
+      entryConfidenceSessionLabel: entryConfidence.sessionLabel,
+      entryConfidenceThreshold: round4(entryConfidence.minimumProbability),
       capDepth: round4(candidate.available),
       menuCell: candidate.cell,
       regimeModelSha256: regime?.modelSha256 ?? null,
@@ -531,6 +559,8 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
   setStatus(state, null, {
     gate: "fired", side, role, minimumShares: shares, budgetUsd,
     releaseScore: candidate.score, releaseThreshold, menuCell: candidate.cell,
+    entryConfidenceSession: entryConfidence.sessionId,
+    entryConfidenceThreshold: entryConfidence.minimumProbability,
     predictedResidual, desiredOrientedShares,
     orientedInventory: features.orientedInventory,
     crossScore, crossThreshold: number(P.T_CROSS_THRESHOLD, MODEL_META.crossThreshold),
