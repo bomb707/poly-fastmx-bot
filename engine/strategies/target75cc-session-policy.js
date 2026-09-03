@@ -28,6 +28,18 @@ export const SESSION_ENTRY_MIN_PROBABILITY = Object.freeze({
   utc20_24: .725,
 });
 
+// The release score remains anchored to the global 0.900 imitation cutoff.
+// Only 04:00-08:00 UTC earned a lower cutoff in chronological BAPI replay;
+// storing an offset preserves explicit operator overrides of the global base.
+export const SESSION_RELEASE_THRESHOLD_OFFSET = Object.freeze({
+  utc00_04: 0,
+  utc04_08: -.015,
+  utc08_12: 0,
+  utc12_16: 0,
+  utc16_20: 0,
+  utc20_24: 0,
+});
+
 const finite = (value) => value != null && value !== "" && Number.isFinite(Number(value));
 const clampHour = (value) => ((Math.floor(Number(value)) % 24) + 24) % 24;
 
@@ -52,5 +64,24 @@ export function resolveSessionEntryConfidence({ winHour, windowStart, enabled = 
     sessionId: session?.id ?? null,
     sessionLabel: session?.label ?? null,
     minimumProbability,
+  };
+}
+
+export function resolveSessionReleaseThreshold({ winHour, windowStart, enabled = true,
+  offsets = SESSION_RELEASE_THRESHOLD_OFFSET, fallback = .9 } = {}) {
+  const utcHour = finite(winHour) ? clampHour(winHour)
+    : finite(windowStart) ? new Date(Number(windowStart) * 1_000).getUTCHours() : null;
+  const session = entryConfidenceSession(utcHour);
+  const configured = enabled && session && offsets && typeof offsets === "object"
+    ? Number(offsets[session.id]) : 0;
+  const offset = Number.isFinite(configured) ? configured : 0;
+  return {
+    enabled: enabled === true,
+    utcHour,
+    sessionId: session?.id ?? null,
+    sessionLabel: session?.label ?? null,
+    baseThreshold: Number(fallback),
+    offset,
+    threshold: Math.max(0, Math.min(1, Number(fallback) + offset)),
   };
 }

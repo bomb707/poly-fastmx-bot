@@ -22,17 +22,21 @@ const outputFile = path.resolve(process.argv[3]
   || path.join(root, "data/wallet-75cc/exact-2026-08-20_2026-08-27/trend-noise-model.json"));
 const exportFile = path.resolve(process.argv[4]
   || path.join(root, "engine/strategies/target75cc-regime-model.js"));
-const start = Date.parse("2026-08-20T00:00:00Z") / 1_000;
-const end = Date.parse("2026-08-27T00:00:00Z") / 1_000;
-const trainEnd = Date.parse("2026-08-25T00:00:00Z") / 1_000;
-const validationEnd = Date.parse("2026-08-26T00:00:00Z") / 1_000;
+const timestamp = (name, fallback) => Date.parse(process.env[name] || fallback) / 1_000;
+const start = timestamp("TREND_START", "2026-08-20T00:00:00Z");
+const end = timestamp("TREND_END", "2026-08-27T00:00:00Z");
+const trainEnd = timestamp("TREND_TRAIN_END", "2026-08-25T00:00:00Z");
+const validationEnd = timestamp("TREND_VALIDATION_END", "2026-08-26T00:00:00Z");
 const finite = (input) => Number.isFinite(Number(input));
 const round = (input, digits = 6) => finite(input) ? +Number(input).toFixed(digits) : null;
 const hash = (input) => crypto.createHash("sha256").update(input).digest("hex");
 // Freeze the decision population to the pre-enhancement strategy. Without this
 // override a regenerated dataset would feed the newly enabled regime model back
 // into its own training rows.
-const baselineStrategy = { ...TARGET, T_REGIME_ON: false, T_REGIME_DIAGNOSTICS: false };
+const baselineStrategy = { ...TARGET, T_REGIME_ON: false, T_REGIME_DIAGNOSTICS: false,
+  T_RELEASE_THRESHOLD: Number(process.env.TREND_RELEASE_THRESHOLD
+    ?? TARGET.T_RELEASE_THRESHOLD),
+  T_COOLDOWN_MS: Number(process.env.TREND_COOLDOWN_MS ?? TARGET.T_COOLDOWN_MS) };
 const baselinePolicySha256 = hash(JSON.stringify({
   params: baselineStrategy,
   releaseModelSha256: RELEASE_META.modelSha256,
@@ -241,7 +245,8 @@ function metrics(model, subset) {
 
 function filterScreen(model, subset, limit = 20) {
   const variants = [];
-  for (const minimumProbability of [.5, .525, .55, .575, .6, .625, .65, .675, .7, .725, .75, .775, .8]) {
+  for (const minimumProbability of [.5, .525, .55, .575, .6, .625, .65, .675, .7,
+    .725, .75, .775, .8, .825, .85, .875, .9, .925]) {
     for (const minimumEdge of [-.05, -.025, 0, .01, .02, .03, .04, .05]) {
       const kept = subset.filter((row) => {
         const probability = score(model, row.vector);
@@ -307,7 +312,8 @@ const report = {
   baselinePolicySha256,
   source: { type: "BAPI v2 coherent 120ms L2 cache", cacheDir,
     range: { start: new Date(start * 1_000).toISOString(), end: new Date(end * 1_000).toISOString() },
-    split: { train: "Aug 20-24", validation: "Aug 25", holdout: "Aug 26" }, files: files.length,
+    split: { trainEnd: new Date(trainEnd * 1_000).toISOString(),
+      validationEnd: new Date(validationEnd * 1_000).toISOString() }, files: files.length,
     processed, skipped },
   noLookahead: "All features use snapshots with timestamp <= decision time. Splits are whole chronological market windows.",
   data: { rows: rows.length, bySegment: Object.fromEntries(["train", "validation", "holdout"]

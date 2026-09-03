@@ -1384,6 +1384,8 @@ function shadowParams(){
     T_RESIDUAL_SCALE:clamp(nv("sigTargetResidualScaleInput",1),0.25,4),
     T_CROSS_THRESHOLD:clamp(nv("sigTargetCrossThresholdInput",0.485064),0,1),
     T_RELEASE_THRESHOLD:clamp(nv("sigTargetReleaseThresholdInput",0.9),0,1),
+    T_RELEASE_SESSION_ON:true,
+    T_RELEASE_SESSION_THRESHOLD_OFFSET:{utc00_04:0,utc04_08:-0.015,utc08_12:0,utc12_16:0,utc16_20:0,utc20_24:0},
     T_DECISION_STEP_MS:Math.round(clamp(nv("sigTargetDecisionStepInput",250),50,5000)),
     T_COOLDOWN_MS:Math.round(clamp(nv("sigTargetCooldownInput",4000),0,30000)),
     T_MAX_CELL_USES:Math.round(clamp(nv("sigTargetMaxCellUsesInput",1),1,10)),
@@ -3990,11 +3992,17 @@ function sessCfgSummary(r){
 // FastMX parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
   const sm=P.T_REGIME_SESSION_MIN_PROBABILITY||{};
+  const releaseOffset=P.T_RELEASE_SESSION_THRESHOLD_OFFSET||{};
+  const releaseBase=P.T_RELEASE_THRESHOLD??0.9;
+  const releaseSchedule=P.T_RELEASE_SESSION_ON===false
+    ?`release ≥${releaseBase}`
+    :`UTC release ≥${["utc00_04","utc04_08","utc08_12","utc12_16","utc16_20","utc20_24"]
+      .map(id=>Math.max(0,Math.min(1,releaseBase+(releaseOffset[id]??0))).toFixed(3)).join("/")}`;
   const sessionConfidence=P.T_REGIME_SESSION_ON===false
     ?`global ≥${P.T_REGIME_MIN_PROBABILITY??0.5}`
     :`UTC p≥${sm.utc00_04??0.5}/${sm.utc04_08??0.75}/${sm.utc08_12??0.65}/${sm.utc12_16??0.5}/${sm.utc16_20??0.5}/${sm.utc20_24??0.725}`;
   return `<span style="color:#cdb8ff">shadow · FastMX wallet-75cc two-sided cap menu`
-    +` · release ≥${P.T_RELEASE_THRESHOLD??0.9} every ${P.T_DECISION_STEP_MS??250}ms`
+    +` · ${releaseSchedule} every ${P.T_DECISION_STEP_MS??250}ms`
     +` · ${P.T_MAX_CELL_USES??1} use/cell · ${P.T_START_S??4}–${P.T_STOP_S??286}s`
     +` · residual-tree ×${P.T_RESIDUAL_SCALE??1} · order ${P.T_MIN_ORDER_SH??5}–${P.T_MAX_ORDER_SH??227}sh`
     +` · gross ≤${P.T_MAX_GROSS_SH??300}sh · cross ≥${P.T_CROSS_THRESHOLD??0.485064}`

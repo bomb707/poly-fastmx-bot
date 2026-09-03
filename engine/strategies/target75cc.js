@@ -9,7 +9,8 @@ import { CROSS_TREE, MODEL_META, RESIDUAL_TREE } from "./target75cc-model.js";
 import { RELEASE_META, RELEASE_MODEL, RELEASE_POLICY } from "./target75cc-release-model.js";
 import { evaluateRegime, REGIME_POLICY } from "./target75cc-regime.js";
 import { ENTRY_CONFIDENCE_SESSIONS, SESSION_ENTRY_MIN_PROBABILITY,
-  resolveSessionEntryConfidence } from "./target75cc-session-policy.js";
+  SESSION_RELEASE_THRESHOLD_OFFSET, resolveSessionEntryConfidence,
+  resolveSessionReleaseThreshold } from "./target75cc-session-policy.js";
 
 export const NAME = "target75cc";
 export const LABEL = "FastMX · wallet-75cc logic";
@@ -27,6 +28,8 @@ export const STRAT = {
   T_START_S: 4,
   T_STOP_S: 286,
   T_RELEASE_THRESHOLD: RELEASE_POLICY.threshold,
+  T_RELEASE_SESSION_ON: true,
+  T_RELEASE_SESSION_THRESHOLD_OFFSET: SESSION_RELEASE_THRESHOLD_OFFSET,
   T_DECISION_STEP_MS: 250,
   T_COOLDOWN_MS: RELEASE_POLICY.cooldownMs,
   T_MAX_CELL_USES: RELEASE_POLICY.maxCellUses,
@@ -355,6 +358,20 @@ export function validateParams(P = STRAT) {
     && number(P.T_RELEASE_THRESHOLD, RELEASE_POLICY.threshold) <= 1)) {
     throw new RangeError("target release threshold must be between zero and one");
   }
+  if (P.T_RELEASE_SESSION_ON !== true && P.T_RELEASE_SESSION_ON !== false) {
+    throw new TypeError("T_RELEASE_SESSION_ON must be boolean");
+  }
+  if (!P.T_RELEASE_SESSION_THRESHOLD_OFFSET
+    || typeof P.T_RELEASE_SESSION_THRESHOLD_OFFSET !== "object"
+    || Array.isArray(P.T_RELEASE_SESSION_THRESHOLD_OFFSET)) {
+    throw new TypeError("T_RELEASE_SESSION_THRESHOLD_OFFSET must be a session map");
+  }
+  for (const session of ENTRY_CONFIDENCE_SESSIONS) {
+    const value = number(P.T_RELEASE_SESSION_THRESHOLD_OFFSET[session.id]);
+    if (!(value >= -1 && value <= 1)) {
+      throw new RangeError(`T_RELEASE_SESSION_THRESHOLD_OFFSET.${session.id} must be between -1 and 1`);
+    }
+  }
   if (!(number(P.T_STOP_S, 286) > number(P.T_START_S, 4))) {
     throw new RangeError("target active interval requires stop > start");
   }
@@ -416,7 +433,11 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
   }
 
   const candidate = releaseCandidate(state, model, tk, current, P, clockMs);
-  const releaseThreshold = number(P.T_RELEASE_THRESHOLD, RELEASE_POLICY.threshold);
+  const releasePolicy = resolveSessionReleaseThreshold({ winHour: tk.winHour,
+    windowStart: state.windowStart, enabled: P.T_RELEASE_SESSION_ON,
+    offsets: P.T_RELEASE_SESSION_THRESHOLD_OFFSET,
+    fallback: number(P.T_RELEASE_THRESHOLD, RELEASE_POLICY.threshold) });
+  const releaseThreshold = releasePolicy.threshold;
   if (!candidate || candidate.score < releaseThreshold) {
     setStatus(state, null, {
       gate: !candidate ? "target-no-menu-cell" : "target-release-below-threshold",
@@ -424,6 +445,8 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       releaseThreshold,
       candidateSide: candidate?.side ?? null,
       candidateCap: candidate?.cap ?? null,
+      releaseThresholdSession: releasePolicy.sessionId,
+      releaseThresholdOffset: releasePolicy.offset,
     });
     return [];
   }
@@ -441,6 +464,8 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       side: candidate.side,
       releaseScore: candidate.score,
       releaseThreshold,
+      releaseThresholdSession: releasePolicy.sessionId,
+      releaseThresholdOffset: releasePolicy.offset,
       entryConfidenceSession: entryConfidence.sessionId,
       entryConfidenceThreshold: entryConfidence.minimumProbability,
       regimeClass: regime?.classification ?? null,
@@ -511,6 +536,8 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       releaseModelSha256: RELEASE_META.modelSha256,
       releaseScore: round4(candidate.score),
       releaseThreshold,
+      releaseThresholdSession: releasePolicy.sessionId,
+      releaseThresholdOffset: releasePolicy.offset,
       entryConfidenceSession: entryConfidence.sessionId,
       entryConfidenceSessionLabel: entryConfidence.sessionLabel,
       entryConfidenceThreshold: round4(entryConfidence.minimumProbability),
@@ -559,6 +586,8 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
   setStatus(state, null, {
     gate: "fired", side, role, minimumShares: shares, budgetUsd,
     releaseScore: candidate.score, releaseThreshold, menuCell: candidate.cell,
+    releaseThresholdSession: releasePolicy.sessionId,
+    releaseThresholdOffset: releasePolicy.offset,
     entryConfidenceSession: entryConfidence.sessionId,
     entryConfidenceThreshold: entryConfidence.minimumProbability,
     predictedResidual, desiredOrientedShares,

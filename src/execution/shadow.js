@@ -146,6 +146,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       targetResidualScale: P.T_RESIDUAL_SCALE,
       targetCrossThreshold: P.T_CROSS_THRESHOLD,
       targetReleaseThreshold: P.T_RELEASE_THRESHOLD,
+      targetReleaseSessionPolicyOn: P.T_RELEASE_SESSION_ON,
+      targetReleaseSessionThresholdOffset: P.T_RELEASE_SESSION_THRESHOLD_OFFSET,
       targetDecisionStepMs: P.T_DECISION_STEP_MS,
       targetMaxCellUses: P.T_MAX_CELL_USES,
       targetMinOrderShares: P.T_MIN_ORDER_SH,

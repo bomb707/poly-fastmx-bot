@@ -91,7 +91,7 @@ This section describes what the repository executes now. It is an implementation
 | Active interval | T+4 through T+286 | No model decision outside this inclusive interval. | Frozen model-search support, not an observed wallet dead-zone or stop time. |
 | Evaluation cadence | 250 ms | At most one release evaluation per cadence interval. | Local engine resolution. |
 | Global cooldown | 4,000 ms | Minimum time between fired decisions, regardless of side. | Validation-selected release policy. |
-| Release cutoff | 0.900 | The highest-scoring Up/Down menu candidate must reach this probability. | Validation-selected fitted value. |
+| Release cutoff | 0.900 base; 0.885 at 04–08 UTC | The highest-scoring Up/Down menu candidate must reach the session's threshold. | Base from timing fit; one BAPI-selected session offset. |
 | Cell uses | 1 | Each `side:cent-cap` cell can fire once per market window. | Validation-selected approximation. |
 | Trend/noise probability / edge | UTC schedule / 0 | Requires 0.500 (00–04), 0.750 (04–08), 0.650 (08–12), 0.500 (12–16), 0.500 (16–20), or 0.725 (20–24), plus edge above ask and modeled fee. | BAPI train+validation-selected economic gate. |
 | Reversal / confirmed-reversal probability | 0.500 / 0.700 | The first is the executable counter-trend gate; the second is a diagnostic class boundary only. | Validation-selected gate / interpretation boundary. |
@@ -127,8 +127,8 @@ For decisions, **effective inventory includes both fills and pending minimum sha
 3. **Cooldown gate.** A fired order blocks either side for 4,000 ms and reports `target-cooldown` until the interval expires.
 4. **Construct one candidate per side.** For each of Up and Down, start at the current ask rounded upward to a cent. Search upward through 0.99 for the first cap whose `side:cent` cell has remaining uses. Thus an ask already on a cent can use that exact cap; the implementation does not blindly add one cent.
 5. **Score release candidates.** A frozen standardized logistic model scores the Up candidate and Down candidate independently. The higher score wins; ties prefer the lower cap, then the lexical side name. Available ask depth through the cap is recorded for diagnostics but does not determine release or requested size.
-6. **Apply release cutoff.** If neither side has an eligible menu cell, or the winning score is below 0.900, no order is emitted.
-7. **Evaluate causal trend/noise and value.** A separate frozen model estimates the selected side's win probability from information timestamped no later than the decision. Based on the window-start UTC hour, the candidate must clear the session floor: 0.500 / 0.750 / 0.650 / 0.500 / 0.500 / 0.725 for consecutive four-hour bins starting at 00:00 UTC. It must also satisfy `probability - ask - feePerShare >= 0`; otherwise it abstains with `target-regime-rejected`. The release cutoff itself remains globally fixed at 0.900.
+6. **Apply release cutoff.** If neither side has an eligible menu cell, or the winning score is below the effective session cutoff, no order is emitted. The base is 0.900; only 04:00–08:00 UTC applies a -0.015 offset, for 0.885.
+7. **Evaluate causal trend/noise and value.** A separate frozen model estimates the selected side's win probability from information timestamped no later than the decision. Based on the window-start UTC hour, the candidate must clear the session floor: 0.500 / 0.750 / 0.650 / 0.500 / 0.500 / 0.725 for consecutive four-hour bins starting at 00:00 UTC. It must also satisfy `probability - ask - feePerShare >= 0`; otherwise it abstains with `target-regime-rejected`.
 8. **Classify market structure.** Multi-timescale token paths produce `TREND_CONTINUATION`, `TEMPORARY_NOISE`, `PULLBACK_ENTRY_OPPORTUNITY`, `POSSIBLE_REVERSAL`, `CONFIRMED_REVERSAL`, or `UNCERTAIN`. The 0.70 confirmed-reversal boundary is diagnostic; a stronger reversal veto was rejected on validation because it worsened complete-path PnL and could strand old exposure.
 9. **Predict and confidence-scale the desired residual.** A frozen regression tree predicts a non-negative absolute post-action residual. Fee-adjusted confidence scales it within 0.50×–1.00× before rounding; it is never levered above the prior tree target.
 10. **Classify the inventory transition.** If the chosen side is currently behind, a second tree decides between a partial hedge and a full reversal. If the side is flat or already ahead, the action is an entry or top-up and the cross tree is not used.
@@ -467,7 +467,7 @@ The target strategy now uses the following narrower configuration. “Fitted” 
 |---|---:|---|
 | Residual scale | `1.0` | Fitted sizing-tree calibration. Order size is dynamic; exact action medians/p90s were 8/29 and 12/48 shares in discovery/partial OOS. |
 | Cross cutoff | `0.485064` | Chronological holdout calibration for partial reduction versus inventory crossing. Both behaviors are directly observed; this probability cutoff is model-specific. |
-| Release cutoff | `0.900` | Selected by discovery-validation timing F1 for the autonomous public-feature release model. It is not an observed wallet threshold. |
+| Release cutoff | `0.900`; `0.885` at 04–08 UTC | The base was selected by discovery-validation timing F1; the single session offset was selected on BAPI train+validation economics. Neither is an observed wallet threshold. |
 | Trend/noise probability / minimum edge | `0.500 / 0` | Candidate must clear 0.50 and fee-adjusted expected edge `p - ask - fee >= 0`; validation-selected local policy, not a wallet constant. |
 | Reversal / confirmed label | `0.500 / 0.700` | 0.50 permits a counter-trend action after the value gate; 0.70 changes its diagnostic label only. |
 | Confidence residual range | `0.50×–1.00×` | Validation-selected downscaling of the residual-tree target; no confidence leverage above baseline. |
@@ -581,7 +581,7 @@ The earlier `usdcSize` uncertainty is no longer a high-severity blocker for curr
 
 ## Existing verification results
 
-The repository's configured test command now passes all 84 Node tests. The added target tests cover model provenance, exact causal feature invariance when future snapshots are mutated, regime classification, economic rejection/admission, and parameter validation. The broader suite still covers strict historical L2 walking, current Helpme gates, target two-sided transitions, private-state exclusion, circuit-breaker generation, WebSocket depth updates, order status, and resolution URLs, but cannot test private wallet state.
+The repository's configured test command covers model provenance, exact causal feature invariance when future snapshots are mutated, regime classification, session-specific release and entry-confidence resolution, economic rejection/admission, and parameter validation. The broader suite still covers strict historical L2 walking, current Helpme gates, target two-sided transitions, private-state exclusion, circuit-breaker generation, WebSocket depth updates, order status, and resolution URLs, but cannot test private wallet state.
 
 Existing research must be interpreted narrowly:
 

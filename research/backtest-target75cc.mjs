@@ -18,7 +18,10 @@ if (!(Number.isFinite(start) && Number.isFinite(end) && end > start)) {
   throw new Error("usage: node research/backtest-target75cc.mjs [start-ISO] [end-ISO] [cache-dir]");
 }
 
-const cooldownMs = Math.max(0, Number(process.env.TARGET_COOLDOWN_MS || 4000));
+const cooldownMs = Math.max(0, Number(process.env.TARGET_COOLDOWN_MS
+  ?? TARGET.T_COOLDOWN_MS ?? 0));
+const releaseThreshold = Number(process.env.TARGET_RELEASE_THRESHOLD
+  ?? TARGET.T_RELEASE_THRESHOLD ?? .9);
 const common = {
   LATENCY_MS: 520,
   H_START_S: 0,
@@ -44,6 +47,7 @@ const policies = {
   target75cc: { ...TARGET, STRATEGY: "target75cc", T_COOLDOWN_MS: cooldownMs,
     T_REGIME_ON: false, T_REGIME_DIAGNOSTICS: true },
   target75ccTrend: { ...TARGET, STRATEGY: "target75cc", T_COOLDOWN_MS: cooldownMs,
+    T_RELEASE_THRESHOLD: releaseThreshold,
     T_REGIME_ON: true,
     T_REGIME_MIN_PROBABILITY: Number(process.env.TARGET_REGIME_MIN_PROBABILITY || .5),
     T_REGIME_MIN_EDGE: Number(process.env.TARGET_REGIME_MIN_EDGE || 0),
@@ -54,6 +58,10 @@ const policies = {
     T_REGIME_SIZE_FLOOR: Number(process.env.TARGET_REGIME_SIZE_FLOOR || .5),
     T_REGIME_SIZE_CEILING: Number(process.env.TARGET_REGIME_SIZE_CEILING || 1) },
 };
+if (process.env.TARGET_ONLY === "1") {
+  delete policies.helpme;
+  delete policies.target75cc;
+}
 
 const exactFireFile = process.env.TARGET_EXACT_FIRE_FILE
   ? path.resolve(process.env.TARGET_EXACT_FIRE_FILE)
@@ -332,6 +340,7 @@ console.log(JSON.stringify({
     valid: files.length - invalid, invalid, coveragePct: round(100 * (files.length - invalid) / Math.max(1, (end - start) / 300)) },
   methodology: "Same causal V2 L2 windows, 520ms latency, visible-depth fixed-USD FAK fills and fees. target75cc is the pre-enhancement autonomous two-sided-menu baseline; target75ccTrend adds the causal trend/noise value gate and confidence sizing; Helpme is the legacy fixed-size momentum baseline.",
   cooldownMs,
+  releaseThreshold,
   stats,
   comparison,
   daily: grouped(perMarket, (row) => new Date(row.windowStart * 1_000).toISOString().slice(0, 10)),

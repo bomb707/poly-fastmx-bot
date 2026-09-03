@@ -7,7 +7,8 @@ import { REGIME_META } from "./target75cc-regime-model.js";
 import { REGIME_CLASSES, interpretRegime } from "./target75cc-regime.js";
 import { regimeFeatures } from "./target75cc-regime-features.js";
 import { STRAT, step, validateParams } from "./target75cc.js";
-import { SESSION_ENTRY_MIN_PROBABILITY, resolveSessionEntryConfidence } from "./target75cc-session-policy.js";
+import { SESSION_ENTRY_MIN_PROBABILITY, SESSION_RELEASE_THRESHOLD_OFFSET,
+  resolveSessionEntryConfidence, resolveSessionReleaseThreshold } from "./target75cc-session-policy.js";
 
 function book(ask, bid = ask - 0.02, depth = 100) {
   return {
@@ -120,6 +121,29 @@ test("entry-confidence threshold resolves from the window's UTC session", () => 
     .minimumProbability, .5);
 });
 
+test("release threshold is relaxed only for the validated UTC session", () => {
+  assert.equal(resolveSessionReleaseThreshold({ winHour: 5 }).threshold, .885);
+  assert.equal(resolveSessionReleaseThreshold({ winHour: 9 }).threshold, .9);
+  assert.equal(resolveSessionReleaseThreshold({ winHour: 5, enabled: false }).threshold, .9);
+  assert.equal(resolveSessionReleaseThreshold({ winHour: 5, fallback: .8 }).threshold, .785);
+});
+
+test("runtime applies the release offset selected for the window's UTC session", () => {
+  const offsets = Object.fromEntries(Object.keys(SESSION_RELEASE_THRESHOLD_OFFSET)
+    .map((id) => [id, 0]));
+  offsets.utc08_12 = 1;
+  const P = { ...FAST, T_RELEASE_SESSION_ON: true,
+    T_RELEASE_SESSION_THRESHOLD_OFFSET: offsets };
+  const asiaTick = { ...tick(5, .52, .48, 101), winHour: 5 };
+  const [accepted] = step(state(), asiaTick, P, 120, 5_000);
+  assert.equal(accepted.signal.releaseThresholdSession, "utc04_08");
+  assert.equal(accepted.signal.releaseThreshold, 0);
+  const europeState = state();
+  assert.deepEqual(step(europeState, { ...asiaTick, winHour: 9 }, P, 120, 5_000), []);
+  assert.equal(europeState.strategyStatus.releaseThresholdSession, "utc08_12");
+  assert.equal(europeState.strategyStatus.releaseThreshold, 1);
+});
+
 test("runtime applies different probability floors to the same candidate by session", () => {
   const schedule = Object.fromEntries(Object.keys(SESSION_ENTRY_MIN_PROBABILITY).map((id) => [id, 0]));
   schedule.utc08_12 = 1;
@@ -212,6 +236,9 @@ test("target parameter validation rejects unsafe bounds", () => {
   assert.throws(() => validateParams({ ...STRAT, T_MIN_ORDER_SH: 10, T_MAX_ORDER_SH: 5 }), /order bounds/);
   assert.throws(() => validateParams({ ...STRAT, T_CROSS_THRESHOLD: 2 }), /cross threshold/);
   assert.throws(() => validateParams({ ...STRAT, T_RELEASE_THRESHOLD: 2 }), /release threshold/);
+  assert.throws(() => validateParams({ ...STRAT, T_RELEASE_SESSION_ON: "yes" }), /must be boolean/);
+  assert.throws(() => validateParams({ ...STRAT, T_RELEASE_SESSION_THRESHOLD_OFFSET:
+    { ...SESSION_RELEASE_THRESHOLD_OFFSET, utc04_08: -2 } }), /utc04_08/);
   assert.throws(() => validateParams({ ...STRAT, T_RESIDUAL_SCALE: 0 }), /residual scale/);
   assert.throws(() => validateParams({ ...STRAT, T_REGIME_MIN_PROBABILITY: 2 }), /T_REGIME_MIN_PROBABILITY/);
   assert.throws(() => validateParams({ ...STRAT, T_REGIME_SESSION_ON: "yes" }), /must be boolean/);
