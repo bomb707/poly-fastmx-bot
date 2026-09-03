@@ -58,6 +58,21 @@ export function effectiveMaxSessionLoss(getShadowParams, fallback = 0) {
   const value = Number(fallback);
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
+
+// Read the engine's session accumulator defensively. This is the live source of
+// truth; the Mongo ledger remains useful for arbitrary historical `since` ranges.
+export function currentShadowSession(getShadowSession) {
+  try {
+    const raw = getShadowSession?.();
+    if (!raw) return null;
+    const sessionRealized = Number(raw.sessionRealized);
+    const resolvedWindows = Number(raw.resolvedWindows);
+    if (!Number.isFinite(sessionRealized) || !Number.isInteger(resolvedWindows) || resolvedWindows < 0) return null;
+    return { sessionRealized, resolvedWindows };
+  } catch {
+    return null;
+  }
+}
 // PERSISTED session floor — the Session-card / live-history "since" default. Pinned to the FIRST boot and saved
 // in the config store, so it survives bot restarts (history persists). The client's Reset still raises it via
 // reqSince. Only wiped if the user clears runtime-config.json.
@@ -108,7 +123,7 @@ async function buildReplay(slug) {
 
 // setMarket({asset, interval, wallet}) is provided by index.js to hot-swap the tracked market live.
 // The last three args feed the SHADOW A/B: current sim fills + live strategy-param get/set.
-export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent, setShadowParams, getShadowParams, manualOps, getLiveTicks) {
+export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent, setShadowParams, getShadowParams, manualOps, getLiveTicks, getShadowSession) {
   const clients = new Set();
   let lastTick = null;
   let activeWindow = null;
@@ -519,7 +534,10 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
         } catch {}
         const r2 = (x) => Math.round(x * 100) / 100;
         res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
-        res.end(JSON.stringify({ bot: r2(bot), shadow: r2(shadow), real: r2(real), nb, ns, nr, slugs, since, botStart: sessionFloorSec() }));
+        // Only the default (since Start) view can use the in-memory accumulator.
+        // Custom Reset/all-time floors continue to use the persisted ledger.
+        const activeSession = reqSince > 0 ? null : currentShadowSession(getShadowSession);
+        res.end(JSON.stringify({ bot: r2(bot), shadow: r2(shadow), real: r2(real), nb, ns, nr, slugs, since, botStart: sessionFloorSec(), activeSession }));
       })().catch((e) => { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: String(e && e.message || e) })); });
       return;
     }
@@ -647,7 +665,8 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
     if (typeof getSnapshotBuys === "function") {
       try { const a = getSnapshotBuys(); if (Array.isArray(a) && a.length) buys = a; } catch {}
     }
-    ws.send(JSON.stringify({ type: "snapshot", tick: lastTick, window: activeWindow, recentBuys: buys }));
+    ws.send(JSON.stringify({ type: "snapshot", tick: lastTick, window: activeWindow, recentBuys: buys,
+      session: currentShadowSession(getShadowSession) }));
     ws.on("close", () => clients.delete(ws));
     ws.on("error", () => clients.delete(ws));
   });

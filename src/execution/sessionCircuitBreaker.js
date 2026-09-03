@@ -3,12 +3,14 @@
 export function createSessionCircuitBreaker(limitProvider = () => 0, onTrip = () => {}) {
   let generation = 0;
   let sessionRealized = 0;
+  let resolvedWindows = 0;
   let tripped = false;
 
   const limit = () => Math.max(0, Number(limitProvider()) || 0);
   const state = () => ({
     generation,
     sessionRealized: Math.round(sessionRealized * 100) / 100,
+    resolvedWindows,
     tripped,
     limit: limit(),
   });
@@ -18,12 +20,14 @@ export function createSessionCircuitBreaker(limitProvider = () => 0, onTrip = ()
     reset() {
       generation++;
       sessionRealized = 0;
+      resolvedWindows = 0;
       tripped = false;
       return state();
     },
     record(windowGeneration, pnl) {
       if (windowGeneration !== generation) return state();
       sessionRealized += Number(pnl) || 0;
+      resolvedWindows++;
       const activeLimit = limit();
       if (!tripped && activeLimit > 0 && sessionRealized <= -activeLimit) {
         tripped = true;

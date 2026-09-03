@@ -66,7 +66,8 @@ const ui = (config.mode !== "console" && config.uiPort > 0)
     (p) => { if (shadow) { const before = shadow.getParams(); shadow.setParams(p); logConfigChange("shadow-params", before, shadow.getParams()); } },
     () => (shadow ? shadow.getParams() : {}),
     manualOps,   // 7th arg: manual-order panel backend (place / list / cancel real orders)
-    (slug) => currentLiveTicks(slug))   // 8th arg: in-memory live-tick series for the CURRENT (unsettled) window
+    (slug) => currentLiveTicks(slug),   // 8th arg: in-memory live-tick series for the CURRENT (unsettled) window
+    () => (shadow ? shadow.breakerState() : null))   // 9th arg: authoritative session PnL + resolved-window count
   : null;
 
 // Authoritative window-open Binance price from the Binance aggTrades REST API — the FIRST aggTrade at/after the

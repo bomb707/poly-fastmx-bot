@@ -3152,6 +3152,7 @@ function connect(){
     if(m.type==="snapshot"){
       ladderLast=null;
       T.resetWindow(m.window); S.resetWindow(m.window); delete $g("result").dataset.fromShadow;
+      applyActiveSession(m.session);
       if(m.tick){ T.onTick(m.tick); S.onTick(m.tick); updateTopBar(m.tick); }
       if(m.recentBuys) m.recentBuys.forEach(b=>T.onBuy(b,true));
       T.prefillLiveWindow(); S.prefillLiveWindow();
@@ -3181,6 +3182,7 @@ function connect(){
     else if(m.type==="shadow_resolved"){
       if(typeof refreshShadowHist==="function") refreshShadowHist();   // pending row → flip to the winner
       if(m.ab){ if(m.slug===S.slug) S.setWinSide(m.ab.winSide); if(m.slug===T.slug) T.setWinSide(m.ab.winSide);
+        applyActiveSession(m.session);
         syncRecentSession();
         if(m.slug===S.slug && m.ab.bot && m.ab.bot.pnl!=null){ const r=$g("result");
           const sp=m.ab.sim.pnl, wsd=m.ab.winSide; r.dataset.fromShadow="1";
@@ -3804,17 +3806,26 @@ async function applyWalletInput(){
   }catch(e){ if(st){ st.textContent="✗ "+(e&&e.message||e); st.className="track-status err"; } renderWalletField(); }
 }
 
-// Foot "Session" cards = cumulative LIVE PnL since bot-boot (or the last Reset), read from the A/B
-// ledger via /api/session-live. Only resetTs is persisted locally (the since= floor); the PnL itself
-// is authoritative server-side so a browser reload shows the same numbers.
+// Foot "Session" cards = cumulative LIVE PnL since Start (or the last Reset). The active shadow
+// total comes directly from the engine; bot totals and custom historical floors come from the A/B ledger.
+// Only resetTs is persisted locally; server-side state restores the numbers after a browser reload.
 const SESS_KEY="sessLivePnlV1";
 function loadSessLive(){ try{ const o=JSON.parse(localStorage.getItem(SESS_KEY)); if(o&&typeof o.resetTs==="number") return o; }catch{} return {bot:{},shadow:{},resetTs:0}; }
 let sessLive=loadSessLive();
 function saveSessLive(){ try{ localStorage.setItem(SESS_KEY, JSON.stringify(sessLive)); }catch{} }
-// BOTH session cards come from the SAME authoritative source (/api/session-live, the A/B ledger),
-// floored at bot-boot and raised by Reset — so tracker (bot) and shadow are directly comparable.
+// Tracker totals come from the ledger. The default shadow total comes from the engine accumulator,
+// while custom ranges use the same ledger floor so the two cards remain directly comparable.
 let botSess={pnl:0,n:0}, shadowSess={pnl:0,n:0};
 function renderSessCards(){ T.setSession(botSess.pnl, botSess.n); S.setSession(shadowSess.pnl, shadowSess.n); }
+// The engine publishes the cumulative session total with snapshots and each
+// settlement. Use it for the default "since session start" range; a user-picked
+// Reset/history floor must continue to come from the persisted ledger.
+function applyActiveSession(session){
+  if(sessLive.resetTs || !session) return;
+  const pnl=Number(session.sessionRealized), n=Number(session.resolvedWindows);
+  if(!Number.isFinite(pnl) || !Number.isInteger(n) || n<0) return;
+  shadowSess={pnl,n}; renderSessCards();
+}
 // RELIABLE updater: poll the existing /api/window for recently-ended windows and record each as
 // soon as it's RESOLVED (winSide present) — bot PnL from real fills. LIVE only. Robust to
 // missed/late resolution ws-events; back-fills any gaps. (No pm2 restart needed.)
@@ -3822,10 +3833,11 @@ let sessSyncing=false;
 async function syncRecentSession(){
   if(sessSyncing || T.mode!=="live") return;
   sessSyncing=true;
-  // BOTH bot + shadow cumulative PnL from the A/B ledger, floored at bot-boot, raised by Reset (since=resetTs).
+  // Bot and custom-range shadow PnL come from the ledger; the response also carries the active engine total.
   try{ const r=await fetch("/api/session-live?since="+(sessLive.resetTs||0)).then(x=>x.json());
     if(r){ if(r.bot!=null) botSess={pnl:r.bot, n:r.nb||0};   // TRACKER session = real on-chain (bot)
-      if(r.shadow!=null) shadowSess={pnl:r.shadow, n:r.ns||0};   // SHADOW session = SIMULATION (sim)
+      if(!sessLive.resetTs && r.activeSession) applyActiveSession(r.activeSession);
+      else if(r.shadow!=null) shadowSess={pnl:r.shadow, n:r.ns||0};   // custom historical floor = persisted simulation ledger
       renderSessCards(); }
   }catch{} finally { sessSyncing=false; }
 }
@@ -3833,7 +3845,7 @@ renderSessCards();
 syncRecentSession();
 setInterval(syncRecentSession, 10000);   // backstop: refresh every 10s
 try{ updateModeBadge(); }catch{}         // set the LIVE/BACKTEST marker on load
-const UI_BUILD="fastmx-momentum-1";   // visible in the header so a stale cached page is obvious
+const UI_BUILD="fastmx-session-pnl-2";   // visible in the header so a stale cached page is obvious
 try{ const bt=document.getElementById("buildTag"); if(bt) bt.textContent="build "+UI_BUILD; }catch{}
 // Load the current market FIRST (sets WIN / MARKET_PREFIX / wallet) so the websocket's first
 // snapshot/ticks are interpreted with the correct window length — then connect + start drawing.

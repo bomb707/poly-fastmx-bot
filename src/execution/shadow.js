@@ -454,15 +454,18 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     }
     ab.netMatch = ab.bot ? ab.sim.net === ab.bot.net : null;
     ab.pnlErr = ab.bot && ab.bot.pnl != null ? r2(Math.abs(ab.sim.pnl - ab.bot.pnl)) : null;
-    recordSession(ab);   // → MongoDB shadow_sessions_<mode>
-    try { onEvent({ kind: "shadow_resolved", slug, ab }); } catch {}
     // SESSION CIRCUIT-BREAKER: accumulate the session's realized PnL (REAL in live, else sim) and, if it breaches
     //   the configured max loss, emit `circuit_breaker` ONCE (index.js halts the bot). Re-arms via resetBreaker().
     // A stopped engine can leave unresolved windows in memory. Starting a new
     // session resets the breaker, after which lifecycle may settle one of those
     // old windows. Count only windows created in this Start generation; otherwise
     // the stale settlement immediately halts the freshly re-armed session.
-    circuitBreaker.record(w.breakerGeneration, ab.real ? ab.real.pnl : ab.sim.pnl);
+    const session = circuitBreaker.record(w.breakerGeneration, ab.real ? ab.real.pnl : ab.sim.pnl);
+    recordSession(ab);   // → MongoDB shadow_sessions_<mode>
+    // Include the authoritative in-memory total. Mongo persistence is intentionally
+    // fire-and-forget, so making the UI wait for a DB re-read leaves the Session
+    // card blank when Mongo is unavailable and races the write when it is healthy.
+    try { onEvent({ kind: "shadow_resolved", slug, ab, session }); } catch {}
     return ab;
   }
 
@@ -513,8 +516,11 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   } }
   function getParams() { return { ...curStrat.STRAT, ...liveParams }; }
   // Circuit-breaker controls: reset re-arms it on Start.
-  function resetBreaker() { circuitBreaker.reset(); }
-  function breakerState() { const { sessionRealized, tripped, limit } = circuitBreaker.state(); return { sessionRealized, tripped, limit }; }
+  function resetBreaker() { return circuitBreaker.reset(); }
+  function breakerState() {
+    const { sessionRealized, resolvedWindows, tripped, limit } = circuitBreaker.state();
+    return { sessionRealized, resolvedWindows, tripped, limit };
+  }
 
   // MANUAL buy (SIM): book a taker fill into the CURRENT live window at the latest ask (≤ limit) — flows through
   //   bookFill exactly like a strategy fill, so it draws a circle, updates the position/PnL, and lands in live

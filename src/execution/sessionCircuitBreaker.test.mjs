@@ -10,7 +10,7 @@ test('ignores a delayed settlement from a previous Start generation', () => {
   breaker.reset();
   breaker.record(oldGeneration, -144.42);
 
-  assert.deepEqual(breaker.state(), { generation: 1, sessionRealized: 0, tripped: false, limit: 5 });
+  assert.deepEqual(breaker.state(), { generation: 1, sessionRealized: 0, resolvedWindows: 0, tripped: false, limit: 5 });
   assert.deepEqual(trips, []);
 });
 
@@ -23,6 +23,15 @@ test('still trips on losses created in the current Start generation', () => {
   breaker.record(currentGeneration, -2);
   breaker.record(currentGeneration, -3.01);
 
-  assert.deepEqual(breaker.state(), { generation: 1, sessionRealized: -5.01, tripped: true, limit: 5 });
+  assert.deepEqual(breaker.state(), { generation: 1, sessionRealized: -5.01, resolvedWindows: 2, tripped: true, limit: 5 });
   assert.deepEqual(trips, [{ sessionRealized: -5.01, limit: 5 }]);
+});
+
+test('resets both cumulative PnL and the resolved-window count', () => {
+  const breaker = createSessionCircuitBreaker(() => 0);
+  const generation = breaker.stamp();
+  breaker.record(generation, 3.456);
+
+  assert.deepEqual(breaker.state(), { generation: 0, sessionRealized: 3.46, resolvedWindows: 1, tripped: false, limit: 0 });
+  assert.deepEqual(breaker.reset(), { generation: 1, sessionRealized: 0, resolvedWindows: 0, tripped: false, limit: 0 });
 });
