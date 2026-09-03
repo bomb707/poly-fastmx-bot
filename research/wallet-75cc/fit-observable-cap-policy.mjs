@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { CAP_FEATURE_NAMES, capFeatureAt, indexAtOrBefore, normalizeTick,
+import { CAP_FEATURE_NAMES, CAP_FEATURE_SET, capFeatureAt, indexAtOrBefore, normalizeTick,
   scoreStandardizedLogistic } from "./weekly-parity-core.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
@@ -178,6 +178,7 @@ const train = groups.filter((group) => group.segment === "train");
 const model = fit(train);
 const report = {
   schema: 1, generatedAt: new Date().toISOString(),
+  featureSet: CAP_FEATURE_SET,
   definition: "Observable two-sided cap-menu preference; no signed construction time, target inventory/action history, or future state.",
   discovery: payload.summary.range, source: path.resolve(fireFile), sourceSha256: hash(fs.readFileSync(fireFile)),
   exclusions: [...excluded], model,

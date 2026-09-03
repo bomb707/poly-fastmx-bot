@@ -146,6 +146,7 @@ for (const { file, windowStart } of rows.length ? [] : files) {
 }
 
 function featureGroup(name) {
+  if (/settlement|secondsLeft|session_utc|binanceOwnGapUsd/i.test(name)) return "settlement";
   if (/Depth|depth|spread|microprice|Imbalance|Pressure/.test(name)) return "microstructure";
   if (/binance|twap|basis|crossFeed/i.test(name)) return "external";
   if (/mid|askMove|bidMove|positionInRange|discount/i.test(name)) return "token-path";
@@ -268,9 +269,12 @@ const trainRows = rows.filter((row) => row.segment === "train");
 const groupSets = {
   context: new Set(["context"]),
   tokenPath: new Set(["context", "token-path"]),
+  settlement: new Set(["context", "settlement"]),
+  tokenSettlement: new Set(["context", "token-path", "settlement"]),
   external: new Set(["context", "external"]),
   microstructure: new Set(["context", "microstructure"]),
   tokenExternal: new Set(["context", "token-path", "external"]),
+  tokenExternalSettlement: new Set(["context", "token-path", "external", "settlement"]),
   all: null,
 };
 const ablations = {};

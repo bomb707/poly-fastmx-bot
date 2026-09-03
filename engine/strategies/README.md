@@ -42,13 +42,14 @@ That's it — it's instantly available to backtest, live-sim, and real-live.
 - `target75cc.js` — default simulation-only target-wallet imitation: autonomous two-sided cap menu plus tracked residual-size and partial-versus-cross models
 - `target75cc-release-model.js` — frozen observable release model, policy, hashes, and exact-week parity metrics
 - `target75cc-model.js` — browser-safe frozen trees generated from the tracked target model artifacts, including their source hashes and holdout metrics
-- `target75cc-regime-features.js` — causal 0.5–60s trend, path, volatility, and liquidity feature construction shared by research and runtime
+- `target75cc-regime-features.js` — causal 0.5–60s trend, path, volatility, liquidity, settlement-open gap, and UTC-session feature construction shared by research and runtime
 - `target75cc-regime-model.js` — generated winner-probability model, chronological metrics, and frozen confidence policy
-- `target75cc-regime.js` — trend/noise/reversal interpretation, fee-adjusted expected-edge gate, and confidence size scaling
+- `target75cc-settlement-gap-model.js` — independent causal Binance/Chainlink TWAP settlement-direction model with chronological validation, holdout, and OOS metrics
+- `target75cc-regime.js` — trend/noise/reversal interpretation, fee-adjusted expected-edge gate, and settlement-aware confidence size scaling; opposed gap evidence can reduce allocation by at most 10%, while aligned evidence never increases it
 - `helpme.js` — retired fixed-seven-share baseline retained for offline historical research only
 - `lockstep.js` — Lockstep adapter over `../strategy.js` (the implementation stays there, live-critical & unchanged)
 - `gap_predictor.js` — imported Gap Predictor profile (linear completed-round gap lock + taker hedge with a
   fee-inclusive 0.03/share profit floor)
 - `_template.js` — skeleton to copy
 
-`target75cc` is branded as FastMX and is the only UI/live-shadow policy. It implements observable two-sided menu, sizing, and inventory-transition structure plus a causal trend/noise layer selected on a chronological validation day. The enhancement materially reduces losses and drawdown, but partial-OOS PnL remains slightly negative and it does not recover the wallet's unknown private release program. It remains simulation-only and must not be described as an exact or profitable clone.
+`target75cc` is branded as FastMX and is the only UI/live-shadow policy. It implements observable two-sided menu, sizing, and inventory-transition structure plus causal trend/noise and settlement-gap layers selected chronologically. The settlement model is used only for conservative loss sizing: it does not create a direction, delay entry, or increase allocation. It does not recover the wallet's unknown private release program and remains simulation-only.

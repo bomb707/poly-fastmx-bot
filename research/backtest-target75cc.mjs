@@ -22,6 +22,7 @@ const cooldownMs = Math.max(0, Number(process.env.TARGET_COOLDOWN_MS
   ?? TARGET.T_COOLDOWN_MS ?? 0));
 const releaseThreshold = Number(process.env.TARGET_RELEASE_THRESHOLD
   ?? TARGET.T_RELEASE_THRESHOLD ?? .9);
+const includeFillDetails = process.env.TARGET_INCLUDE_FILL_DETAILS === "1";
 const common = {
   LATENCY_MS: 520,
   H_START_S: 0,
@@ -55,6 +56,8 @@ const policies = {
     T_REGIME_PULLBACK_MIN_PROBABILITY: Number(process.env.TARGET_REGIME_PULLBACK_MIN_PROBABILITY
       || TARGET.T_REGIME_PULLBACK_MIN_PROBABILITY),
     T_REGIME_CONFIDENCE_SIZING: process.env.TARGET_REGIME_CONFIDENCE_SIZING !== "0",
+    T_REGIME_GAP_DOWNSIZE_WEIGHT: Number(process.env.TARGET_REGIME_GAP_DOWNSIZE_WEIGHT
+      ?? TARGET.T_REGIME_GAP_DOWNSIZE_WEIGHT),
     T_REGIME_SIZE_FLOOR: Number(process.env.TARGET_REGIME_SIZE_FLOOR || .5),
     T_REGIME_SIZE_CEILING: Number(process.env.TARGET_REGIME_SIZE_CEILING || 1) },
 };
@@ -192,7 +195,13 @@ function addResult(row, fills, position, pnl, winSide, ticks) {
     }
   }
   return { pnl, fills: fills.length, upShares: position.upShares, downShares: position.downShares,
-    cost: position.totalCost, fees: position.fee };
+    cost: position.totalCost, fees: position.fee,
+    ...(includeFillDetails ? { fillDetails: fills.map((fill) => ({
+      t: Number(fill.tInto), decidedT: Number(fill.decidedT), side: fill.side,
+      role: fill.role || fill.leg || "entry", shares: Number(fill.shares),
+      minimumShares: Number(fill.minimumShares ?? fill.requestedShares ?? fill.shares),
+      price: Number(fill.effPx), signal: fill.signal,
+    })) } : {}) };
 }
 
 for (const { file, windowStart } of files) {

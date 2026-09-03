@@ -4,7 +4,8 @@ import { DEFAULT_STRATEGY, getStrategy, listStrategies } from "./index.js";
 import { MODEL_META } from "./target75cc-model.js";
 import { RELEASE_META, RELEASE_MODEL, RELEASE_POLICY } from "./target75cc-release-model.js";
 import { REGIME_META } from "./target75cc-regime-model.js";
-import { REGIME_CLASSES, interpretRegime } from "./target75cc-regime.js";
+import { REGIME_CLASSES, SETTLEMENT_GAP_META, evaluateRegime, interpretRegime }
+  from "./target75cc-regime.js";
 import { regimeFeatures } from "./target75cc-regime-features.js";
 import { STRAT, step, validateParams } from "./target75cc.js";
 import { SESSION_ENTRY_MIN_PROBABILITY, SESSION_RELEASE_THRESHOLD_OFFSET,
@@ -67,6 +68,8 @@ test("tracked model metadata preserves the chronological holdout evidence", () =
   assert.equal(REGIME_META.selection.selectedFeatureSet, "tokenPath");
   assert.match(REGIME_META.baselinePolicySha256, /^[a-f0-9]{64}$/);
   assert.ok(REGIME_META.metrics.holdout.auc > .8);
+  assert.equal(SETTLEMENT_GAP_META.selection.selectedFeatureSet, "core");
+  assert.ok(SETTLEMENT_GAP_META.metrics.holdout.auc > .8);
 });
 
 test("trend/noise features cannot read a future snapshot", () => {
@@ -80,6 +83,30 @@ test("trend/noise features cannot read a future snapshot", () => {
   const left = regimeFeatures({ ...args, history: [prior, current, futureA] });
   const right = regimeFeatures({ ...args, history: [prior, current, futureB] });
   assert.deepEqual(left.vector, right.vector);
+});
+
+test("settlement-gap model preserves winner participation while downsizing opposed inventory", () => {
+  const snapshot = (ms, gap) => ({ ms, bz: 100_000 + gap, cl: 100_000 + gap * .8,
+    Up: { ask: .55, bid: .54, askDepth1: 100, askDepth3: 300,
+      bidDepth1: 100, bidDepth3: 300 },
+    Down: { ask: .46, bid: .45, askDepth1: 100, askDepth3: 300,
+      bidDepth1: 100, bidDepth3: 300 } });
+  const evaluate = (gap, weight = .1) => {
+    const current = snapshot(180_000, gap);
+    return evaluateRegime({ history: [snapshot(150_000, gap / 2), current], current,
+      tk: { t: 180, openBinance: 100_000, openChainlink: 100_000, winHour: 12 },
+      side: "Up", clockMs: 180_000,
+      P: { ...STRAT, T_REGIME_GAP_DOWNSIZE_WEIGHT: weight,
+        T_REGIME_MIN_PROBABILITY: 0, T_REGIME_MIN_EDGE: -1,
+        T_REGIME_REVERSAL_MIN_PROBABILITY: 0, T_REGIME_CONFIDENCE_SIZING: false } });
+  };
+  const aligned = evaluate(100), opposed = evaluate(-100), disabled = evaluate(-100, 0);
+  assert.ok(aligned.settlementGapProbability > .9);
+  assert.equal(aligned.settlementGapDownsizeScale, 1);
+  assert.ok(opposed.settlementGapProbability < .1);
+  assert.ok(opposed.settlementGapDownsizeScale >= .9 && opposed.settlementGapDownsizeScale < 1);
+  assert.equal(disabled.settlementGapDownsizeScale, 1);
+  assert.equal(opposed.sideProbability, disabled.sideProbability);
 });
 
 test("counter-trend classification distinguishes noise, possible reversal, and confirmed reversal", () => {
@@ -246,4 +273,6 @@ test("target parameter validation rejects unsafe bounds", () => {
     { ...SESSION_ENTRY_MIN_PROBABILITY, utc04_08: 2 } }), /utc04_08/);
   assert.throws(() => validateParams({ ...STRAT, T_REGIME_SIZE_FLOOR: 2,
     T_REGIME_SIZE_CEILING: 1 }), /regime size bounds/);
+  assert.throws(() => validateParams({ ...STRAT, T_REGIME_GAP_DOWNSIZE_WEIGHT: 2 }),
+    /T_REGIME_GAP_DOWNSIZE_WEIGHT/);
 });

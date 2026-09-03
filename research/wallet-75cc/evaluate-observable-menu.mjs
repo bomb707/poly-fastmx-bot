@@ -13,8 +13,9 @@ const outputFile = path.resolve(process.argv[4] || path.join(cohortDir, "observa
 const modelDir = path.resolve(process.argv[5] || cohortDir);
 const exact = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(cohortDir, "exact-fire-dataset.json.gz"))));
 const fitted = JSON.parse(fs.readFileSync(path.join(modelDir, "observable-cap-policy-model.json")));
-const frozenEvaluation = modelDir === cohortDir ? null
-  : JSON.parse(fs.readFileSync(path.join(modelDir, "observable-menu-evaluation.json")));
+const frozenEvaluationFile = path.join(modelDir, "observable-menu-evaluation.json");
+const frozenEvaluation = modelDir === cohortDir || !fs.existsSync(frozenEvaluationFile) ? null
+  : JSON.parse(fs.readFileSync(frozenEvaluationFile));
 const model = fitted.model;
 const finite = (value) => Number.isFinite(Number(value));
 const round = (value, digits = 6) => finite(value) ? +Number(value).toFixed(digits) : null;

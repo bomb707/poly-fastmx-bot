@@ -11,18 +11,49 @@ const startMs = (slug) => Number(String(slug || "").split("-").at(-1)) * 1_000;
 const readGzip = (file) => JSON.parse(zlib.gunzipSync(fs.readFileSync(file)));
 const sha256 = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
-export const CAP_FEATURE_NAMES = [
+export const CAP_FINE_HORIZONS_MS = [500, 1_000, 2_000, 3_000, 5_000,
+  10_000, 15_000, 30_000, 60_000];
+export const CAP_COARSE_HORIZONS_MS = [1_000, 3_000, 5_000, 15_000, 30_000, 60_000];
+export const CAP_BINANCE_GAP_KNOTS = [.025, .05, .10, .20];
+
+export const CAP_BASE_FEATURE_NAMES = [
   "timeFraction", "ask", "cap", "capHeadroom", "exactCap", "spread", "pairAsk",
   "askDepth1", "askDepth3", "bidDepth1", "bidDepth3", "topDepthImbalance",
   "depth3Imbalance", "micropriceBias", "executableRunLog", "sinceLastFireLog",
   "sinceSameSideFireLog", "absoluteInventoryLog", "orientedInventory", "oppositeInventory",
   "binanceGap", "twapGap", "binanceTwapBasis",
-  ...[1_000, 3_000, 5_000, 15_000, 30_000, 60_000].flatMap((ms) => [
+  ...CAP_COARSE_HORIZONS_MS.flatMap((ms) => [
     `askMove${ms}`, `bidMove${ms}`, `binanceMove${ms}`, `twapMove${ms}`, `basisMove${ms}`,
   ]),
   "askDepth3Change1000", "bidDepth3Change1000", "askDepth3Change3000",
   "bidDepth3Change3000", "askDepth3Change5000", "bidDepth3Change5000",
 ];
+
+export const CAP_FINE_FEATURE_NAMES = [
+  "timeFraction", "ask", "cap", "capHeadroom", "exactCap", "spread", "pairAsk",
+  "askDepth1", "askDepth3", "bidDepth1", "bidDepth3", "topDepthImbalance",
+  "depth3Imbalance", "micropriceBias", "executableRunLog", "sinceLastFireLog",
+  "sinceSameSideFireLog", "absoluteInventoryLog", "orientedInventory", "oppositeInventory",
+  "binanceGap", "twapGap", "binanceTwapBasis",
+  ...CAP_BINANCE_GAP_KNOTS.flatMap((knot) => [
+    `binanceGapAbove${String(knot).replace(".", "p")}`,
+    `binanceGapBelow${String(knot).replace(".", "p")}`,
+  ]),
+  ...CAP_FINE_HORIZONS_MS.flatMap((ms) => [
+    `midMove${ms}`, `askMove${ms}`, `bidMove${ms}`, `binanceMove${ms}`,
+    `spreadChange${ms}`, `depthPressureChange${ms}`,
+  ]),
+  ...CAP_COARSE_HORIZONS_MS.flatMap((ms) => [`twapMove${ms}`, `basisMove${ms}`]),
+  "askDepth3Change1000", "bidDepth3Change1000", "askDepth3Change3000",
+  "bidDepth3Change3000", "askDepth3Change5000", "bidDepth3Change5000",
+];
+
+export const CAP_FEATURE_SET = String(process.env.W75CC_CAP_FEATURE_SET || "base").trim().toLowerCase();
+if (!["base", "fine-btc-clob"].includes(CAP_FEATURE_SET)) {
+  throw new Error(`unknown W75CC_CAP_FEATURE_SET ${CAP_FEATURE_SET}`);
+}
+export const CAP_FEATURE_NAMES = CAP_FEATURE_SET === "fine-btc-clob"
+  ? CAP_FINE_FEATURE_NAMES : CAP_BASE_FEATURE_NAMES;
 
 export function indexAtOrBefore(ticks, ms) {
   let low = 0, high = ticks.length - 1, answer = -1;
@@ -44,9 +75,18 @@ const depth = (rows, count) => (rows || []).slice(0, count)
 const pctMove = (current, prior) => current > 0 && prior > 0 ? (current - prior) / prior * 100 : 0;
 const basisPct = (tick) => Number(tick?.bz) > 0 && Number(tick?.cl) > 0
   ? (Number(tick.bz) - Number(tick.cl)) / Number(tick.cl) * 100 : 0;
+const midpoint = (tick, side) => {
+  const ask = bestAsk(tick, side), bid = bestBid(tick, side);
+  return ask > 0 && bid > 0 ? (ask + bid) / 2 : null;
+};
+const pressure = (tick, side) => {
+  const book = sideBook(tick, side);
+  const askDepth3 = depth(book?.asks, 3), bidDepth3 = depth(book?.bids, 3);
+  return (bidDepth3 - askDepth3) / Math.max(EPS, bidDepth3 + askDepth3);
+};
 
 /**
- * Reconstruct the causal 59-column cap-cell vector used by the weekly policy.
+ * Reconstruct the causal 59-column base vector or opt-in fine BTC/CLOB vector.
  * `executableSinceMs` belongs to this side/cap cell and must be tracked without
  * looking ahead. Target inventory fields are retained for schema parity; the
  * autonomous structural model deliberately assigns them zero weight.
@@ -88,15 +128,28 @@ export function capFeatureAt({ feed, ticks = feed?.ticks || [], index, side, cap
       ? pctMove(Number(tick.cl), Number(feed.openPrice ?? feed.openChainlink)) * sign : 0,
     binanceTwapBasis: basisPct(tick) * sign,
   };
-  for (const lookbackMs of [1_000, 3_000, 5_000, 15_000, 30_000, 60_000]) {
+  for (const knot of CAP_BINANCE_GAP_KNOTS) {
+    const suffix = String(knot).replace(".", "p");
+    raw[`binanceGapAbove${suffix}`] = Math.max(0, raw.binanceGap - knot);
+    raw[`binanceGapBelow${suffix}`] = Math.max(0, -raw.binanceGap - knot);
+  }
+  const mid = midpoint(tick, side), currentSpread = ask - bid;
+  for (const lookbackMs of CAP_FINE_HORIZONS_MS) {
     const priorIndex = indexAtOrBefore(ticks, Number(tick.ms) - lookbackMs);
     const prior = priorIndex >= 0 ? ticks[priorIndex] : null;
     const priorAsk = bestAsk(prior, side), priorBid = bestBid(prior, side);
+    const priorMid = midpoint(prior, side);
+    raw[`midMove${lookbackMs}`] = priorMid != null ? mid - priorMid : 0;
     raw[`askMove${lookbackMs}`] = priorAsk > 0 ? ask - priorAsk : 0;
     raw[`bidMove${lookbackMs}`] = priorBid > 0 ? bid - priorBid : 0;
     raw[`binanceMove${lookbackMs}`] = prior ? pctMove(Number(tick.bz), Number(prior.bz)) * sign : 0;
-    raw[`twapMove${lookbackMs}`] = prior ? pctMove(Number(tick.cl), Number(prior.cl)) * sign : 0;
-    raw[`basisMove${lookbackMs}`] = prior ? (basisPct(tick) - basisPct(prior)) * sign : 0;
+    raw[`spreadChange${lookbackMs}`] = priorAsk > 0 && priorBid > 0
+      ? currentSpread - (priorAsk - priorBid) : 0;
+    raw[`depthPressureChange${lookbackMs}`] = prior ? pressure(tick, side) - pressure(prior, side) : 0;
+    if (CAP_COARSE_HORIZONS_MS.includes(lookbackMs)) {
+      raw[`twapMove${lookbackMs}`] = prior ? pctMove(Number(tick.cl), Number(prior.cl)) * sign : 0;
+      raw[`basisMove${lookbackMs}`] = prior ? (basisPct(tick) - basisPct(prior)) * sign : 0;
+    }
     if (lookbackMs <= 5_000) {
       const priorBook = sideBook(prior, side);
       raw[`askDepth3Change${lookbackMs}`] = priorBook ? askDepth3 - depth(priorBook.asks, 3) : 0;

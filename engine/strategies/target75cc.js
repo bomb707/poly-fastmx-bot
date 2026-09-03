@@ -50,6 +50,7 @@ export const STRAT = {
   T_REGIME_DOMINANT_THRESHOLD: REGIME_POLICY.dominantThreshold,
   T_REGIME_SHORT_THRESHOLD: REGIME_POLICY.shortCounterThreshold,
   T_REGIME_CONFIDENCE_SIZING: true,
+  T_REGIME_GAP_DOWNSIZE_WEIGHT: .1,
   T_REGIME_SIZE_FLOOR: REGIME_POLICY.confidenceScaleFloor,
   T_REGIME_SIZE_CEILING: REGIME_POLICY.confidenceScaleCeiling,
   T_LIVE_ORDER_TYPE: "FAK",
@@ -383,6 +384,10 @@ export function validateParams(P = STRAT) {
       throw new RangeError(`${name} must be between zero and one`);
     }
   }
+  if (!(number(P.T_REGIME_GAP_DOWNSIZE_WEIGHT, 0) >= 0
+    && number(P.T_REGIME_GAP_DOWNSIZE_WEIGHT, 0) <= 1)) {
+    throw new RangeError("T_REGIME_GAP_DOWNSIZE_WEIGHT must be between zero and one");
+  }
   if (P.T_REGIME_SESSION_ON !== true && P.T_REGIME_SESSION_ON !== false) {
     throw new TypeError("T_REGIME_SESSION_ON must be boolean");
   }
@@ -546,6 +551,11 @@ export function step(state, tk, P = STRAT, dtMs = 120, clockMs = tk.t * 1000) {
       regimeModelSha256: regime?.modelSha256 ?? null,
       regimeClass: regime?.classification ?? null,
       sideProbability: regime == null ? null : round4(regime.sideProbability),
+      baseSideProbability: regime == null ? null : round4(regime.baseSideProbability),
+      settlementGapProbability: regime == null ? null : round4(regime.settlementGapProbability),
+      settlementGapDownsizeWeight: regime == null ? null : round4(regime.settlementGapDownsizeWeight),
+      settlementGapDownsizeScale: regime == null ? null : round4(regime.settlementGapDownsizeScale),
+      settlementGapModelSha256: regime?.settlementGapModelSha256 ?? null,
       expectedEdge: regime == null ? null : round4(regime.expectedEdge),
       noiseProbability: regime == null ? null : round4(regime.noiseProbability),
       reversalProbability: regime == null ? null : round4(regime.reversalProbability),

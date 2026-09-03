@@ -1,0 +1,3632 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-09-03T12:28:35.486Z",
+  "range": {
+    "from": "2026-08-14T00:00:00.000Z",
+    "to": "2026-09-03T12:00:00.000Z"
+  },
+  "source": "/home/hr/works/poly-fastmx-bot/data/wincache",
+  "files": {
+    "considered": 4226,
+    "invalid": 0,
+    "usable": 4222
+  },
+  "checkpointsS": [
+    60,
+    120,
+    180,
+    240,
+    270
+  ],
+  "observations": 20690,
+  "resolutionMismatches": 0,
+  "definitions": {
+    "binanceOwnGapUsd": "Binance snapshot minus Binance boundary open",
+    "settlementReferenceGapUsd": "Binance snapshot minus Chainlink TWAP-60 opening reference",
+    "twapGapUsd": "current Chainlink TWAP-60 stream value minus its opening reference",
+    "reversal": "the side implied by the causal gap at the checkpoint differs from the eventual market winner",
+    "activity": "high/low split of trailing-30s Up-token midpoint range at the sample median 0.15"
+  },
+  "overallByCheckpoint": {
+    "60": {
+      "binanceOwnOpen": {
+        "0-10": {
+          "observations": 1410,
+          "correctPct": 56.31,
+          "reversalPct": 43.69,
+          "reversalWilson95Pct": [
+            41.12,
+            46.29
+          ],
+          "twapDirectionAgreementPct": 59.01,
+          "pricedObservations": 1410,
+          "averageLeaderAsk": 0.5556,
+          "realizedPnlPerShare": -0.0086
+        },
+        "10-20": {
+          "observations": 780,
+          "correctPct": 60.51,
+          "reversalPct": 39.49,
+          "reversalWilson95Pct": [
+            36.12,
+            42.96
+          ],
+          "twapDirectionAgreementPct": 67.56,
+          "pricedObservations": 780,
+          "averageLeaderAsk": 0.6235,
+          "realizedPnlPerShare": -0.0336
+        },
+        "20-50": {
+          "observations": 1317,
+          "correctPct": 67.96,
+          "reversalPct": 32.04,
+          "reversalWilson95Pct": [
+            29.58,
+            34.61
+          ],
+          "twapDirectionAgreementPct": 75.85,
+          "pricedObservations": 1317,
+          "averageLeaderAsk": 0.6967,
+          "realizedPnlPerShare": -0.0308
+        },
+        "50-100": {
+          "observations": 557,
+          "correctPct": 74.87,
+          "reversalPct": 25.13,
+          "reversalWilson95Pct": [
+            21.71,
+            28.9
+          ],
+          "twapDirectionAgreementPct": 84.2,
+          "pricedObservations": 557,
+          "averageLeaderAsk": 0.7738,
+          "realizedPnlPerShare": -0.0366
+        },
+        "100-150": {
+          "observations": 106,
+          "correctPct": 81.13,
+          "reversalPct": 18.87,
+          "reversalWilson95Pct": [
+            12.56,
+            27.35
+          ],
+          "twapDirectionAgreementPct": 83.02,
+          "pricedObservations": 106,
+          "averageLeaderAsk": 0.8259,
+          "realizedPnlPerShare": -0.0238
+        },
+        "150-plus": {
+          "observations": 35,
+          "correctPct": 80,
+          "reversalPct": 20,
+          "reversalWilson95Pct": [
+            10.04,
+            35.89
+          ],
+          "twapDirectionAgreementPct": 94.29,
+          "pricedObservations": 35,
+          "averageLeaderAsk": 0.8534,
+          "realizedPnlPerShare": -0.0614
+        }
+      },
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 787,
+          "correctPct": 51.84,
+          "reversalPct": 48.16,
+          "reversalWilson95Pct": [
+            44.68,
+            51.65
+          ],
+          "twapDirectionAgreementPct": 56.42,
+          "pricedObservations": 787,
+          "averageLeaderAsk": 0.5332,
+          "realizedPnlPerShare": -0.0311
+        },
+        "10-20": {
+          "observations": 597,
+          "correctPct": 63.15,
+          "reversalPct": 36.85,
+          "reversalWilson95Pct": [
+            33.08,
+            40.79
+          ],
+          "twapDirectionAgreementPct": 67.84,
+          "pricedObservations": 597,
+          "averageLeaderAsk": 0.5859,
+          "realizedPnlPerShare": 0.03
+        },
+        "20-50": {
+          "observations": 1286,
+          "correctPct": 61.2,
+          "reversalPct": 38.8,
+          "reversalWilson95Pct": [
+            36.18,
+            41.5
+          ],
+          "twapDirectionAgreementPct": 70.61,
+          "pricedObservations": 1286,
+          "averageLeaderAsk": 0.626,
+          "realizedPnlPerShare": -0.0288
+        },
+        "50-100": {
+          "observations": 1261,
+          "correctPct": 66.61,
+          "reversalPct": 33.39,
+          "reversalWilson95Pct": [
+            30.84,
+            36.04
+          ],
+          "twapDirectionAgreementPct": 76.69,
+          "pricedObservations": 1261,
+          "averageLeaderAsk": 0.6704,
+          "realizedPnlPerShare": -0.0177
+        },
+        "100-150": {
+          "observations": 204,
+          "correctPct": 78.43,
+          "reversalPct": 21.57,
+          "reversalWilson95Pct": [
+            16.48,
+            27.71
+          ],
+          "twapDirectionAgreementPct": 94.12,
+          "pricedObservations": 204,
+          "averageLeaderAsk": 0.8237,
+          "realizedPnlPerShare": -0.0491
+        },
+        "150-plus": {
+          "observations": 70,
+          "correctPct": 85.71,
+          "reversalPct": 14.29,
+          "reversalWilson95Pct": [
+            7.95,
+            24.34
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 70,
+          "averageLeaderAsk": 0.8819,
+          "realizedPnlPerShare": -0.0318
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 1724,
+          "correctPct": 53.31,
+          "reversalPct": 46.69,
+          "reversalWilson95Pct": [
+            44.35,
+            49.05
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1724,
+          "averageLeaderAsk": 0.5643,
+          "realizedPnlPerShare": -0.0471
+        },
+        "10-20": {
+          "observations": 914,
+          "correctPct": 66.41,
+          "reversalPct": 33.59,
+          "reversalWilson95Pct": [
+            30.6,
+            36.71
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 914,
+          "averageLeaderAsk": 0.6438,
+          "realizedPnlPerShare": 0.0057
+        },
+        "20-50": {
+          "observations": 1170,
+          "correctPct": 68.89,
+          "reversalPct": 31.11,
+          "reversalWilson95Pct": [
+            28.52,
+            33.82
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1170,
+          "averageLeaderAsk": 0.7097,
+          "realizedPnlPerShare": -0.0339
+        },
+        "50-100": {
+          "observations": 335,
+          "correctPct": 75.52,
+          "reversalPct": 24.48,
+          "reversalWilson95Pct": [
+            20.18,
+            29.35
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 335,
+          "averageLeaderAsk": 0.7699,
+          "realizedPnlPerShare": -0.0258
+        },
+        "100-150": {
+          "observations": 46,
+          "correctPct": 80.43,
+          "reversalPct": 19.57,
+          "reversalWilson95Pct": [
+            10.65,
+            33.17
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 46,
+          "averageLeaderAsk": 0.7765,
+          "realizedPnlPerShare": 0.0186
+        },
+        "150-plus": {
+          "observations": 16,
+          "correctPct": 81.25,
+          "reversalPct": 18.75,
+          "reversalWilson95Pct": [
+            6.59,
+            43.01
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 16,
+          "averageLeaderAsk": 0.8263,
+          "realizedPnlPerShare": -0.0231
+        }
+      }
+    },
+    "120": {
+      "binanceOwnOpen": {
+        "0-10": {
+          "observations": 1016,
+          "correctPct": 57.09,
+          "reversalPct": 42.91,
+          "reversalWilson95Pct": [
+            39.9,
+            45.98
+          ],
+          "twapDirectionAgreementPct": 63.98,
+          "pricedObservations": 1016,
+          "averageLeaderAsk": 0.5763,
+          "realizedPnlPerShare": -0.0208
+        },
+        "10-20": {
+          "observations": 717,
+          "correctPct": 66.11,
+          "reversalPct": 33.89,
+          "reversalWilson95Pct": [
+            30.52,
+            37.43
+          ],
+          "twapDirectionAgreementPct": 76.15,
+          "pricedObservations": 717,
+          "averageLeaderAsk": 0.6697,
+          "realizedPnlPerShare": -0.0224
+        },
+        "20-50": {
+          "observations": 1271,
+          "correctPct": 73.33,
+          "reversalPct": 26.67,
+          "reversalWilson95Pct": [
+            24.31,
+            29.17
+          ],
+          "twapDirectionAgreementPct": 85.13,
+          "pricedObservations": 1271,
+          "averageLeaderAsk": 0.7515,
+          "realizedPnlPerShare": -0.0299
+        },
+        "50-100": {
+          "observations": 835,
+          "correctPct": 80.84,
+          "reversalPct": 19.16,
+          "reversalWilson95Pct": [
+            16.64,
+            21.97
+          ],
+          "twapDirectionAgreementPct": 90.54,
+          "pricedObservations": 830,
+          "averageLeaderAsk": 0.8463,
+          "realizedPnlPerShare": -0.0473
+        },
+        "100-150": {
+          "observations": 255,
+          "correctPct": 90.2,
+          "reversalPct": 9.8,
+          "reversalWilson95Pct": [
+            6.73,
+            14.07
+          ],
+          "twapDirectionAgreementPct": 94.9,
+          "pricedObservations": 251,
+          "averageLeaderAsk": 0.9047,
+          "realizedPnlPerShare": -0.0099
+        },
+        "150-plus": {
+          "observations": 112,
+          "correctPct": 94.64,
+          "reversalPct": 5.36,
+          "reversalWilson95Pct": [
+            2.48,
+            11.2
+          ],
+          "twapDirectionAgreementPct": 97.32,
+          "pricedObservations": 103,
+          "averageLeaderAsk": 0.9382,
+          "realizedPnlPerShare": -0.0003
+        }
+      },
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 571,
+          "correctPct": 53.77,
+          "reversalPct": 46.23,
+          "reversalWilson95Pct": [
+            42.18,
+            50.34
+          ],
+          "twapDirectionAgreementPct": 59.02,
+          "pricedObservations": 571,
+          "averageLeaderAsk": 0.5537,
+          "realizedPnlPerShare": -0.0314
+        },
+        "10-20": {
+          "observations": 525,
+          "correctPct": 60.76,
+          "reversalPct": 39.24,
+          "reversalWilson95Pct": [
+            35.15,
+            43.48
+          ],
+          "twapDirectionAgreementPct": 70.1,
+          "pricedObservations": 525,
+          "averageLeaderAsk": 0.6157,
+          "realizedPnlPerShare": -0.0223
+        },
+        "20-50": {
+          "observations": 1277,
+          "correctPct": 65.78,
+          "reversalPct": 34.22,
+          "reversalWilson95Pct": [
+            31.67,
+            36.87
+          ],
+          "twapDirectionAgreementPct": 76.19,
+          "pricedObservations": 1277,
+          "averageLeaderAsk": 0.679,
+          "realizedPnlPerShare": -0.0337
+        },
+        "50-100": {
+          "observations": 1333,
+          "correctPct": 72.47,
+          "reversalPct": 27.53,
+          "reversalWilson95Pct": [
+            25.2,
+            29.99
+          ],
+          "twapDirectionAgreementPct": 80.05,
+          "pricedObservations": 1331,
+          "averageLeaderAsk": 0.7364,
+          "realizedPnlPerShare": -0.0229
+        },
+        "100-150": {
+          "observations": 321,
+          "correctPct": 90.03,
+          "reversalPct": 9.97,
+          "reversalWilson95Pct": [
+            7.15,
+            13.73
+          ],
+          "twapDirectionAgreementPct": 97.51,
+          "pricedObservations": 320,
+          "averageLeaderAsk": 0.9076,
+          "realizedPnlPerShare": -0.0132
+        },
+        "150-plus": {
+          "observations": 179,
+          "correctPct": 95.53,
+          "reversalPct": 4.47,
+          "reversalWilson95Pct": [
+            2.28,
+            8.57
+          ],
+          "twapDirectionAgreementPct": 98.32,
+          "pricedObservations": 164,
+          "averageLeaderAsk": 0.9315,
+          "realizedPnlPerShare": 0.0156
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 1193,
+          "correctPct": 56.08,
+          "reversalPct": 43.92,
+          "reversalWilson95Pct": [
+            41.13,
+            46.75
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1193,
+          "averageLeaderAsk": 0.5835,
+          "realizedPnlPerShare": -0.0376
+        },
+        "10-20": {
+          "observations": 828,
+          "correctPct": 65.46,
+          "reversalPct": 34.54,
+          "reversalWilson95Pct": [
+            31.38,
+            37.84
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 828,
+          "averageLeaderAsk": 0.6828,
+          "realizedPnlPerShare": -0.0414
+        },
+        "20-50": {
+          "observations": 1230,
+          "correctPct": 75.37,
+          "reversalPct": 24.63,
+          "reversalWilson95Pct": [
+            22.31,
+            27.12
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1228,
+          "averageLeaderAsk": 0.7579,
+          "realizedPnlPerShare": -0.0157
+        },
+        "50-100": {
+          "observations": 702,
+          "correctPct": 82.91,
+          "reversalPct": 17.09,
+          "reversalWilson95Pct": [
+            14.49,
+            20.06
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 698,
+          "averageLeaderAsk": 0.846,
+          "realizedPnlPerShare": -0.026
+        },
+        "100-150": {
+          "observations": 166,
+          "correctPct": 89.76,
+          "reversalPct": 10.24,
+          "reversalWilson95Pct": [
+            6.49,
+            15.79
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 161,
+          "averageLeaderAsk": 0.9106,
+          "realizedPnlPerShare": -0.0213
+        },
+        "150-plus": {
+          "observations": 87,
+          "correctPct": 93.1,
+          "reversalPct": 6.9,
+          "reversalWilson95Pct": [
+            3.2,
+            14.24
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 80,
+          "averageLeaderAsk": 0.9194,
+          "realizedPnlPerShare": 0.0008
+        }
+      }
+    },
+    "180": {
+      "binanceOwnOpen": {
+        "0-10": {
+          "observations": 897,
+          "correctPct": 56.63,
+          "reversalPct": 43.37,
+          "reversalWilson95Pct": [
+            40.16,
+            46.63
+          ],
+          "twapDirectionAgreementPct": 64.33,
+          "pricedObservations": 897,
+          "averageLeaderAsk": 0.5968,
+          "realizedPnlPerShare": -0.0443
+        },
+        "10-20": {
+          "observations": 623,
+          "correctPct": 69.82,
+          "reversalPct": 30.18,
+          "reversalWilson95Pct": [
+            26.7,
+            33.89
+          ],
+          "twapDirectionAgreementPct": 77.21,
+          "pricedObservations": 622,
+          "averageLeaderAsk": 0.7164,
+          "realizedPnlPerShare": -0.0303
+        },
+        "20-50": {
+          "observations": 1258,
+          "correctPct": 80.52,
+          "reversalPct": 19.48,
+          "reversalWilson95Pct": [
+            17.38,
+            21.76
+          ],
+          "twapDirectionAgreementPct": 86.8,
+          "pricedObservations": 1251,
+          "averageLeaderAsk": 0.8127,
+          "realizedPnlPerShare": -0.0174
+        },
+        "50-100": {
+          "observations": 879,
+          "correctPct": 88.74,
+          "reversalPct": 11.26,
+          "reversalWilson95Pct": [
+            9.34,
+            13.52
+          ],
+          "twapDirectionAgreementPct": 92.61,
+          "pricedObservations": 794,
+          "averageLeaderAsk": 0.901,
+          "realizedPnlPerShare": -0.0298
+        },
+        "100-150": {
+          "observations": 324,
+          "correctPct": 95.99,
+          "reversalPct": 4.01,
+          "reversalWilson95Pct": [
+            2.36,
+            6.74
+          ],
+          "twapDirectionAgreementPct": 97.84,
+          "pricedObservations": 213,
+          "averageLeaderAsk": 0.9422,
+          "realizedPnlPerShare": -0.0068
+        },
+        "150-plus": {
+          "observations": 211,
+          "correctPct": 97.16,
+          "reversalPct": 2.84,
+          "reversalWilson95Pct": [
+            1.31,
+            6.06
+          ],
+          "twapDirectionAgreementPct": 98.58,
+          "pricedObservations": 89,
+          "averageLeaderAsk": 0.9561,
+          "realizedPnlPerShare": -0.0263
+        }
+      },
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 524,
+          "correctPct": 55.15,
+          "reversalPct": 44.85,
+          "reversalWilson95Pct": [
+            40.64,
+            49.13
+          ],
+          "twapDirectionAgreementPct": 59.35,
+          "pricedObservations": 522,
+          "averageLeaderAsk": 0.5769,
+          "realizedPnlPerShare": -0.041
+        },
+        "10-20": {
+          "observations": 451,
+          "correctPct": 69.18,
+          "reversalPct": 30.82,
+          "reversalWilson95Pct": [
+            26.74,
+            35.23
+          ],
+          "twapDirectionAgreementPct": 69.4,
+          "pricedObservations": 451,
+          "averageLeaderAsk": 0.6499,
+          "realizedPnlPerShare": 0.0295
+        },
+        "20-50": {
+          "observations": 1202,
+          "correctPct": 70.05,
+          "reversalPct": 29.95,
+          "reversalWilson95Pct": [
+            27.43,
+            32.6
+          ],
+          "twapDirectionAgreementPct": 76.29,
+          "pricedObservations": 1196,
+          "averageLeaderAsk": 0.7214,
+          "realizedPnlPerShare": -0.0323
+        },
+        "50-100": {
+          "observations": 1373,
+          "correctPct": 78.81,
+          "reversalPct": 21.19,
+          "reversalWilson95Pct": [
+            19.11,
+            23.44
+          ],
+          "twapDirectionAgreementPct": 83.1,
+          "pricedObservations": 1314,
+          "averageLeaderAsk": 0.7907,
+          "realizedPnlPerShare": -0.0192
+        },
+        "100-150": {
+          "observations": 371,
+          "correctPct": 94.88,
+          "reversalPct": 5.12,
+          "reversalWilson95Pct": [
+            3.3,
+            7.86
+          ],
+          "twapDirectionAgreementPct": 98.65,
+          "pricedObservations": 265,
+          "averageLeaderAsk": 0.9414,
+          "realizedPnlPerShare": -0.0166
+        },
+        "150-plus": {
+          "observations": 271,
+          "correctPct": 97.42,
+          "reversalPct": 2.58,
+          "reversalWilson95Pct": [
+            1.26,
+            5.23
+          ],
+          "twapDirectionAgreementPct": 98.15,
+          "pricedObservations": 119,
+          "averageLeaderAsk": 0.9637,
+          "realizedPnlPerShare": -0.0248
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 987,
+          "correctPct": 58.05,
+          "reversalPct": 41.95,
+          "reversalWilson95Pct": [
+            38.9,
+            45.05
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 985,
+          "averageLeaderAsk": 0.6034,
+          "realizedPnlPerShare": -0.0369
+        },
+        "10-20": {
+          "observations": 674,
+          "correctPct": 70.92,
+          "reversalPct": 29.08,
+          "reversalWilson95Pct": [
+            25.78,
+            32.62
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 673,
+          "averageLeaderAsk": 0.7247,
+          "realizedPnlPerShare": -0.0273
+        },
+        "20-50": {
+          "observations": 1271,
+          "correctPct": 80.09,
+          "reversalPct": 19.91,
+          "reversalWilson95Pct": [
+            17.8,
+            22.19
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1251,
+          "averageLeaderAsk": 0.8102,
+          "realizedPnlPerShare": -0.0211
+        },
+        "50-100": {
+          "observations": 827,
+          "correctPct": 89.84,
+          "reversalPct": 10.16,
+          "reversalWilson95Pct": [
+            8.28,
+            12.4
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 707,
+          "averageLeaderAsk": 0.8993,
+          "realizedPnlPerShare": -0.022
+        },
+        "100-150": {
+          "observations": 259,
+          "correctPct": 93.05,
+          "reversalPct": 6.95,
+          "reversalWilson95Pct": [
+            4.44,
+            10.72
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 166,
+          "averageLeaderAsk": 0.9295,
+          "realizedPnlPerShare": -0.0418
+        },
+        "150-plus": {
+          "observations": 174,
+          "correctPct": 97.7,
+          "reversalPct": 2.3,
+          "reversalWilson95Pct": [
+            0.9,
+            5.76
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 87,
+          "averageLeaderAsk": 0.9463,
+          "realizedPnlPerShare": 0.005
+        }
+      }
+    },
+    "240": {
+      "binanceOwnOpen": {
+        "0-10": {
+          "observations": 807,
+          "correctPct": 63.69,
+          "reversalPct": 36.31,
+          "reversalWilson95Pct": [
+            33.06,
+            39.68
+          ],
+          "twapDirectionAgreementPct": 64.19,
+          "pricedObservations": 795,
+          "averageLeaderAsk": 0.6351,
+          "realizedPnlPerShare": -0.0135
+        },
+        "10-20": {
+          "observations": 574,
+          "correctPct": 80.14,
+          "reversalPct": 19.86,
+          "reversalWilson95Pct": [
+            16.8,
+            23.32
+          ],
+          "twapDirectionAgreementPct": 79.09,
+          "pricedObservations": 533,
+          "averageLeaderAsk": 0.7931,
+          "realizedPnlPerShare": -0.0126
+        },
+        "20-50": {
+          "observations": 1188,
+          "correctPct": 89.73,
+          "reversalPct": 10.27,
+          "reversalWilson95Pct": [
+            8.67,
+            12.13
+          ],
+          "twapDirectionAgreementPct": 87.71,
+          "pricedObservations": 821,
+          "averageLeaderAsk": 0.8585,
+          "realizedPnlPerShare": -0.0124
+        },
+        "50-100": {
+          "observations": 896,
+          "correctPct": 97.21,
+          "reversalPct": 2.79,
+          "reversalWilson95Pct": [
+            1.9,
+            4.09
+          ],
+          "twapDirectionAgreementPct": 93.97,
+          "pricedObservations": 265,
+          "averageLeaderAsk": 0.8945,
+          "realizedPnlPerShare": 0.0067
+        },
+        "100-150": {
+          "observations": 401,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            0.95
+          ],
+          "twapDirectionAgreementPct": 98,
+          "pricedObservations": 47,
+          "averageLeaderAsk": 0.9796,
+          "realizedPnlPerShare": 0.0191
+        },
+        "150-plus": {
+          "observations": 279,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            1.36
+          ],
+          "twapDirectionAgreementPct": 99.64,
+          "pricedObservations": 18,
+          "averageLeaderAsk": 0.9907,
+          "realizedPnlPerShare": 0.0087
+        }
+      },
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 459,
+          "correctPct": 58.82,
+          "reversalPct": 41.18,
+          "reversalWilson95Pct": [
+            36.77,
+            45.73
+          ],
+          "twapDirectionAgreementPct": 59.91,
+          "pricedObservations": 449,
+          "averageLeaderAsk": 0.5705,
+          "realizedPnlPerShare": -0.001
+        },
+        "10-20": {
+          "observations": 389,
+          "correctPct": 74.81,
+          "reversalPct": 25.19,
+          "reversalWilson95Pct": [
+            21.14,
+            29.74
+          ],
+          "twapDirectionAgreementPct": 74.29,
+          "pricedObservations": 360,
+          "averageLeaderAsk": 0.7107,
+          "realizedPnlPerShare": 0.0092
+        },
+        "20-50": {
+          "observations": 1160,
+          "correctPct": 79.66,
+          "reversalPct": 20.34,
+          "reversalWilson95Pct": [
+            18.13,
+            22.76
+          ],
+          "twapDirectionAgreementPct": 77.16,
+          "pricedObservations": 878,
+          "averageLeaderAsk": 0.7371,
+          "realizedPnlPerShare": -0.0126
+        },
+        "50-100": {
+          "observations": 1383,
+          "correctPct": 84.96,
+          "reversalPct": 15.04,
+          "reversalWilson95Pct": [
+            13.25,
+            17.02
+          ],
+          "twapDirectionAgreementPct": 82.86,
+          "pricedObservations": 756,
+          "averageLeaderAsk": 0.7353,
+          "realizedPnlPerShare": -0.0165
+        },
+        "100-150": {
+          "observations": 407,
+          "correctPct": 99.75,
+          "reversalPct": 0.25,
+          "reversalWilson95Pct": [
+            0.04,
+            1.38
+          ],
+          "twapDirectionAgreementPct": 99.51,
+          "pricedObservations": 59,
+          "averageLeaderAsk": 0.9787,
+          "realizedPnlPerShare": 0.0029
+        },
+        "150-plus": {
+          "observations": 347,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            1.09
+          ],
+          "twapDirectionAgreementPct": 99.42,
+          "pricedObservations": 18,
+          "averageLeaderAsk": 0.99,
+          "realizedPnlPerShare": 0.0093
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 865,
+          "correctPct": 69.25,
+          "reversalPct": 30.75,
+          "reversalWilson95Pct": [
+            27.77,
+            33.91
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 848,
+          "averageLeaderAsk": 0.6674,
+          "realizedPnlPerShare": 0.0095
+        },
+        "10-20": {
+          "observations": 583,
+          "correctPct": 79.07,
+          "reversalPct": 20.93,
+          "reversalWilson95Pct": [
+            17.82,
+            24.41
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 541,
+          "averageLeaderAsk": 0.7829,
+          "realizedPnlPerShare": -0.0134
+        },
+        "20-50": {
+          "observations": 1233,
+          "correctPct": 89.05,
+          "reversalPct": 10.95,
+          "reversalWilson95Pct": [
+            9.33,
+            12.81
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 790,
+          "averageLeaderAsk": 0.8407,
+          "realizedPnlPerShare": -0.0173
+        },
+        "50-100": {
+          "observations": 885,
+          "correctPct": 96.5,
+          "reversalPct": 3.5,
+          "reversalWilson95Pct": [
+            2.48,
+            4.93
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 261,
+          "averageLeaderAsk": 0.8853,
+          "realizedPnlPerShare": -0.0086
+        },
+        "100-150": {
+          "observations": 315,
+          "correctPct": 99.37,
+          "reversalPct": 0.63,
+          "reversalWilson95Pct": [
+            0.17,
+            2.29
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 28,
+          "averageLeaderAsk": 0.9185,
+          "realizedPnlPerShare": 0.0058
+        },
+        "150-plus": {
+          "observations": 264,
+          "correctPct": 99.24,
+          "reversalPct": 0.76,
+          "reversalWilson95Pct": [
+            0.21,
+            2.72
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 27,
+          "averageLeaderAsk": 0.9484,
+          "realizedPnlPerShare": -0.025
+        }
+      }
+    },
+    "270": {
+      "binanceOwnOpen": {
+        "0-10": {
+          "observations": 715,
+          "correctPct": 64.06,
+          "reversalPct": 35.94,
+          "reversalWilson95Pct": [
+            32.51,
+            39.53
+          ],
+          "twapDirectionAgreementPct": 62.66,
+          "pricedObservations": 530,
+          "averageLeaderAsk": 0.5466,
+          "realizedPnlPerShare": -0.0374
+        },
+        "10-20": {
+          "observations": 494,
+          "correctPct": 83,
+          "reversalPct": 17,
+          "reversalWilson95Pct": [
+            13.95,
+            20.57
+          ],
+          "twapDirectionAgreementPct": 76.52,
+          "pricedObservations": 214,
+          "averageLeaderAsk": 0.6076,
+          "realizedPnlPerShare": -0.0058
+        },
+        "20-50": {
+          "observations": 1105,
+          "correctPct": 92.58,
+          "reversalPct": 7.42,
+          "reversalWilson95Pct": [
+            6.02,
+            9.12
+          ],
+          "twapDirectionAgreementPct": 88.6,
+          "pricedObservations": 219,
+          "averageLeaderAsk": 0.6497,
+          "realizedPnlPerShare": -0.0296
+        },
+        "50-100": {
+          "observations": 923,
+          "correctPct": 97.62,
+          "reversalPct": 2.38,
+          "reversalWilson95Pct": [
+            1.58,
+            3.58
+          ],
+          "twapDirectionAgreementPct": 94.91,
+          "pricedObservations": 48,
+          "averageLeaderAsk": 0.6606,
+          "realizedPnlPerShare": -0.0824
+        },
+        "100-150": {
+          "observations": 387,
+          "correctPct": 99.74,
+          "reversalPct": 0.26,
+          "reversalWilson95Pct": [
+            0.05,
+            1.45
+          ],
+          "twapDirectionAgreementPct": 97.42,
+          "pricedObservations": 7,
+          "averageLeaderAsk": 0.8199,
+          "realizedPnlPerShare": 0.035
+        },
+        "150-plus": {
+          "observations": 318,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            1.19
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 0,
+          "averageLeaderAsk": 0,
+          "realizedPnlPerShare": 0
+        }
+      },
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 408,
+          "correctPct": 62.99,
+          "reversalPct": 37.01,
+          "reversalWilson95Pct": [
+            32.47,
+            41.8
+          ],
+          "twapDirectionAgreementPct": 59.8,
+          "pricedObservations": 281,
+          "averageLeaderAsk": 0.465,
+          "realizedPnlPerShare": -0.0078
+        },
+        "10-20": {
+          "observations": 403,
+          "correctPct": 77.92,
+          "reversalPct": 22.08,
+          "reversalWilson95Pct": [
+            18.31,
+            26.39
+          ],
+          "twapDirectionAgreementPct": 73.7,
+          "pricedObservations": 172,
+          "averageLeaderAsk": 0.4908,
+          "realizedPnlPerShare": -0.0081
+        },
+        "20-50": {
+          "observations": 1082,
+          "correctPct": 86.51,
+          "reversalPct": 13.49,
+          "reversalWilson95Pct": [
+            11.59,
+            15.66
+          ],
+          "twapDirectionAgreementPct": 82.72,
+          "pricedObservations": 298,
+          "averageLeaderAsk": 0.5247,
+          "realizedPnlPerShare": -0.0168
+        },
+        "50-100": {
+          "observations": 1289,
+          "correctPct": 86.81,
+          "reversalPct": 13.19,
+          "reversalWilson95Pct": [
+            11.45,
+            15.15
+          ],
+          "twapDirectionAgreementPct": 83.4,
+          "pricedObservations": 341,
+          "averageLeaderAsk": 0.5176,
+          "realizedPnlPerShare": -0.0212
+        },
+        "100-150": {
+          "observations": 395,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            0.96
+          ],
+          "twapDirectionAgreementPct": 99.24,
+          "pricedObservations": 2,
+          "averageLeaderAsk": 0.9945,
+          "realizedPnlPerShare": 0.0051
+        },
+        "150-plus": {
+          "observations": 365,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            1.04
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1,
+          "averageLeaderAsk": 0.999,
+          "realizedPnlPerShare": 0.0009
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 791,
+          "correctPct": 75.22,
+          "reversalPct": 24.78,
+          "reversalWilson95Pct": [
+            21.9,
+            27.9
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 577,
+          "averageLeaderAsk": 0.6837,
+          "realizedPnlPerShare": -0.0295
+        },
+        "10-20": {
+          "observations": 529,
+          "correctPct": 87.33,
+          "reversalPct": 12.67,
+          "reversalWilson95Pct": [
+            10.1,
+            15.77
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 207,
+          "averageLeaderAsk": 0.7035,
+          "realizedPnlPerShare": -0.0275
+        },
+        "20-50": {
+          "observations": 1127,
+          "correctPct": 96.45,
+          "reversalPct": 3.55,
+          "reversalWilson95Pct": [
+            2.62,
+            4.8
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 146,
+          "averageLeaderAsk": 0.7143,
+          "realizedPnlPerShare": 0.0121
+        },
+        "50-100": {
+          "observations": 876,
+          "correctPct": 98.97,
+          "reversalPct": 1.03,
+          "reversalWilson95Pct": [
+            0.54,
+            1.94
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 33,
+          "averageLeaderAsk": 0.6898,
+          "realizedPnlPerShare": 0.0337
+        },
+        "100-150": {
+          "observations": 341,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            1.11
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 3,
+          "averageLeaderAsk": 0.9493,
+          "realizedPnlPerShare": 0.0476
+        },
+        "150-plus": {
+          "observations": 278,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            1.36
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 2,
+          "averageLeaderAsk": 0.9545,
+          "realizedPnlPerShare": 0.0426
+        }
+      }
+    }
+  },
+  "sessionAt180": {
+    "utc00_04": {
+      "label": "Asia morning / US evening",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 82,
+          "correctPct": 59.76,
+          "reversalPct": 40.24,
+          "reversalWilson95Pct": [
+            30.3,
+            51.06
+          ],
+          "twapDirectionAgreementPct": 58.54,
+          "pricedObservations": 82,
+          "averageLeaderAsk": 0.5877,
+          "realizedPnlPerShare": -0.004
+        },
+        "10-20": {
+          "observations": 74,
+          "correctPct": 67.57,
+          "reversalPct": 32.43,
+          "reversalWilson95Pct": [
+            22.86,
+            43.73
+          ],
+          "twapDirectionAgreementPct": 64.86,
+          "pricedObservations": 74,
+          "averageLeaderAsk": 0.6714,
+          "realizedPnlPerShare": -0.0075
+        },
+        "20-50": {
+          "observations": 222,
+          "correctPct": 69.37,
+          "reversalPct": 30.63,
+          "reversalWilson95Pct": [
+            24.94,
+            36.98
+          ],
+          "twapDirectionAgreementPct": 73.87,
+          "pricedObservations": 221,
+          "averageLeaderAsk": 0.7273,
+          "realizedPnlPerShare": -0.0452
+        },
+        "50-100": {
+          "observations": 201,
+          "correctPct": 78.61,
+          "reversalPct": 21.39,
+          "reversalWilson95Pct": [
+            16.29,
+            27.57
+          ],
+          "twapDirectionAgreementPct": 81.09,
+          "pricedObservations": 194,
+          "averageLeaderAsk": 0.7885,
+          "realizedPnlPerShare": -0.0179
+        },
+        "100-150": {
+          "observations": 44,
+          "correctPct": 95.45,
+          "reversalPct": 4.55,
+          "reversalWilson95Pct": [
+            1.26,
+            15.14
+          ],
+          "twapDirectionAgreementPct": 97.73,
+          "pricedObservations": 30,
+          "averageLeaderAsk": 0.9675,
+          "realizedPnlPerShare": -0.0363
+        },
+        "150-plus": {
+          "observations": 34,
+          "correctPct": 97.06,
+          "reversalPct": 2.94,
+          "reversalWilson95Pct": [
+            0.52,
+            14.92
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 11,
+          "averageLeaderAsk": 0.9753,
+          "realizedPnlPerShare": -0.0678
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 150,
+          "correctPct": 62.67,
+          "reversalPct": 37.33,
+          "reversalWilson95Pct": [
+            30,
+            45.3
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 150,
+          "averageLeaderAsk": 0.5731,
+          "realizedPnlPerShare": 0.0405
+        },
+        "10-20": {
+          "observations": 124,
+          "correctPct": 70.16,
+          "reversalPct": 29.84,
+          "reversalWilson95Pct": [
+            22.49,
+            38.4
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 124,
+          "averageLeaderAsk": 0.7139,
+          "realizedPnlPerShare": -0.0236
+        },
+        "20-50": {
+          "observations": 197,
+          "correctPct": 76.14,
+          "reversalPct": 23.86,
+          "reversalWilson95Pct": [
+            18.44,
+            30.27
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 196,
+          "averageLeaderAsk": 0.8056,
+          "realizedPnlPerShare": -0.0542
+        },
+        "50-100": {
+          "observations": 126,
+          "correctPct": 91.27,
+          "reversalPct": 8.73,
+          "reversalWilson95Pct": [
+            4.94,
+            14.96
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 110,
+          "averageLeaderAsk": 0.8963,
+          "realizedPnlPerShare": -0.002
+        },
+        "100-150": {
+          "observations": 44,
+          "correctPct": 95.45,
+          "reversalPct": 4.55,
+          "reversalWilson95Pct": [
+            1.26,
+            15.14
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 25,
+          "averageLeaderAsk": 0.939,
+          "realizedPnlPerShare": -0.0226
+        },
+        "150-plus": {
+          "observations": 16,
+          "correctPct": 93.75,
+          "reversalPct": 6.25,
+          "reversalWilson95Pct": [
+            1.11,
+            28.33
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 8,
+          "averageLeaderAsk": 0.9697,
+          "realizedPnlPerShare": -0.0968
+        }
+      }
+    },
+    "utc04_08": {
+      "label": "Asia afternoon / US midnight",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 95,
+          "correctPct": 47.37,
+          "reversalPct": 52.63,
+          "reversalWilson95Pct": [
+            42.69,
+            62.37
+          ],
+          "twapDirectionAgreementPct": 62.11,
+          "pricedObservations": 95,
+          "averageLeaderAsk": 0.6029,
+          "realizedPnlPerShare": -0.1418
+        },
+        "10-20": {
+          "observations": 74,
+          "correctPct": 72.97,
+          "reversalPct": 27.03,
+          "reversalWilson95Pct": [
+            18.23,
+            38.09
+          ],
+          "twapDirectionAgreementPct": 68.92,
+          "pricedObservations": 74,
+          "averageLeaderAsk": 0.6623,
+          "realizedPnlPerShare": 0.0558
+        },
+        "20-50": {
+          "observations": 180,
+          "correctPct": 74.44,
+          "reversalPct": 25.56,
+          "reversalWilson95Pct": [
+            19.74,
+            32.39
+          ],
+          "twapDirectionAgreementPct": 70,
+          "pricedObservations": 177,
+          "averageLeaderAsk": 0.6999,
+          "realizedPnlPerShare": 0.0308
+        },
+        "50-100": {
+          "observations": 219,
+          "correctPct": 80.37,
+          "reversalPct": 19.63,
+          "reversalWilson95Pct": [
+            14.92,
+            25.4
+          ],
+          "twapDirectionAgreementPct": 84.47,
+          "pricedObservations": 205,
+          "averageLeaderAsk": 0.7809,
+          "realizedPnlPerShare": 0.0012
+        },
+        "100-150": {
+          "observations": 45,
+          "correctPct": 97.78,
+          "reversalPct": 2.22,
+          "reversalWilson95Pct": [
+            0.39,
+            11.57
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 21,
+          "averageLeaderAsk": 0.9538,
+          "realizedPnlPerShare": -0.0043
+        },
+        "150-plus": {
+          "observations": 21,
+          "correctPct": 90.48,
+          "reversalPct": 9.52,
+          "reversalWilson95Pct": [
+            2.65,
+            28.91
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 6,
+          "averageLeaderAsk": 0.9697,
+          "realizedPnlPerShare": -0.305
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 178,
+          "correctPct": 60.11,
+          "reversalPct": 39.89,
+          "reversalWilson95Pct": [
+            32.98,
+            47.22
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 178,
+          "averageLeaderAsk": 0.6166,
+          "realizedPnlPerShare": -0.0286
+        },
+        "10-20": {
+          "observations": 105,
+          "correctPct": 76.19,
+          "reversalPct": 23.81,
+          "reversalWilson95Pct": [
+            16.68,
+            32.79
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 105,
+          "averageLeaderAsk": 0.7483,
+          "realizedPnlPerShare": 0.003
+        },
+        "20-50": {
+          "observations": 192,
+          "correctPct": 85.42,
+          "reversalPct": 14.58,
+          "reversalWilson95Pct": [
+            10.29,
+            20.27
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 189,
+          "averageLeaderAsk": 0.8361,
+          "realizedPnlPerShare": 0.0076
+        },
+        "50-100": {
+          "observations": 121,
+          "correctPct": 92.56,
+          "reversalPct": 7.44,
+          "reversalWilson95Pct": [
+            3.96,
+            13.53
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 87,
+          "averageLeaderAsk": 0.9282,
+          "realizedPnlPerShare": -0.0358
+        },
+        "100-150": {
+          "observations": 24,
+          "correctPct": 91.67,
+          "reversalPct": 8.33,
+          "reversalWilson95Pct": [
+            2.32,
+            25.85
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 14,
+          "averageLeaderAsk": 0.955,
+          "realizedPnlPerShare": -0.1007
+        },
+        "150-plus": {
+          "observations": 14,
+          "correctPct": 85.71,
+          "reversalPct": 14.29,
+          "reversalWilson95Pct": [
+            4.01,
+            39.94
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 5,
+          "averageLeaderAsk": 0.9236,
+          "realizedPnlPerShare": -0.3279
+        }
+      }
+    },
+    "utc08_12": {
+      "label": "Europe morning / US premarket",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 85,
+          "correctPct": 51.76,
+          "reversalPct": 48.24,
+          "reversalWilson95Pct": [
+            37.92,
+            58.7
+          ],
+          "twapDirectionAgreementPct": 58.82,
+          "pricedObservations": 84,
+          "averageLeaderAsk": 0.5867,
+          "realizedPnlPerShare": -0.0882
+        },
+        "10-20": {
+          "observations": 77,
+          "correctPct": 70.13,
+          "reversalPct": 29.87,
+          "reversalWilson95Pct": [
+            20.8,
+            40.85
+          ],
+          "twapDirectionAgreementPct": 70.13,
+          "pricedObservations": 77,
+          "averageLeaderAsk": 0.6447,
+          "realizedPnlPerShare": 0.0447
+        },
+        "20-50": {
+          "observations": 201,
+          "correctPct": 70.65,
+          "reversalPct": 29.35,
+          "reversalWilson95Pct": [
+            23.49,
+            35.99
+          ],
+          "twapDirectionAgreementPct": 80.1,
+          "pricedObservations": 200,
+          "averageLeaderAsk": 0.7452,
+          "realizedPnlPerShare": -0.0496
+        },
+        "50-100": {
+          "observations": 245,
+          "correctPct": 80.41,
+          "reversalPct": 19.59,
+          "reversalWilson95Pct": [
+            15.11,
+            25.02
+          ],
+          "twapDirectionAgreementPct": 81.22,
+          "pricedObservations": 231,
+          "averageLeaderAsk": 0.7792,
+          "realizedPnlPerShare": 0.0053
+        },
+        "100-150": {
+          "observations": 71,
+          "correctPct": 92.96,
+          "reversalPct": 7.04,
+          "reversalWilson95Pct": [
+            3.05,
+            15.45
+          ],
+          "twapDirectionAgreementPct": 97.18,
+          "pricedObservations": 50,
+          "averageLeaderAsk": 0.9484,
+          "realizedPnlPerShare": -0.0513
+        },
+        "150-plus": {
+          "observations": 48,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            7.41
+          ],
+          "twapDirectionAgreementPct": 95.83,
+          "pricedObservations": 19,
+          "averageLeaderAsk": 0.9651,
+          "realizedPnlPerShare": 0.0327
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 167,
+          "correctPct": 52.1,
+          "reversalPct": 47.9,
+          "reversalWilson95Pct": [
+            40.46,
+            55.44
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 167,
+          "averageLeaderAsk": 0.6171,
+          "realizedPnlPerShare": -0.1091
+        },
+        "10-20": {
+          "observations": 123,
+          "correctPct": 73.98,
+          "reversalPct": 26.02,
+          "reversalWilson95Pct": [
+            19.07,
+            34.41
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 123,
+          "averageLeaderAsk": 0.7574,
+          "realizedPnlPerShare": -0.0282
+        },
+        "20-50": {
+          "observations": 221,
+          "correctPct": 78.73,
+          "reversalPct": 21.27,
+          "reversalWilson95Pct": [
+            16.39,
+            27.13
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 217,
+          "averageLeaderAsk": 0.8153,
+          "realizedPnlPerShare": -0.04
+        },
+        "50-100": {
+          "observations": 142,
+          "correctPct": 92.96,
+          "reversalPct": 7.04,
+          "reversalWilson95Pct": [
+            3.87,
+            12.48
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 118,
+          "averageLeaderAsk": 0.9093,
+          "realizedPnlPerShare": 0.0009
+        },
+        "100-150": {
+          "observations": 44,
+          "correctPct": 95.45,
+          "reversalPct": 4.55,
+          "reversalWilson95Pct": [
+            1.26,
+            15.14
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 23,
+          "averageLeaderAsk": 0.9804,
+          "realizedPnlPerShare": -0.0687
+        },
+        "150-plus": {
+          "observations": 30,
+          "correctPct": 96.67,
+          "reversalPct": 3.33,
+          "reversalWilson95Pct": [
+            0.59,
+            16.67
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 13,
+          "averageLeaderAsk": 0.9028,
+          "realizedPnlPerShare": 0.0181
+        }
+      }
+    },
+    "utc12_16": {
+      "label": "US morning",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 85,
+          "correctPct": 58.82,
+          "reversalPct": 41.18,
+          "reversalWilson95Pct": [
+            31.32,
+            51.8
+          ],
+          "twapDirectionAgreementPct": 58.82,
+          "pricedObservations": 85,
+          "averageLeaderAsk": 0.5476,
+          "realizedPnlPerShare": 0.0261
+        },
+        "10-20": {
+          "observations": 50,
+          "correctPct": 66,
+          "reversalPct": 34,
+          "reversalWilson95Pct": [
+            22.44,
+            47.85
+          ],
+          "twapDirectionAgreementPct": 58,
+          "pricedObservations": 50,
+          "averageLeaderAsk": 0.5884,
+          "realizedPnlPerShare": 0.0582
+        },
+        "20-50": {
+          "observations": 168,
+          "correctPct": 63.69,
+          "reversalPct": 36.31,
+          "reversalWilson95Pct": [
+            29.42,
+            43.81
+          ],
+          "twapDirectionAgreementPct": 76.79,
+          "pricedObservations": 168,
+          "averageLeaderAsk": 0.6877,
+          "realizedPnlPerShare": -0.0616
+        },
+        "50-100": {
+          "observations": 265,
+          "correctPct": 70.94,
+          "reversalPct": 29.06,
+          "reversalWilson95Pct": [
+            23.92,
+            34.79
+          ],
+          "twapDirectionAgreementPct": 80.75,
+          "pricedObservations": 260,
+          "averageLeaderAsk": 0.7566,
+          "realizedPnlPerShare": -0.0621
+        },
+        "100-150": {
+          "observations": 102,
+          "correctPct": 91.18,
+          "reversalPct": 8.82,
+          "reversalWilson95Pct": [
+            4.71,
+            15.92
+          ],
+          "twapDirectionAgreementPct": 99.02,
+          "pricedObservations": 94,
+          "averageLeaderAsk": 0.9154,
+          "realizedPnlPerShare": -0.0162
+        },
+        "150-plus": {
+          "observations": 96,
+          "correctPct": 96.88,
+          "reversalPct": 3.13,
+          "reversalWilson95Pct": [
+            1.07,
+            8.79
+          ],
+          "twapDirectionAgreementPct": 96.88,
+          "pricedObservations": 56,
+          "averageLeaderAsk": 0.9561,
+          "realizedPnlPerShare": -0.0124
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 159,
+          "correctPct": 57.86,
+          "reversalPct": 42.14,
+          "reversalWilson95Pct": [
+            34.74,
+            49.91
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 158,
+          "averageLeaderAsk": 0.6027,
+          "realizedPnlPerShare": -0.0398
+        },
+        "10-20": {
+          "observations": 91,
+          "correctPct": 62.64,
+          "reversalPct": 37.36,
+          "reversalWilson95Pct": [
+            28.12,
+            47.62
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 90,
+          "averageLeaderAsk": 0.6833,
+          "realizedPnlPerShare": -0.0738
+        },
+        "20-50": {
+          "observations": 216,
+          "correctPct": 76.85,
+          "reversalPct": 23.15,
+          "reversalWilson95Pct": [
+            18.02,
+            29.21
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 213,
+          "averageLeaderAsk": 0.7774,
+          "realizedPnlPerShare": -0.0221
+        },
+        "50-100": {
+          "observations": 163,
+          "correctPct": 84.05,
+          "reversalPct": 15.95,
+          "reversalWilson95Pct": [
+            11.12,
+            22.35
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 154,
+          "averageLeaderAsk": 0.8739,
+          "realizedPnlPerShare": -0.049
+        },
+        "100-150": {
+          "observations": 69,
+          "correctPct": 86.96,
+          "reversalPct": 13.04,
+          "reversalWilson95Pct": [
+            7.02,
+            22.97
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 56,
+          "averageLeaderAsk": 0.8893,
+          "realizedPnlPerShare": -0.0556
+        },
+        "150-plus": {
+          "observations": 68,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            5.35
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 43,
+          "averageLeaderAsk": 0.9428,
+          "realizedPnlPerShare": 0.0537
+        }
+      }
+    },
+    "utc16_20": {
+      "label": "US afternoon",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 88,
+          "correctPct": 52.27,
+          "reversalPct": 47.73,
+          "reversalWilson95Pct": [
+            37.61,
+            58.04
+          ],
+          "twapDirectionAgreementPct": 52.27,
+          "pricedObservations": 87,
+          "averageLeaderAsk": 0.5476,
+          "realizedPnlPerShare": -0.0451
+        },
+        "10-20": {
+          "observations": 88,
+          "correctPct": 68.18,
+          "reversalPct": 31.82,
+          "reversalWilson95Pct": [
+            23.02,
+            42.13
+          ],
+          "twapDirectionAgreementPct": 77.27,
+          "pricedObservations": 88,
+          "averageLeaderAsk": 0.6591,
+          "realizedPnlPerShare": 0.0094
+        },
+        "20-50": {
+          "observations": 206,
+          "correctPct": 66.5,
+          "reversalPct": 33.5,
+          "reversalWilson95Pct": [
+            27.4,
+            40.19
+          ],
+          "twapDirectionAgreementPct": 75.73,
+          "pricedObservations": 206,
+          "averageLeaderAsk": 0.7116,
+          "realizedPnlPerShare": -0.0569
+        },
+        "50-100": {
+          "observations": 221,
+          "correctPct": 79.64,
+          "reversalPct": 20.36,
+          "reversalWilson95Pct": [
+            15.58,
+            26.16
+          ],
+          "twapDirectionAgreementPct": 87.78,
+          "pricedObservations": 218,
+          "averageLeaderAsk": 0.8167,
+          "realizedPnlPerShare": -0.03
+        },
+        "100-150": {
+          "observations": 66,
+          "correctPct": 96.97,
+          "reversalPct": 3.03,
+          "reversalWilson95Pct": [
+            0.83,
+            10.39
+          ],
+          "twapDirectionAgreementPct": 98.48,
+          "pricedObservations": 44,
+          "averageLeaderAsk": 0.9568,
+          "realizedPnlPerShare": -0.0051
+        },
+        "150-plus": {
+          "observations": 48,
+          "correctPct": 97.92,
+          "reversalPct": 2.08,
+          "reversalWilson95Pct": [
+            0.37,
+            10.9
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 18,
+          "averageLeaderAsk": 0.966,
+          "realizedPnlPerShare": -0.0238
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 161,
+          "correctPct": 55.28,
+          "reversalPct": 44.72,
+          "reversalWilson95Pct": [
+            37.25,
+            52.43
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 161,
+          "averageLeaderAsk": 0.6134,
+          "realizedPnlPerShare": -0.0744
+        },
+        "10-20": {
+          "observations": 109,
+          "correctPct": 70.64,
+          "reversalPct": 29.36,
+          "reversalWilson95Pct": [
+            21.63,
+            38.49
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 109,
+          "averageLeaderAsk": 0.7157,
+          "realizedPnlPerShare": -0.0205
+        },
+        "20-50": {
+          "observations": 234,
+          "correctPct": 80.34,
+          "reversalPct": 19.66,
+          "reversalWilson95Pct": [
+            15.07,
+            25.22
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 230,
+          "averageLeaderAsk": 0.8076,
+          "realizedPnlPerShare": -0.0164
+        },
+        "50-100": {
+          "observations": 136,
+          "correctPct": 85.29,
+          "reversalPct": 14.71,
+          "reversalWilson95Pct": [
+            9.73,
+            21.63
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 120,
+          "averageLeaderAsk": 0.8941,
+          "realizedPnlPerShare": -0.0663
+        },
+        "100-150": {
+          "observations": 46,
+          "correctPct": 93.48,
+          "reversalPct": 6.52,
+          "reversalWilson95Pct": [
+            2.24,
+            17.5
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 29,
+          "averageLeaderAsk": 0.9397,
+          "realizedPnlPerShare": -0.0467
+        },
+        "150-plus": {
+          "observations": 31,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            11.03
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 12,
+          "averageLeaderAsk": 0.9765,
+          "realizedPnlPerShare": 0.0219
+        }
+      }
+    },
+    "utc20_24": {
+      "label": "US evening / Asia open",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 89,
+          "correctPct": 61.8,
+          "reversalPct": 38.2,
+          "reversalWilson95Pct": [
+            28.79,
+            48.59
+          ],
+          "twapDirectionAgreementPct": 65.17,
+          "pricedObservations": 89,
+          "averageLeaderAsk": 0.5866,
+          "realizedPnlPerShare": 0.0168
+        },
+        "10-20": {
+          "observations": 88,
+          "correctPct": 69.32,
+          "reversalPct": 30.68,
+          "reversalWilson95Pct": [
+            22.02,
+            40.96
+          ],
+          "twapDirectionAgreementPct": 71.59,
+          "pricedObservations": 88,
+          "averageLeaderAsk": 0.6517,
+          "realizedPnlPerShare": 0.0288
+        },
+        "20-50": {
+          "observations": 225,
+          "correctPct": 74.67,
+          "reversalPct": 25.33,
+          "reversalWilson95Pct": [
+            20.1,
+            31.4
+          ],
+          "twapDirectionAgreementPct": 80.44,
+          "pricedObservations": 224,
+          "averageLeaderAsk": 0.7454,
+          "realizedPnlPerShare": -0.0095
+        },
+        "50-100": {
+          "observations": 222,
+          "correctPct": 84.23,
+          "reversalPct": 15.77,
+          "reversalWilson95Pct": [
+            11.56,
+            21.14
+          ],
+          "twapDirectionAgreementPct": 83.78,
+          "pricedObservations": 206,
+          "averageLeaderAsk": 0.8308,
+          "realizedPnlPerShare": -0.0028
+        },
+        "100-150": {
+          "observations": 43,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            8.2
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 26,
+          "averageLeaderAsk": 0.9561,
+          "realizedPnlPerShare": 0.0416
+        },
+        "150-plus": {
+          "observations": 24,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            13.8
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 9,
+          "averageLeaderAsk": 0.9853,
+          "realizedPnlPerShare": 0.0137
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 172,
+          "correctPct": 60.47,
+          "reversalPct": 39.53,
+          "reversalWilson95Pct": [
+            32.53,
+            46.99
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 171,
+          "averageLeaderAsk": 0.5939,
+          "realizedPnlPerShare": -0.0051
+        },
+        "10-20": {
+          "observations": 122,
+          "correctPct": 70.49,
+          "reversalPct": 29.51,
+          "reversalWilson95Pct": [
+            22.14,
+            38.13
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 122,
+          "averageLeaderAsk": 0.7213,
+          "realizedPnlPerShare": -0.0278
+        },
+        "20-50": {
+          "observations": 211,
+          "correctPct": 83.41,
+          "reversalPct": 16.59,
+          "reversalWilson95Pct": [
+            12.18,
+            22.19
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 206,
+          "averageLeaderAsk": 0.822,
+          "realizedPnlPerShare": -0.0003
+        },
+        "50-100": {
+          "observations": 139,
+          "correctPct": 94.24,
+          "reversalPct": 5.76,
+          "reversalWilson95Pct": [
+            2.94,
+            10.95
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 118,
+          "averageLeaderAsk": 0.9089,
+          "realizedPnlPerShare": 0.0269
+        },
+        "100-150": {
+          "observations": 32,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            10.72
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 19,
+          "averageLeaderAsk": 0.9399,
+          "realizedPnlPerShare": 0.0569
+        },
+        "150-plus": {
+          "observations": 15,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            20.39
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 6,
+          "averageLeaderAsk": 0.993,
+          "realizedPnlPerShare": 0.0065
+        }
+      }
+    }
+  },
+  "stabilityAt180": {
+    "early": {
+      "range": "before 2026-08-27",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 178,
+          "correctPct": 48.88,
+          "reversalPct": 51.12,
+          "reversalWilson95Pct": [
+            43.83,
+            58.37
+          ],
+          "twapDirectionAgreementPct": 56.18,
+          "pricedObservations": 176,
+          "averageLeaderAsk": 0.5515,
+          "realizedPnlPerShare": -0.0837
+        },
+        "10-20": {
+          "observations": 176,
+          "correctPct": 65.34,
+          "reversalPct": 34.66,
+          "reversalWilson95Pct": [
+            28.02,
+            41.95
+          ],
+          "twapDirectionAgreementPct": 69.89,
+          "pricedObservations": 176,
+          "averageLeaderAsk": 0.6064,
+          "realizedPnlPerShare": 0.0332
+        },
+        "20-50": {
+          "observations": 578,
+          "correctPct": 62.46,
+          "reversalPct": 37.54,
+          "reversalWilson95Pct": [
+            33.69,
+            41.56
+          ],
+          "twapDirectionAgreementPct": 70.42,
+          "pricedObservations": 578,
+          "averageLeaderAsk": 0.6469,
+          "realizedPnlPerShare": -0.0332
+        },
+        "50-100": {
+          "observations": 886,
+          "correctPct": 72.35,
+          "reversalPct": 27.65,
+          "reversalWilson95Pct": [
+            24.81,
+            30.69
+          ],
+          "twapDirectionAgreementPct": 76.75,
+          "pricedObservations": 874,
+          "averageLeaderAsk": 0.7353,
+          "realizedPnlPerShare": -0.0246
+        },
+        "100-150": {
+          "observations": 196,
+          "correctPct": 93.37,
+          "reversalPct": 6.63,
+          "reversalWilson95Pct": [
+            3.92,
+            11.02
+          ],
+          "twapDirectionAgreementPct": 97.96,
+          "pricedObservations": 155,
+          "averageLeaderAsk": 0.9287,
+          "realizedPnlPerShare": -0.0168
+        },
+        "150-plus": {
+          "observations": 159,
+          "correctPct": 96.86,
+          "reversalPct": 3.14,
+          "reversalWilson95Pct": [
+            1.35,
+            7.15
+          ],
+          "twapDirectionAgreementPct": 98.11,
+          "pricedObservations": 77,
+          "averageLeaderAsk": 0.9538,
+          "realizedPnlPerShare": -0.0217
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 568,
+          "correctPct": 58.98,
+          "reversalPct": 41.02,
+          "reversalWilson95Pct": [
+            37.05,
+            45.11
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 567,
+          "averageLeaderAsk": 0.6176,
+          "realizedPnlPerShare": -0.042
+        },
+        "10-20": {
+          "observations": 331,
+          "correctPct": 71.9,
+          "reversalPct": 28.1,
+          "reversalWilson95Pct": [
+            23.53,
+            33.17
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 330,
+          "averageLeaderAsk": 0.7429,
+          "realizedPnlPerShare": -0.0358
+        },
+        "20-50": {
+          "observations": 616,
+          "correctPct": 78.08,
+          "reversalPct": 21.92,
+          "reversalWilson95Pct": [
+            18.83,
+            25.35
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 607,
+          "averageLeaderAsk": 0.7924,
+          "realizedPnlPerShare": -0.0243
+        },
+        "50-100": {
+          "observations": 429,
+          "correctPct": 87.18,
+          "reversalPct": 12.82,
+          "reversalWilson95Pct": [
+            9.98,
+            16.32
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 389,
+          "averageLeaderAsk": 0.8867,
+          "realizedPnlPerShare": -0.0341
+        },
+        "100-150": {
+          "observations": 125,
+          "correctPct": 91.2,
+          "reversalPct": 8.8,
+          "reversalWilson95Pct": [
+            4.98,
+            15.07
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 87,
+          "averageLeaderAsk": 0.9222,
+          "realizedPnlPerShare": -0.0531
+        },
+        "150-plus": {
+          "observations": 104,
+          "correctPct": 96.15,
+          "reversalPct": 3.85,
+          "reversalWilson95Pct": [
+            1.51,
+            9.47
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 57,
+          "averageLeaderAsk": 0.9331,
+          "realizedPnlPerShare": -0.0065
+        }
+      }
+    },
+    "late": {
+      "range": "2026-08-27 onward",
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 346,
+          "correctPct": 58.38,
+          "reversalPct": 41.62,
+          "reversalWilson95Pct": [
+            36.54,
+            46.88
+          ],
+          "twapDirectionAgreementPct": 60.98,
+          "pricedObservations": 346,
+          "averageLeaderAsk": 0.5898,
+          "realizedPnlPerShare": -0.0193
+        },
+        "10-20": {
+          "observations": 275,
+          "correctPct": 71.64,
+          "reversalPct": 28.36,
+          "reversalWilson95Pct": [
+            23.36,
+            33.96
+          ],
+          "twapDirectionAgreementPct": 69.09,
+          "pricedObservations": 275,
+          "averageLeaderAsk": 0.6777,
+          "realizedPnlPerShare": 0.0271
+        },
+        "20-50": {
+          "observations": 624,
+          "correctPct": 77.08,
+          "reversalPct": 22.92,
+          "reversalWilson95Pct": [
+            19.79,
+            26.37
+          ],
+          "twapDirectionAgreementPct": 81.73,
+          "pricedObservations": 618,
+          "averageLeaderAsk": 0.791,
+          "realizedPnlPerShare": -0.0315
+        },
+        "50-100": {
+          "observations": 487,
+          "correctPct": 90.55,
+          "reversalPct": 9.45,
+          "reversalWilson95Pct": [
+            7.16,
+            12.37
+          ],
+          "twapDirectionAgreementPct": 94.66,
+          "pricedObservations": 440,
+          "averageLeaderAsk": 0.9006,
+          "realizedPnlPerShare": -0.0085
+        },
+        "100-150": {
+          "observations": 175,
+          "correctPct": 96.57,
+          "reversalPct": 3.43,
+          "reversalWilson95Pct": [
+            1.58,
+            7.28
+          ],
+          "twapDirectionAgreementPct": 99.43,
+          "pricedObservations": 110,
+          "averageLeaderAsk": 0.9593,
+          "realizedPnlPerShare": -0.0164
+        },
+        "150-plus": {
+          "observations": 112,
+          "correctPct": 98.21,
+          "reversalPct": 1.79,
+          "reversalWilson95Pct": [
+            0.49,
+            6.28
+          ],
+          "twapDirectionAgreementPct": 98.21,
+          "pricedObservations": 42,
+          "averageLeaderAsk": 0.9817,
+          "realizedPnlPerShare": -0.0306
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 419,
+          "correctPct": 56.8,
+          "reversalPct": 43.2,
+          "reversalWilson95Pct": [
+            38.54,
+            47.98
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 418,
+          "averageLeaderAsk": 0.5841,
+          "realizedPnlPerShare": -0.0301
+        },
+        "10-20": {
+          "observations": 343,
+          "correctPct": 69.97,
+          "reversalPct": 30.03,
+          "reversalWilson95Pct": [
+            25.42,
+            35.08
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 343,
+          "averageLeaderAsk": 0.7073,
+          "realizedPnlPerShare": -0.0191
+        },
+        "20-50": {
+          "observations": 655,
+          "correctPct": 81.98,
+          "reversalPct": 18.02,
+          "reversalWilson95Pct": [
+            15.26,
+            21.14
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 644,
+          "averageLeaderAsk": 0.8269,
+          "realizedPnlPerShare": -0.0181
+        },
+        "50-100": {
+          "observations": 398,
+          "correctPct": 92.71,
+          "reversalPct": 7.29,
+          "reversalWilson95Pct": [
+            5.12,
+            10.27
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 318,
+          "averageLeaderAsk": 0.9146,
+          "realizedPnlPerShare": -0.0072
+        },
+        "100-150": {
+          "observations": 134,
+          "correctPct": 94.78,
+          "reversalPct": 5.22,
+          "reversalWilson95Pct": [
+            2.55,
+            10.39
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 79,
+          "averageLeaderAsk": 0.9375,
+          "realizedPnlPerShare": -0.0294
+        },
+        "150-plus": {
+          "observations": 70,
+          "correctPct": 100,
+          "reversalPct": 0,
+          "reversalWilson95Pct": [
+            0,
+            5.2
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 30,
+          "averageLeaderAsk": 0.9715,
+          "realizedPnlPerShare": 0.0267
+        }
+      }
+    }
+  },
+  "activityAt180": {
+    "low": {
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 169,
+          "correctPct": 58.58,
+          "reversalPct": 41.42,
+          "reversalWilson95Pct": [
+            34.26,
+            48.96
+          ],
+          "twapDirectionAgreementPct": 72.78,
+          "pricedObservations": 167,
+          "averageLeaderAsk": 0.627,
+          "realizedPnlPerShare": -0.0585
+        },
+        "10-20": {
+          "observations": 137,
+          "correctPct": 72.99,
+          "reversalPct": 27.01,
+          "reversalWilson95Pct": [
+            20.27,
+            34.99
+          ],
+          "twapDirectionAgreementPct": 84.67,
+          "pricedObservations": 137,
+          "averageLeaderAsk": 0.7195,
+          "realizedPnlPerShare": 0.0007
+        },
+        "20-50": {
+          "observations": 532,
+          "correctPct": 75.56,
+          "reversalPct": 24.44,
+          "reversalWilson95Pct": [
+            20.98,
+            28.26
+          ],
+          "twapDirectionAgreementPct": 83.83,
+          "pricedObservations": 526,
+          "averageLeaderAsk": 0.7668,
+          "realizedPnlPerShare": -0.0211
+        },
+        "50-100": {
+          "observations": 866,
+          "correctPct": 82.22,
+          "reversalPct": 17.78,
+          "reversalWilson95Pct": [
+            15.38,
+            20.47
+          ],
+          "twapDirectionAgreementPct": 85.45,
+          "pricedObservations": 810,
+          "averageLeaderAsk": 0.8179,
+          "realizedPnlPerShare": -0.0131
+        },
+        "100-150": {
+          "observations": 316,
+          "correctPct": 96.2,
+          "reversalPct": 3.8,
+          "reversalWilson95Pct": [
+            2.19,
+            6.52
+          ],
+          "twapDirectionAgreementPct": 99.37,
+          "pricedObservations": 211,
+          "averageLeaderAsk": 0.9569,
+          "realizedPnlPerShare": -0.0165
+        },
+        "150-plus": {
+          "observations": 253,
+          "correctPct": 98.02,
+          "reversalPct": 1.98,
+          "reversalWilson95Pct": [
+            0.85,
+            4.54
+          ],
+          "twapDirectionAgreementPct": 99.21,
+          "pricedObservations": 104,
+          "averageLeaderAsk": 0.9703,
+          "realizedPnlPerShare": -0.0203
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 361,
+          "correctPct": 61.5,
+          "reversalPct": 38.5,
+          "reversalWilson95Pct": [
+            33.63,
+            43.62
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 359,
+          "averageLeaderAsk": 0.6435,
+          "realizedPnlPerShare": -0.0436
+        },
+        "10-20": {
+          "observations": 258,
+          "correctPct": 79.07,
+          "reversalPct": 20.93,
+          "reversalWilson95Pct": [
+            16.41,
+            26.3
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 257,
+          "averageLeaderAsk": 0.8137,
+          "realizedPnlPerShare": -0.033
+        },
+        "20-50": {
+          "observations": 628,
+          "correctPct": 88.85,
+          "reversalPct": 11.15,
+          "reversalWilson95Pct": [
+            8.92,
+            13.85
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 611,
+          "averageLeaderAsk": 0.8935,
+          "realizedPnlPerShare": -0.014
+        },
+        "50-100": {
+          "observations": 628,
+          "correctPct": 94.27,
+          "reversalPct": 5.73,
+          "reversalWilson95Pct": [
+            4.17,
+            7.83
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 510,
+          "averageLeaderAsk": 0.9461,
+          "realizedPnlPerShare": -0.0181
+        },
+        "100-150": {
+          "observations": 234,
+          "correctPct": 94.87,
+          "reversalPct": 5.13,
+          "reversalWilson95Pct": [
+            2.96,
+            8.75
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 143,
+          "averageLeaderAsk": 0.9576,
+          "realizedPnlPerShare": -0.0441
+        },
+        "150-plus": {
+          "observations": 164,
+          "correctPct": 98.78,
+          "reversalPct": 1.22,
+          "reversalWilson95Pct": [
+            0.34,
+            4.34
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 77,
+          "averageLeaderAsk": 0.9699,
+          "realizedPnlPerShare": 0.0022
+        }
+      }
+    },
+    "high": {
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 355,
+          "correctPct": 53.52,
+          "reversalPct": 46.48,
+          "reversalWilson95Pct": [
+            41.36,
+            51.68
+          ],
+          "twapDirectionAgreementPct": 52.96,
+          "pricedObservations": 355,
+          "averageLeaderAsk": 0.5533,
+          "realizedPnlPerShare": -0.0328
+        },
+        "10-20": {
+          "observations": 314,
+          "correctPct": 67.52,
+          "reversalPct": 32.48,
+          "reversalWilson95Pct": [
+            27.54,
+            37.85
+          ],
+          "twapDirectionAgreementPct": 62.74,
+          "pricedObservations": 314,
+          "averageLeaderAsk": 0.6195,
+          "realizedPnlPerShare": 0.042
+        },
+        "20-50": {
+          "observations": 670,
+          "correctPct": 65.67,
+          "reversalPct": 34.33,
+          "reversalWilson95Pct": [
+            30.83,
+            38
+          ],
+          "twapDirectionAgreementPct": 70.3,
+          "pricedObservations": 670,
+          "averageLeaderAsk": 0.6857,
+          "realizedPnlPerShare": -0.0412
+        },
+        "50-100": {
+          "observations": 507,
+          "correctPct": 72.98,
+          "reversalPct": 27.02,
+          "reversalWilson95Pct": [
+            23.34,
+            31.05
+          ],
+          "twapDirectionAgreementPct": 79.09,
+          "pricedObservations": 504,
+          "averageLeaderAsk": 0.7468,
+          "realizedPnlPerShare": -0.029
+        },
+        "100-150": {
+          "observations": 55,
+          "correctPct": 87.27,
+          "reversalPct": 12.73,
+          "reversalWilson95Pct": [
+            6.3,
+            24.02
+          ],
+          "twapDirectionAgreementPct": 94.55,
+          "pricedObservations": 54,
+          "averageLeaderAsk": 0.8809,
+          "realizedPnlPerShare": -0.0171
+        },
+        "150-plus": {
+          "observations": 18,
+          "correctPct": 88.89,
+          "reversalPct": 11.11,
+          "reversalWilson95Pct": [
+            3.1,
+            32.8
+          ],
+          "twapDirectionAgreementPct": 83.33,
+          "pricedObservations": 15,
+          "averageLeaderAsk": 0.918,
+          "realizedPnlPerShare": -0.0563
+        }
+      },
+      "chainlinkTwap": {
+        "0-10": {
+          "observations": 626,
+          "correctPct": 56.07,
+          "reversalPct": 43.93,
+          "reversalWilson95Pct": [
+            40.09,
+            47.84
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 626,
+          "averageLeaderAsk": 0.5804,
+          "realizedPnlPerShare": -0.0331
+        },
+        "10-20": {
+          "observations": 416,
+          "correctPct": 65.87,
+          "reversalPct": 34.13,
+          "reversalWilson95Pct": [
+            29.74,
+            38.82
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 416,
+          "averageLeaderAsk": 0.6698,
+          "realizedPnlPerShare": -0.0237
+        },
+        "20-50": {
+          "observations": 643,
+          "correctPct": 71.54,
+          "reversalPct": 28.46,
+          "reversalWilson95Pct": [
+            25.11,
+            32.07
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 640,
+          "averageLeaderAsk": 0.7306,
+          "realizedPnlPerShare": -0.0278
+        },
+        "50-100": {
+          "observations": 199,
+          "correctPct": 75.88,
+          "reversalPct": 24.12,
+          "reversalWilson95Pct": [
+            18.7,
+            30.52
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 197,
+          "averageLeaderAsk": 0.778,
+          "realizedPnlPerShare": -0.032
+        },
+        "100-150": {
+          "observations": 25,
+          "correctPct": 76,
+          "reversalPct": 24,
+          "reversalWilson95Pct": [
+            11.5,
+            43.43
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 23,
+          "averageLeaderAsk": 0.7552,
+          "realizedPnlPerShare": -0.0274
+        },
+        "150-plus": {
+          "observations": 10,
+          "correctPct": 80,
+          "reversalPct": 20,
+          "reversalWilson95Pct": [
+            5.67,
+            50.98
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 10,
+          "averageLeaderAsk": 0.765,
+          "realizedPnlPerShare": 0.0263
+        }
+      }
+    }
+  },
+  "agreementAt180": {
+    "agree": {
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 311,
+          "correctPct": 62.38,
+          "reversalPct": 37.62,
+          "reversalWilson95Pct": [
+            32.42,
+            43.12
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 309,
+          "averageLeaderAsk": 0.6774,
+          "realizedPnlPerShare": -0.0695
+        },
+        "10-20": {
+          "observations": 313,
+          "correctPct": 76.68,
+          "reversalPct": 23.32,
+          "reversalWilson95Pct": [
+            18.98,
+            28.31
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 313,
+          "averageLeaderAsk": 0.7329,
+          "realizedPnlPerShare": 0.0222
+        },
+        "20-50": {
+          "observations": 917,
+          "correctPct": 78.84,
+          "reversalPct": 21.16,
+          "reversalWilson95Pct": [
+            18.64,
+            23.92
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 911,
+          "averageLeaderAsk": 0.8107,
+          "realizedPnlPerShare": -0.0328
+        },
+        "50-100": {
+          "observations": 1141,
+          "correctPct": 85.71,
+          "reversalPct": 14.29,
+          "reversalWilson95Pct": [
+            12.37,
+            16.44
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 1082,
+          "averageLeaderAsk": 0.8661,
+          "realizedPnlPerShare": -0.0226
+        },
+        "100-150": {
+          "observations": 366,
+          "correctPct": 95.08,
+          "reversalPct": 4.92,
+          "reversalWilson95Pct": [
+            3.13,
+            7.64
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 261,
+          "averageLeaderAsk": 0.9419,
+          "realizedPnlPerShare": -0.0143
+        },
+        "150-plus": {
+          "observations": 266,
+          "correctPct": 97.74,
+          "reversalPct": 2.26,
+          "reversalWilson95Pct": [
+            1.04,
+            4.83
+          ],
+          "twapDirectionAgreementPct": 100,
+          "pricedObservations": 116,
+          "averageLeaderAsk": 0.9646,
+          "realizedPnlPerShare": -0.0185
+        }
+      }
+    },
+    "disagree": {
+      "settlementReferenceOpen": {
+        "0-10": {
+          "observations": 213,
+          "correctPct": 44.6,
+          "reversalPct": 55.4,
+          "reversalWilson95Pct": [
+            48.69,
+            61.92
+          ],
+          "twapDirectionAgreementPct": 0,
+          "pricedObservations": 213,
+          "averageLeaderAsk": 0.4311,
+          "realizedPnlPerShare": 0.0003
+        },
+        "10-20": {
+          "observations": 138,
+          "correctPct": 52.17,
+          "reversalPct": 47.83,
+          "reversalWilson95Pct": [
+            39.66,
+            56.11
+          ],
+          "twapDirectionAgreementPct": 0,
+          "pricedObservations": 138,
+          "averageLeaderAsk": 0.4617,
+          "realizedPnlPerShare": 0.046
+        },
+        "20-50": {
+          "observations": 285,
+          "correctPct": 41.75,
+          "reversalPct": 58.25,
+          "reversalWilson95Pct": [
+            52.45,
+            63.82
+          ],
+          "twapDirectionAgreementPct": 0,
+          "pricedObservations": 285,
+          "averageLeaderAsk": 0.4359,
+          "realizedPnlPerShare": -0.0307
+        },
+        "50-100": {
+          "observations": 232,
+          "correctPct": 44.83,
+          "reversalPct": 55.17,
+          "reversalWilson95Pct": [
+            48.74,
+            61.44
+          ],
+          "twapDirectionAgreementPct": 0,
+          "pricedObservations": 232,
+          "averageLeaderAsk": 0.439,
+          "realizedPnlPerShare": -0.0034
+        },
+        "100-150": {
+          "observations": 5,
+          "correctPct": 80,
+          "reversalPct": 20,
+          "reversalWilson95Pct": [
+            3.62,
+            62.45
+          ],
+          "twapDirectionAgreementPct": 0,
+          "pricedObservations": 4,
+          "averageLeaderAsk": 0.9125,
+          "realizedPnlPerShare": -0.1677
+        },
+        "150-plus": {
+          "observations": 5,
+          "correctPct": 80,
+          "reversalPct": 20,
+          "reversalWilson95Pct": [
+            3.62,
+            62.45
+          ],
+          "twapDirectionAgreementPct": 0,
+          "pricedObservations": 3,
+          "averageLeaderAsk": 0.93,
+          "realizedPnlPerShare": -0.2679
+        }
+      }
+    }
+  },
+  "dailyAt180": {
+    "2026-08-14": {
+      "gap50To100": {
+        "observations": 73,
+        "correctPct": 47.95,
+        "reversalPct": 52.05,
+        "reversalWilson95Pct": [
+          40.78,
+          63.12
+        ],
+        "twapDirectionAgreementPct": 61.64,
+        "pricedObservations": 73,
+        "averageLeaderAsk": 0.6064,
+        "realizedPnlPerShare": -0.1387
+      },
+      "gap100Plus": {
+        "observations": 14,
+        "correctPct": 85.71,
+        "reversalPct": 14.29,
+        "reversalWilson95Pct": [
+          4.01,
+          39.94
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 12,
+        "averageLeaderAsk": 0.895,
+        "realizedPnlPerShare": -0.0669
+      }
+    },
+    "2026-08-15": {
+      "gap50To100": {
+        "observations": 127,
+        "correctPct": 56.69,
+        "reversalPct": 43.31,
+        "reversalWilson95Pct": [
+          35.01,
+          52
+        ],
+        "twapDirectionAgreementPct": 58.27,
+        "pricedObservations": 126,
+        "averageLeaderAsk": 0.5708,
+        "realizedPnlPerShare": -0.0191
+      },
+      "gap100Plus": {
+        "observations": 0,
+        "correctPct": 0,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          null,
+          null
+        ],
+        "twapDirectionAgreementPct": 0,
+        "pricedObservations": 0,
+        "averageLeaderAsk": 0,
+        "realizedPnlPerShare": 0
+      }
+    },
+    "2026-08-16": {
+      "gap50To100": {
+        "observations": 113,
+        "correctPct": 58.41,
+        "reversalPct": 41.59,
+        "reversalWilson95Pct": [
+          32.93,
+          50.81
+        ],
+        "twapDirectionAgreementPct": 50.44,
+        "pricedObservations": 113,
+        "averageLeaderAsk": 0.5603,
+        "realizedPnlPerShare": 0.0116
+      },
+      "gap100Plus": {
+        "observations": 1,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          79.35
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 1,
+        "averageLeaderAsk": 0.96,
+        "realizedPnlPerShare": 0.0373
+      }
+    },
+    "2026-08-17": {
+      "gap50To100": {
+        "observations": 71,
+        "correctPct": 63.38,
+        "reversalPct": 36.62,
+        "reversalWilson95Pct": [
+          26.37,
+          48.24
+        ],
+        "twapDirectionAgreementPct": 67.61,
+        "pricedObservations": 71,
+        "averageLeaderAsk": 0.6294,
+        "realizedPnlPerShare": -0.0072
+      },
+      "gap100Plus": {
+        "observations": 10,
+        "correctPct": 90,
+        "reversalPct": 10,
+        "reversalWilson95Pct": [
+          1.79,
+          40.42
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 7,
+        "averageLeaderAsk": 0.967,
+        "realizedPnlPerShare": -0.112
+      }
+    },
+    "2026-08-18": {
+      "gap50To100": {
+        "observations": 62,
+        "correctPct": 59.68,
+        "reversalPct": 40.32,
+        "reversalWilson95Pct": [
+          29.02,
+          52.75
+        ],
+        "twapDirectionAgreementPct": 61.29,
+        "pricedObservations": 62,
+        "averageLeaderAsk": 0.6211,
+        "realizedPnlPerShare": -0.0342
+      },
+      "gap100Plus": {
+        "observations": 5,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          43.45
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 3,
+        "averageLeaderAsk": 0.9567,
+        "realizedPnlPerShare": 0.0404
+      }
+    },
+    "2026-08-19": {
+      "gap50To100": {
+        "observations": 26,
+        "correctPct": 65.38,
+        "reversalPct": 34.62,
+        "reversalWilson95Pct": [
+          19.41,
+          53.78
+        ],
+        "twapDirectionAgreementPct": 80.77,
+        "pricedObservations": 26,
+        "averageLeaderAsk": 0.7685,
+        "realizedPnlPerShare": -0.1239
+      },
+      "gap100Plus": {
+        "observations": 18,
+        "correctPct": 94.44,
+        "reversalPct": 5.56,
+        "reversalWilson95Pct": [
+          0.99,
+          25.76
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 15,
+        "averageLeaderAsk": 0.9033,
+        "realizedPnlPerShare": 0.0244
+      }
+    },
+    "2026-08-20": {
+      "gap50To100": {
+        "observations": 29,
+        "correctPct": 68.97,
+        "reversalPct": 31.03,
+        "reversalWilson95Pct": [
+          17.28,
+          49.23
+        ],
+        "twapDirectionAgreementPct": 86.21,
+        "pricedObservations": 28,
+        "averageLeaderAsk": 0.7739,
+        "realizedPnlPerShare": -0.1059
+      },
+      "gap100Plus": {
+        "observations": 24,
+        "correctPct": 91.67,
+        "reversalPct": 8.33,
+        "reversalWilson95Pct": [
+          2.32,
+          25.85
+        ],
+        "twapDirectionAgreementPct": 91.67,
+        "pricedObservations": 19,
+        "averageLeaderAsk": 0.9107,
+        "realizedPnlPerShare": -0.0212
+      }
+    },
+    "2026-08-21": {
+      "gap50To100": {
+        "observations": 20,
+        "correctPct": 55,
+        "reversalPct": 45,
+        "reversalWilson95Pct": [
+          25.82,
+          65.79
+        ],
+        "twapDirectionAgreementPct": 95,
+        "pricedObservations": 20,
+        "averageLeaderAsk": 0.8165,
+        "realizedPnlPerShare": -0.2765
+      },
+      "gap100Plus": {
+        "observations": 28,
+        "correctPct": 85.71,
+        "reversalPct": 14.29,
+        "reversalWilson95Pct": [
+          5.7,
+          31.49
+        ],
+        "twapDirectionAgreementPct": 96.43,
+        "pricedObservations": 22,
+        "averageLeaderAsk": 0.8818,
+        "realizedPnlPerShare": -0.0698
+      }
+    },
+    "2026-08-22": {
+      "gap50To100": {
+        "observations": 55,
+        "correctPct": 90.91,
+        "reversalPct": 9.09,
+        "reversalWilson95Pct": [
+          3.95,
+          19.58
+        ],
+        "twapDirectionAgreementPct": 98.18,
+        "pricedObservations": 53,
+        "averageLeaderAsk": 0.9183,
+        "realizedPnlPerShare": -0.0175
+      },
+      "gap100Plus": {
+        "observations": 25,
+        "correctPct": 88,
+        "reversalPct": 12,
+        "reversalWilson95Pct": [
+          4.17,
+          29.96
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 14,
+        "averageLeaderAsk": 0.9668,
+        "realizedPnlPerShare": -0.1833
+      }
+    },
+    "2026-08-23": {
+      "gap50To100": {
+        "observations": 84,
+        "correctPct": 96.43,
+        "reversalPct": 3.57,
+        "reversalWilson95Pct": [
+          1.22,
+          9.98
+        ],
+        "twapDirectionAgreementPct": 96.43,
+        "pricedObservations": 81,
+        "averageLeaderAsk": 0.9325,
+        "realizedPnlPerShare": 0.0263
+      },
+      "gap100Plus": {
+        "observations": 29,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          11.7
+        ],
+        "twapDirectionAgreementPct": 96.55,
+        "pricedObservations": 13,
+        "averageLeaderAsk": 0.9868,
+        "realizedPnlPerShare": 0.0123
+      }
+    },
+    "2026-08-24": {
+      "gap50To100": {
+        "observations": 81,
+        "correctPct": 87.65,
+        "reversalPct": 12.35,
+        "reversalWilson95Pct": [
+          6.85,
+          21.26
+        ],
+        "twapDirectionAgreementPct": 96.3,
+        "pricedObservations": 78,
+        "averageLeaderAsk": 0.8918,
+        "realizedPnlPerShare": -0.0262
+      },
+      "gap100Plus": {
+        "observations": 81,
+        "correctPct": 96.3,
+        "reversalPct": 3.7,
+        "reversalWilson95Pct": [
+          1.27,
+          10.33
+        ],
+        "twapDirectionAgreementPct": 97.53,
+        "pricedObservations": 47,
+        "averageLeaderAsk": 0.9334,
+        "realizedPnlPerShare": -0.0014
+      }
+    },
+    "2026-08-25": {
+      "gap50To100": {
+        "observations": 80,
+        "correctPct": 93.75,
+        "reversalPct": 6.25,
+        "reversalWilson95Pct": [
+          2.7,
+          13.81
+        ],
+        "twapDirectionAgreementPct": 96.25,
+        "pricedObservations": 80,
+        "averageLeaderAsk": 0.8901,
+        "realizedPnlPerShare": 0.041
+      },
+      "gap100Plus": {
+        "observations": 78,
+        "correctPct": 97.44,
+        "reversalPct": 2.56,
+        "reversalWilson95Pct": [
+          0.71,
+          8.88
+        ],
+        "twapDirectionAgreementPct": 98.72,
+        "pricedObservations": 55,
+        "averageLeaderAsk": 0.956,
+        "realizedPnlPerShare": 0.0047
+      }
+    },
+    "2026-08-26": {
+      "gap50To100": {
+        "observations": 65,
+        "correctPct": 93.85,
+        "reversalPct": 6.15,
+        "reversalWilson95Pct": [
+          2.42,
+          14.78
+        ],
+        "twapDirectionAgreementPct": 96.92,
+        "pricedObservations": 63,
+        "averageLeaderAsk": 0.9052,
+        "realizedPnlPerShare": 0.0258
+      },
+      "gap100Plus": {
+        "observations": 42,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          8.38
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 24,
+        "averageLeaderAsk": 0.958,
+        "realizedPnlPerShare": 0.0393
+      }
+    },
+    "2026-08-27": {
+      "gap50To100": {
+        "observations": 76,
+        "correctPct": 94.74,
+        "reversalPct": 5.26,
+        "reversalWilson95Pct": [
+          2.07,
+          12.77
+        ],
+        "twapDirectionAgreementPct": 96.05,
+        "pricedObservations": 67,
+        "averageLeaderAsk": 0.9337,
+        "realizedPnlPerShare": 0.0024
+      },
+      "gap100Plus": {
+        "observations": 55,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          6.53
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 26,
+        "averageLeaderAsk": 0.9718,
+        "realizedPnlPerShare": 0.0263
+      }
+    },
+    "2026-08-28": {
+      "gap50To100": {
+        "observations": 69,
+        "correctPct": 91.3,
+        "reversalPct": 8.7,
+        "reversalWilson95Pct": [
+          4.05,
+          17.7
+        ],
+        "twapDirectionAgreementPct": 98.55,
+        "pricedObservations": 63,
+        "averageLeaderAsk": 0.9346,
+        "realizedPnlPerShare": -0.0337
+      },
+      "gap100Plus": {
+        "observations": 60,
+        "correctPct": 96.67,
+        "reversalPct": 3.33,
+        "reversalWilson95Pct": [
+          0.92,
+          11.36
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 31,
+        "averageLeaderAsk": 0.9625,
+        "realizedPnlPerShare": -0.0295
+      }
+    },
+    "2026-08-29": {
+      "gap50To100": {
+        "observations": 34,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          10.15
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 25,
+        "averageLeaderAsk": 0.98,
+        "realizedPnlPerShare": 0.0187
+      },
+      "gap100Plus": {
+        "observations": 5,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          43.45
+        ],
+        "twapDirectionAgreementPct": 80,
+        "pricedObservations": 0,
+        "averageLeaderAsk": 0,
+        "realizedPnlPerShare": 0
+      }
+    },
+    "2026-08-30": {
+      "gap50To100": {
+        "observations": 52,
+        "correctPct": 94.23,
+        "reversalPct": 5.77,
+        "reversalWilson95Pct": [
+          1.98,
+          15.64
+        ],
+        "twapDirectionAgreementPct": 98.08,
+        "pricedObservations": 43,
+        "averageLeaderAsk": 0.9426,
+        "realizedPnlPerShare": 0.0073
+      },
+      "gap100Plus": {
+        "observations": 19,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          16.82
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 10,
+        "averageLeaderAsk": 0.9829,
+        "realizedPnlPerShare": 0.0159
+      }
+    },
+    "2026-08-31": {
+      "gap50To100": {
+        "observations": 58,
+        "correctPct": 93.1,
+        "reversalPct": 6.9,
+        "reversalWilson95Pct": [
+          2.71,
+          16.43
+        ],
+        "twapDirectionAgreementPct": 93.1,
+        "pricedObservations": 57,
+        "averageLeaderAsk": 0.9057,
+        "realizedPnlPerShare": 0.0185
+      },
+      "gap100Plus": {
+        "observations": 43,
+        "correctPct": 90.7,
+        "reversalPct": 9.3,
+        "reversalWilson95Pct": [
+          3.68,
+          21.6
+        ],
+        "twapDirectionAgreementPct": 97.67,
+        "pricedObservations": 25,
+        "averageLeaderAsk": 0.9595,
+        "realizedPnlPerShare": -0.1221
+      }
+    },
+    "2026-09-01": {
+      "gap50To100": {
+        "observations": 79,
+        "correctPct": 83.54,
+        "reversalPct": 16.46,
+        "reversalWilson95Pct": [
+          9.88,
+          26.15
+        ],
+        "twapDirectionAgreementPct": 94.94,
+        "pricedObservations": 73,
+        "averageLeaderAsk": 0.8625,
+        "realizedPnlPerShare": -0.0481
+      },
+      "gap100Plus": {
+        "observations": 45,
+        "correctPct": 100,
+        "reversalPct": 0,
+        "reversalWilson95Pct": [
+          0,
+          7.87
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 27,
+        "averageLeaderAsk": 0.9548,
+        "realizedPnlPerShare": 0.0427
+      }
+    },
+    "2026-09-02": {
+      "gap50To100": {
+        "observations": 82,
+        "correctPct": 85.37,
+        "reversalPct": 14.63,
+        "reversalWilson95Pct": [
+          8.57,
+          23.86
+        ],
+        "twapDirectionAgreementPct": 91.46,
+        "pricedObservations": 76,
+        "averageLeaderAsk": 0.8545,
+        "realizedPnlPerShare": -0.0202
+      },
+      "gap100Plus": {
+        "observations": 39,
+        "correctPct": 97.44,
+        "reversalPct": 2.56,
+        "reversalWilson95Pct": [
+          0.45,
+          13.18
+        ],
+        "twapDirectionAgreementPct": 97.44,
+        "pricedObservations": 24,
+        "averageLeaderAsk": 0.9678,
+        "realizedPnlPerShare": -0.0116
+      }
+    },
+    "2026-09-03": {
+      "gap50To100": {
+        "observations": 37,
+        "correctPct": 89.19,
+        "reversalPct": 10.81,
+        "reversalWilson95Pct": [
+          4.29,
+          24.71
+        ],
+        "twapDirectionAgreementPct": 83.78,
+        "pricedObservations": 36,
+        "averageLeaderAsk": 0.8406,
+        "realizedPnlPerShare": 0.0397
+      },
+      "gap100Plus": {
+        "observations": 21,
+        "correctPct": 95.24,
+        "reversalPct": 4.76,
+        "reversalWilson95Pct": [
+          0.85,
+          22.67
+        ],
+        "twapDirectionAgreementPct": 100,
+        "pricedObservations": 9,
+        "averageLeaderAsk": 0.9811,
+        "realizedPnlPerShare": -0.0935
+      }
+    }
+  }
+}

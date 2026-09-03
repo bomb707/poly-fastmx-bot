@@ -1,11 +1,15 @@
 import { fillFee } from "../fees.js";
 import { REGIME_META, REGIME_MODEL, REGIME_POLICY } from "./target75cc-regime-model.js";
+import { SETTLEMENT_GAP_META, SETTLEMENT_GAP_MODEL }
+  from "./target75cc-settlement-gap-model.js";
 import { REGIME_FEATURE_NAMES, regimeFeatures } from "./target75cc-regime-features.js";
 
 const EPS = 1e-9;
 const finite = (input) => input != null && input !== "" && Number.isFinite(Number(input));
 const number = (input, fallback) => finite(input) ? Number(input) : fallback;
 const clamp = (input, low, high) => Math.max(low, Math.min(high, input));
+const logistic = (logit) => logit >= 0 ? 1 / (1 + Math.exp(-logit))
+  : Math.exp(logit) / (1 + Math.exp(logit));
 
 export const REGIME_CLASSES = Object.freeze({
   TREND_CONTINUATION: "TREND_CONTINUATION",
@@ -26,7 +30,19 @@ export function scoreRegime(vector) {
     const standardized = clamp((number(vector[index], 0) - mean) / scale, -10, 10);
     logit += weight * standardized;
   }
-  return logit >= 0 ? 1 / (1 + Math.exp(-logit)) : Math.exp(logit) / (1 + Math.exp(logit));
+  return logistic(logit);
+}
+
+export function scoreSettlementGap(raw) {
+  let logit = number(SETTLEMENT_GAP_MODEL.intercept, 0);
+  for (let index = 0; index < SETTLEMENT_GAP_MODEL.featureNames.length; index++) {
+    const name = SETTLEMENT_GAP_MODEL.featureNames[index];
+    const mean = number(SETTLEMENT_GAP_MODEL.normalization.mean[index], 0);
+    const scale = Math.max(EPS, number(SETTLEMENT_GAP_MODEL.normalization.scale[index], 1));
+    const standardized = clamp((number(raw?.[name], 0) - mean) / scale, -12, 12);
+    logit += number(SETTLEMENT_GAP_MODEL.weights[index], 0) * standardized;
+  }
+  return logistic(logit);
 }
 
 export function interpretRegime(raw, sideProbability, ask, P = {}) {
@@ -108,9 +124,19 @@ export function interpretRegime(raw, sideProbability, ask, P = {}) {
 export function evaluateRegime({ history, current, tk, side, clockMs, P } = {}) {
   const features = regimeFeatures({ history, current, tk, side, clockMs });
   if (!features) return null;
-  const sideProbability = scoreRegime(features.vector);
-  return { ...interpretRegime(features.raw, sideProbability, Number(current[side].ask), P),
-    features: features.raw, modelSha256: REGIME_META.modelSha256 };
+  const baseSideProbability = scoreRegime(features.vector);
+  const settlementGapProbability = scoreSettlementGap(features.raw);
+  const sideProbability = baseSideProbability;
+  const interpreted = interpretRegime(features.raw, sideProbability, Number(current[side].ask), P);
+  const settlementGapDownsizeWeight = clamp(number(P?.T_REGIME_GAP_DOWNSIZE_WEIGHT, 0), 0, 1);
+  const settlementGapDownsizeScale = 1 - settlementGapDownsizeWeight
+    * clamp((.5 - settlementGapProbability) * 2, 0, 1);
+  return { ...interpreted,
+    sizeScale: interpreted.sizeScale * settlementGapDownsizeScale,
+    baseSideProbability, settlementGapProbability,
+    settlementGapDownsizeWeight, settlementGapDownsizeScale,
+    features: features.raw, modelSha256: REGIME_META.modelSha256,
+    settlementGapModelSha256: SETTLEMENT_GAP_META.modelSha256 };
 }
 
-export { REGIME_META, REGIME_MODEL, REGIME_POLICY };
+export { REGIME_META, REGIME_MODEL, REGIME_POLICY, SETTLEMENT_GAP_META, SETTLEMENT_GAP_MODEL };

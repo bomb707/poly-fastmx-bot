@@ -6,6 +6,9 @@
 
 export const REGIME_HORIZONS_MS = [500, 1_000, 2_000, 3_000, 5_000,
   10_000, 15_000, 30_000, 60_000];
+export const SETTLEMENT_GAP_KNOTS_USD = [10, 20, 50, 100, 150];
+export const SETTLEMENT_SESSION_IDS = ["utc00_04", "utc04_08", "utc08_12",
+  "utc12_16", "utc16_20", "utc20_24"];
 
 const BASE_FEATURES = [
   "timeFraction", "ask", "spread", "pairAsk",
@@ -28,8 +31,24 @@ const PATH_FEATURES = [
   "discountFromHigh15", "discountFromHigh30",
   "midAcceleration", "binanceAcceleration", "dominantScore", "shortScore",
 ];
+const SETTLEMENT_FEATURES = [
+  "binanceOwnGapUsd", "binanceSettlementGapUsd", "twapSettlementGapUsd",
+  "binanceSettlementGapBps", "twapSettlementGapBps", "settlementDirectionAgreement",
+  "binanceSettlementGapWhenAgree", "binanceSettlementGapWhenDisagree",
+  "twapSettlementGapWhenAgree", "twapSettlementGapWhenDisagree", "secondsLeftFraction",
+  "binanceSettlementRequiredVelocity", "twapSettlementRequiredVelocity",
+  "twapVolatility30", "binanceSettlementSafetyZ", "twapSettlementSafetyZ",
+  ...SETTLEMENT_GAP_KNOTS_USD.flatMap((knot) => [
+    `binanceSettlementAboveUsd${knot}`, `binanceSettlementBelowUsd${knot}`,
+    `twapSettlementAboveUsd${knot}`, `twapSettlementBelowUsd${knot}`,
+  ]),
+  ...SETTLEMENT_SESSION_IDS.flatMap((id) => [
+    `session_${id}`, `binanceSettlementGap_${id}`, `twapSettlementGap_${id}`,
+  ]),
+];
 
-export const REGIME_FEATURE_NAMES = [...BASE_FEATURES, ...MOVE_FEATURES, ...PATH_FEATURES];
+export const REGIME_FEATURE_NAMES = [...BASE_FEATURES, ...MOVE_FEATURES, ...PATH_FEATURES,
+  ...SETTLEMENT_FEATURES];
 
 const EPS = 1e-9;
 const finite = (value) => value != null && value !== "" && Number.isFinite(Number(value));
@@ -48,6 +67,10 @@ const pctMove = (current, prior) => current > 0 && prior > 0
 const basisPct = (snapshot) => value(snapshot?.bz) > 0 && value(snapshot?.cl) > 0
   ? (Number(snapshot.bz) - Number(snapshot.cl)) / Number(snapshot.cl) * 100 : 0;
 const clamp = (input, low, high) => Math.max(low, Math.min(high, input));
+const sessionId = (hour) => {
+  const normalized = ((Math.floor(value(hour)) % 24) + 24) % 24;
+  return SETTLEMENT_SESSION_IDS[Math.floor(normalized / 4)];
+};
 
 export function regimePriorAt(history, targetMs) {
   let low = 0, high = history.length - 1, answer = -1;
@@ -105,6 +128,23 @@ export function regimeFeatures({ history = [], current, tk = {}, side, clockMs }
   if (!(value(book?.ask) > 0 && value(book?.bid) > 0 && value(opposite?.ask) > 0)) return null;
   const sign = side === "Up" ? 1 : -1;
   const mid = midpoint(book);
+  const openBinance = value(tk.openBinance), openChainlink = value(tk.openChainlink);
+  const binanceOwnGapUsd = value(current.bz) > 0 && openBinance > 0
+    ? (value(current.bz) - openBinance) * sign : 0;
+  const binanceSettlementGapUsd = value(current.bz) > 0 && openChainlink > 0
+    ? (value(current.bz) - openChainlink) * sign : 0;
+  const twapSettlementGapUsd = value(current.cl) > 0 && openChainlink > 0
+    ? (value(current.cl) - openChainlink) * sign : 0;
+  const binanceSettlementGapPct = openChainlink > 0
+    ? binanceSettlementGapUsd / openChainlink * 100 : 0;
+  const twapSettlementGapPct = openChainlink > 0
+    ? twapSettlementGapUsd / openChainlink * 100 : 0;
+  const settlementDirectionAgreement = Math.sign(binanceSettlementGapUsd)
+    === Math.sign(twapSettlementGapUsd) ? 1 : -1;
+  const secondsLeft = clamp(300 - value(tk.t), 1, 300);
+  const derivedUtcHour = finite(tk.winHour) ? value(tk.winHour)
+    : Number(clockMs) > 1e11 ? new Date(Number(clockMs) - value(tk.t) * 1_000).getUTCHours() : 0;
+  const currentSessionId = sessionId(derivedUtcHour);
   const raw = {
     timeFraction: value(tk.t) / 300,
     ask: value(book.ask),
@@ -125,7 +165,33 @@ export function regimeFeatures({ history = [], current, tk = {}, side, clockMs }
     twapGap: value(current.cl) > 0 && value(tk.openChainlink) > 0
       ? pctMove(value(current.cl), value(tk.openChainlink)) * sign : 0,
     binanceTwapBasis: basisPct(current) * sign,
+    binanceOwnGapUsd,
+    binanceSettlementGapUsd,
+    twapSettlementGapUsd,
+    binanceSettlementGapBps: binanceSettlementGapPct * 100,
+    twapSettlementGapBps: twapSettlementGapPct * 100,
+    settlementDirectionAgreement,
+    binanceSettlementGapWhenAgree: settlementDirectionAgreement > 0 ? binanceSettlementGapUsd : 0,
+    binanceSettlementGapWhenDisagree: settlementDirectionAgreement < 0 ? binanceSettlementGapUsd : 0,
+    twapSettlementGapWhenAgree: settlementDirectionAgreement > 0 ? twapSettlementGapUsd : 0,
+    twapSettlementGapWhenDisagree: settlementDirectionAgreement < 0 ? twapSettlementGapUsd : 0,
+    secondsLeftFraction: secondsLeft / 300,
+    binanceSettlementRequiredVelocity: binanceSettlementGapUsd / secondsLeft,
+    twapSettlementRequiredVelocity: twapSettlementGapUsd / secondsLeft,
   };
+
+  for (const knot of SETTLEMENT_GAP_KNOTS_USD) {
+    raw[`binanceSettlementAboveUsd${knot}`] = Math.max(0, binanceSettlementGapUsd - knot);
+    raw[`binanceSettlementBelowUsd${knot}`] = Math.max(0, -binanceSettlementGapUsd - knot);
+    raw[`twapSettlementAboveUsd${knot}`] = Math.max(0, twapSettlementGapUsd - knot);
+    raw[`twapSettlementBelowUsd${knot}`] = Math.max(0, -twapSettlementGapUsd - knot);
+  }
+  for (const id of SETTLEMENT_SESSION_IDS) {
+    const active = Number(id === currentSessionId);
+    raw[`session_${id}`] = active;
+    raw[`binanceSettlementGap_${id}`] = active * raw.binanceSettlementGapBps;
+    raw[`twapSettlementGap_${id}`] = active * raw.twapSettlementGapBps;
+  }
 
   for (const lookbackMs of REGIME_HORIZONS_MS) {
     const prior = regimePriorAt(history, Number(clockMs) - lookbackMs);
@@ -147,6 +213,7 @@ export function regimeFeatures({ history = [], current, tk = {}, side, clockMs }
   const bz15 = pathStats(path(history, current, side, clockMs, 15, "bz"));
   const bz30 = pathStats(path(history, current, side, clockMs, 30, "bz"));
   const cl15 = pathStats(path(history, current, side, clockMs, 15, "cl"));
+  const cl30 = pathStats(path(history, current, side, clockMs, 30, "cl"));
   raw.midPersistence5 = mid5.persistence;
   raw.midPersistence15 = mid15.persistence;
   raw.midPersistence30 = mid30.persistence;
@@ -164,6 +231,11 @@ export function regimeFeatures({ history = [], current, tk = {}, side, clockMs }
   raw.midVolatility30 = mid30.volatility;
   raw.binanceVolatility15 = bz15.volatility;
   raw.binanceVolatility30 = bz30.volatility;
+  raw.twapVolatility30 = cl30.volatility;
+  raw.binanceSettlementSafetyZ = clamp(binanceSettlementGapPct
+    / Math.max(.005, bz30.volatility * Math.sqrt(secondsLeft)), -20, 20);
+  raw.twapSettlementSafetyZ = clamp(twapSettlementGapPct
+    / Math.max(.002, cl30.volatility * Math.sqrt(secondsLeft)), -20, 20);
   raw.shortMidZ = raw.midMove1000 / Math.max(.0025, mid15.volatility);
   raw.shortBinanceZ = raw.binanceMove1000 / Math.max(.0005, bz15.volatility);
   raw.positionInRange15 = mid15.position;
@@ -189,4 +261,3 @@ export function regimeFeatures({ history = [], current, tk = {}, side, clockMs }
   const vector = REGIME_FEATURE_NAMES.map((name) => finite(raw[name]) ? Number(raw[name]) : 0);
   return { raw, vector };
 }
-
