@@ -21,7 +21,13 @@ const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigSessStopInput",
   "sigBinanceGapOn", "sigBinanceGapLookbackInput", "sigBinanceGapMinInput",
   "sigBinanceTrendOn", "sigBinanceTrendLookbackSecInput", "sigBinanceTrendMinInput",
   "sigBinanceCountertrendLookbackInput", "sigBinanceCountertrendMinInput", "sigBinanceGapAgreeOn",
-  "sigHedgeOn", "sigReversalOn",
+  "sigHedgeOn", "sigReversalOn", "sigSessionPolicyOn", "sigDynamicSizeOn", "sigEntryRiskInput",
+  "sigRiskLimitsOn", "sigMaxOrderInput", "sigMaxGrossInput", "sigMaxRoundCostInput",
+  "sigMaxWorstLossInput", "sigMaxSignalOrdersInput", "sigParticipationOn",
+  "sigParticipationStartInput", "sigParticipationRiskInput", "sigRescueMakerOn",
+  "sigRescueStartInput", "sigRescueRiskInput", "sigRescueRetainInput",
+  "sigRescueFillPctInput", "sigRescueTouchMsInput", "sigReversalConfirmInput",
+  "sigReversalRiskInput",
   "sigStartInput", "sigStopInput", "sigBaseOrderInput", "sigReleaseCooldownInput", "verboseInput"]);
 const SHADOW_KEYS = new Set(Object.keys(STRAT));
 

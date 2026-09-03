@@ -11,8 +11,7 @@ Simulation-only BTC five-minute strategy reconstruction for target wallet
 
 ## Active policy
 
-The strategy has two independently switchable causal direction signals plus
-the `poly-mom-bot` Binance trend regime:
+The strategy combines two causal direction signals with the `poly-mom-bot` Binance trend regime:
 
 1. `H_CLOB_MID_VELOCITY_ON` controls the CLOB family. Its primary velocity is
    `upMid(now) - upMid(at-or-before now - lookback)`, where `upMid = (best bid + best ask) / 2`.
@@ -28,30 +27,33 @@ the `poly-mom-bot` Binance trend regime:
 4. Trend is a regime filter, not a standalone direction source, and therefore requires the Binance momentum
    source. At least one of CLOB or Binance momentum must be enabled. When both fast sources are enabled they
    must independently qualify and agree in sign.
-5. `H_BINANCE_GAP_AGREE_ON` remains an independent optional `poly-mom-bot` window-gap toggle. It is currently
-   off by default and can be enabled without changing either fast signal or the trend-regime definition.
-6. Every distinct qualifying signal aligned with flat/current inventory emits one seven-share `entry`.
-   `H_HEDGE_ON` and `H_REVERSAL_ON` independently control opposing signals. A partial hedge is exact-share sized
-   so the old inventory leader retains at least one share of lead. A reversal requires CLOB, Binance fast momentum,
-   a strong aligned Binance trend, and Binance spot versus window-open to agree; it crosses only an old imbalance
-   of at most 25 shares and targets a ten-share new-side residual. Both controls default off after failing the
-   stability requirement in paired train/holdout replay.
-7. The selected side must have a current ask and enough visible depth under the one-cent marketable cap. There is
-   no persistence timer. Cooldown is the only release throttle and defaults to `1000` ms.
-8. Chainlink, ask differentials, imbalance, microprice, and weighted scores do not participate in direction.
-9. Entries are fixed-USDC FAK intents (`cap × minimum shares`) in simulation. Inventory-control orders are
-   exact-share intents and force live GTC plus immediate remainder cancellation so price improvement cannot cross
-   a hedge accidentally. All modeled orders match future visible L2 after 520 ms.
-10. The session circuit breaker remains an external emergency stop and defaults to `-$25`.
+5. UTC profiles independently override lookbacks, thresholds, cooldown, price floor, window-gap agreement,
+   sizing targets, and reversal behavior for Asia 00–07, Europe 07–13, US 13–21, and late-US 21–24. The exact matrix is in
+   `CURRENT-STATE.md`.
+6. Normal entries use dynamic exact-share sizing from $2/$4/$2/$2 Asia/Europe/US/late-US targets. Global limits cap one order at 100 shares, a
+   round at 500 gross shares and $250 cost, its modeled worse-settlement loss at $10, and its normal/fallback order
+   count at four.
+7. Europe and late-US permit an opposite-side inventory reversal only after CLOB, Binance velocity, strong trend,
+   and Binance window-gap direction remain aligned for 1,000ms. Asia and US keep reversals off. Partial hedge is
+   globally off.
+8. If normal signals have not filled a round, $1 minimum-risk attempts start at second 90 and retry through second
+   299. This guarantees attempts, not exchange fills.
+9. At second 270, an eligible opposite/losing token receives resting post-only GTC bids at $0.02 and $0.01 before
+   either level is reached. Complete fills must retain a 25-share predicted-winner lead and pass all hard limits.
+10. The session circuit breaker remains an external emergency stop at `-$25`. Chainlink, ask differentials,
+    imbalance, microprice, and weighted scores do not participate in direction.
 
-The PM2 environment currently deploys Binance velocity ON, CLOB velocity OFF, the trend regime and window-gap
-agreement ON, a `0–300s` entry window, and a `2000ms` cooldown. Partial hedge and strong reversal are OFF.
+The corrected selected policy traded all 3,353 available Aug 22–Sep 3 replays with 6,516 fills, `+$279.44` P&L,
+`$20,520.72` cost, and a `$264.94` maximum drawdown. Its Aug 31–Sep 3 segment remained `-$83.24`; because that
+segment informed the latest Europe sizing decision, it is not a sealed holdout. The rescue maker ladder had zero
+credited historical fills. Treat
+this as risk-control evidence, not proof of future profit. See `research/FASTMX_COMPLETE_POLICY_2026-09-03.md`.
 
 The Order Release panel also exposes a **live order type** selector. `GTC + cancel remainder` is the measured-faster
 default for real automatic execution; `FAK` is available for atomic immediate-or-cancel behavior. The selection is
 durable and live-only, so it does not silently alter recorded:false or backtest accounting.
 
-The exact trailing-day fit covers 2026-08-26 11:25 UTC through 2026-08-27 11:25 UTC. That historical study used
+The older trailing-day fit covers 2026-08-26 11:25 UTC through 2026-08-27 11:25 UTC. That historical study used
 the now-retired hard three-direction agreement rule; with the required three-second CLOB lookback it matched
 `98.48%` of eligible target directions on the untouched final 12 hours and `98.55%` over the full day, at `27.40%`
 and `30.11%` target-action coverage respectively. Those figures must not be attributed to the replacement
@@ -61,9 +63,10 @@ Full formulas, splits, Wilson intervals, and candidate rankings are in
 Direction precision is not release parity or profitability. The final 2,875-window risk audit found the safe
 retired guarded policy still lost `$162.04` after fees (`-2.46%` modeled ROI; `$260.97` max drawdown; four of ten days
 positive). That result does not validate the new entry-every-signal action rule or prove an edge.
-The current paired inventory replay is in
+The retired paired inventory replay is in
 `research/wallet-75cc/results/fastmx-inventory-mode-backtest-2026-08-27.md`: partial hedging worsened fit and
-holdout, while reversal improved holdout but worsened fit and the combined period. Neither control was promoted.
+holdout, while its earlier immediate reversal improved holdout but worsened fit and the combined period. That
+result was superseded by the persistent, session-limited reversal evaluation above.
 FastMX therefore remains an instrumented forward simulation, not a profitability or exact-clone claim. Only `helpme` is registered internally at runtime;
 copied experimental strategies are not selectable by this app.
 

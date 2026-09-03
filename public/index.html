@@ -755,6 +755,11 @@
         <span class="pcfg-hint" id="pcfgHint"></span>
       </div>
       <div class="scfg-section">
+        <span class="scfg-grp" title="UTC SESSION POLICY — applies independently researched Asia, Europe, US, and late-US momentum regimes.">UTC sessions</span>
+        <label class="cfgtgl" title="Use a different causal momentum/cooldown/reversal profile for Asia 00–07, Europe 07–13, US 13–21, and late-US 21–24 UTC."><input type="checkbox" id="sigSessionPolicyOn" checked><span class="tgl-track"></span><span class="tgl-lbl">session regimes</span></label>
+        <span style="font-size:9px;color:var(--txt3);line-height:1.45">Asia 00–07 · Europe 07–13 · US 13–21 · late-US 21–24</span>
+      </div>
+      <div class="scfg-section">
         <span class="scfg-grp" title="STRATEGY — which trading strategy the bot runs (backtest + live). Selectable while the bot is STOPPED; the config below belongs to the selected strategy. Add more in engine/strategies/.">strategy</span>
         <label class="cfgsel" title="The simulation-only FastMX momentum strategy."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option></select></label>
         <span style="font-size:10px;color:var(--txt2);line-height:1.45">CLOB/Binance velocity selects direction; opposing signals can trim risk or reverse only with strong confirmation</span>
@@ -782,17 +787,42 @@
           <select id="sigLiveOrderTypeInput" class="momsel"><option value="GTC">GTC + cancel remainder</option><option value="FAK">FAK</option></select>
         </label>
         <label class="cfgnum" title="BASE ORDER — minimum shares signed at the limit cap. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
+        <label class="cfgtgl" title="DYNAMIC SIZE — derive exact shares from a fixed USDC risk budget and the entry cap instead of submitting a static share count."><input type="checkbox" id="sigDynamicSizeOn" checked><span class="tgl-track"></span><span class="tgl-lbl">dynamic size</span></label>
+        <label class="cfgnum" title="ENTRY RISK — global target when UTC session regimes are off. With regimes on, the tested Asia/Europe/US/late-US targets are $2/$4/$2/$2. Shares = target / worst-price cap, always subject to hard limits.">entry risk $<input id="sigEntryRiskInput" type="number" min="1" max="100" step="0.5" value="2"></label>
         <label class="cfgnum" title="COOLDOWN — minimum time between entry releases in the same five-minute market. This is the only release throttle.">cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="1000"></label>
         <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal may buy the underweight side, but the previous inventory leader must retain more shares. Defaults off because it failed the paired train/holdout replay."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
-        <label class="cfgtgl" title="REVERSAL — cross inventory only when CLOB momentum, Binance momentum, a strong Binance trend, and Binance spot versus the window open all confirm the new side. Defaults off because its improvement did not generalize across splits."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
+        <label class="cfgtgl" title="REVERSAL — cross inventory only in the Europe and late-US profiles, after CLOB momentum, Binance momentum, strong Binance trend, and Binance spot versus the window open continuously confirm the new side."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">global reversal</span></label>
+        <label class="cfgnum" title="REVERSAL CONFIRM — strict reversal evidence must remain continuously valid for this long.">reversal confirm ms<input id="sigReversalConfirmInput" type="number" min="0" max="30000" step="500" value="1000"></label>
+        <label class="cfgnum" title="REVERSAL RISK — global residual-share budget when UTC session regimes are off. Session regimes use the tested $2/$4/$2/$2 targets, and reversal itself is enabled only in Europe and late-US.">reversal risk $<input id="sigReversalRiskInput" type="number" min="1" max="100" step="0.5" value="2"></label>
       </div>
       <div class="scfg-section">
-        <span class="scfg-grp" title="RISK — session-level emergency circuit breaker.">risk</span>
+        <span class="scfg-grp" title="RISK — order, round, inventory, and session safety limits.">risk</span>
+        <label class="cfgtgl" title="Enforce all per-order, per-round, gross-share, worst-settlement-loss, and order-count limits."><input type="checkbox" id="sigRiskLimitsOn" checked><span class="tgl-track"></span><span class="tgl-lbl">hard limits</span></label>
+        <label class="cfgnum" title="Maximum exact shares requested by one automatic order.">max order sh<input id="sigMaxOrderInput" type="number" min="4" max="1000" step="1" value="100"></label>
+        <label class="cfgnum" title="Maximum total Up + Down shares, including pending/resting reservations.">max gross sh<input id="sigMaxGrossInput" type="number" min="4" max="5000" step="10" value="500"></label>
+        <label class="cfgnum" title="Maximum round cost including pending/resting reservations.">round cost $<input id="sigMaxRoundCostInput" type="number" min="1" max="5000" step="5" value="250"></label>
+        <label class="cfgnum" title="Maximum modeled loss in the worse of Up-settlement and Down-settlement after a candidate order.">worst loss $<input id="sigMaxWorstLossInput" type="number" min="1" max="1000" step="1" value="10"></label>
+        <label class="cfgnum" title="Maximum number of signal/fallback orders in one round; rescue maker layers are separately bounded.">signal orders<input id="sigMaxSignalOrdersInput" type="number" min="1" max="100" step="1" value="4"></label>
         <label class="cfgnum" title="SESSION STOP (circuit breaker) — auto-STOP the whole bot if running session PnL drops to −this USDC. Re-arms when you press Start. 0 = off.">sess stop<input id="sigSessStopInput" type="number" min="0" step="5" value="25"></label>
+      </div>
+      <div class="scfg-section">
+        <span class="scfg-grp" title="PARTICIPATION — minimum-risk attempts for rounds untouched by normal signals.">participation</span>
+        <label class="cfgtgl" title="Retry a minimum-risk marketable order late in any round with no position. This guarantees attempts, not exchange fills."><input type="checkbox" id="sigParticipationOn" checked><span class="tgl-track"></span><span class="tgl-lbl">all-round attempts</span></label>
+        <label class="cfgnum" title="Begin fallback attempts at this second; 90 seconds preserved 100% historical participation without forcing an immediate session-start entry.">fallback from s<input id="sigParticipationStartInput" type="number" min="0" max="299" step="1" value="90"></label>
+        <label class="cfgnum" title="Fallback target principal before venue share/notional minimums.">fallback risk $<input id="sigParticipationRiskInput" type="number" min="1" max="100" step="0.5" value="1"></label>
+      </div>
+      <div class="scfg-section">
+        <span class="scfg-grp" title="RESCUE MAKERS — pre-position passive bids on the current losing token before it reaches the limits.">rescue makers</span>
+        <label class="cfgtgl" title="At the configured start, post 0.02 and 0.01 bids on the losing side only while both remain strictly below its ask."><input type="checkbox" id="sigRescueMakerOn" checked><span class="tgl-track"></span><span class="tgl-lbl">0.02 + 0.01 ladder</span></label>
+        <label class="cfgnum" title="Place the passive rescue ladder at or after this second.">rescue from s<input id="sigRescueStartInput" type="number" min="0" max="299" step="1" value="270"></label>
+        <label class="cfgnum" title="Combined maximum principal allocated across the two rescue levels; venue minimum is effectively $2 total.">rescue risk $<input id="sigRescueRiskInput" type="number" min="2" max="100" step="1" value="2"></label>
+        <label class="cfgnum" title="Minimum predicted-winner share lead that must remain if both rescue orders completely fill.">retain lead sh<input id="sigRescueRetainInput" type="number" min="0" max="1000" step="1" value="25"></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="SIMULATION knobs — how the BACKTEST/shadow models fills. No effect on REAL live (live fills come from the actual order book).">simulation</span>
         <label class="cfgnum" title="TAKER LATENCY (ms) — the shadow/backtest fills a marketable order at the ask that exists this many ms AFTER the decision. The current taker setting is 520ms; passive-maker research models maker arrival separately. NO effect on real live fills.">taker latency ms<input id="sigLatencyInput" type="number" min="0" max="10000" step="20" value="520"></label>
+        <label class="cfgnum" title="At a maker touch, percent of the original rescue order filled per touch interval.">maker touch %<input id="sigRescueFillPctInput" type="number" min="0" max="100" step="5" value="100"></label>
+        <label class="cfgnum" title="Duration used by the modeled maker touch queue.">maker touch ms<input id="sigRescueTouchMsInput" type="number" min="1" max="10000" step="10" value="250"></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="diagnostics — does NOT affect strategy or performance">debug</span>
@@ -1392,6 +1422,7 @@ function shadowParams(){
     SIZE:7, LIMIT:0.98, TICK:0.01,
     LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),     // SIM/backtest taker fill latency (ms). No effect on real live.
     WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
+    H_SESSION_POLICY_ON:document.getElementById("sigSessionPolicyOn")?.checked===true,
     // CLOB/Binance are the direction sources. Trend is poly-mom's optional
     // countertrend-confirmation regime on the Binance source.
     H_ON:true, H_START_S:hStart, H_STOP_S:hStop,
@@ -1412,11 +1443,43 @@ function shadowParams(){
     H_REVERSAL_ON:document.getElementById("sigReversalOn")?.checked===true,
     H_REVERSAL_RESIDUAL_SH:10,
     H_REVERSAL_MAX_IMBALANCE_SH:25,
+    H_REVERSAL_CONFIRM_MS:Math.round(clamp(nv("sigReversalConfirmInput",1000),0,30000)),
+    H_REVERSAL_DYNAMIC_SIZE_ON:true,
+    H_REVERSAL_RISK_USD:clamp(nv("sigReversalRiskInput",2),1,100),
+    H_REVERSAL_ECONOMIC_GATE_ON:false,
+    H_REVERSAL_MIN_PAIR_EDGE:-0.03,
+    H_REVERSAL_MAX_LOCKED_LOSS_USD:2,
     H_MIN_ASK:0.05, H_MAX_ASK:0.98,
     H_CAP_HEADROOM:0.01, H_MIN_DEPTH_SH:4,
     H_LIVE_ORDER_TYPE:liveOrderType,
     H_BASE_ORDER_SH:clamp(nv("sigBaseOrderInput",7),1,100),
     H_MIN_ORDER_SH:4,
+    H_MIN_ORDER_USD:1,
+    H_DYNAMIC_SIZE_ON:document.getElementById("sigDynamicSizeOn")?.checked===true,
+    H_ENTRY_RISK_USD:clamp(nv("sigEntryRiskInput",2),1,100),
+    H_RISK_LIMITS_ON:document.getElementById("sigRiskLimitsOn")?.checked===true,
+    H_MAX_ORDER_SH:clamp(nv("sigMaxOrderInput",100),4,1000),
+    H_MAX_GROSS_SH:clamp(nv("sigMaxGrossInput",500),4,5000),
+    H_MAX_ROUND_COST_USD:clamp(nv("sigMaxRoundCostInput",250),1,5000),
+    H_MAX_ROUND_WORST_LOSS_USD:clamp(nv("sigMaxWorstLossInput",10),1,1000),
+    H_MAX_SIGNAL_ORDERS:Math.round(clamp(nv("sigMaxSignalOrdersInput",4),1,100)),
+    H_PARTICIPATION_ON:document.getElementById("sigParticipationOn")?.checked===true,
+    H_PARTICIPATION_START_S:Math.round(clamp(nv("sigParticipationStartInput",90),0,299)),
+    H_PARTICIPATION_END_S:299,
+    H_PARTICIPATION_RETRY_MS:1000,
+    H_PARTICIPATION_RISK_USD:clamp(nv("sigParticipationRiskInput",1),1,100),
+    H_PARTICIPATION_MAX_ASK:0.99,
+    H_RESCUE_MAKER_ON:document.getElementById("sigRescueMakerOn")?.checked===true,
+    H_RESCUE_START_S:Math.round(clamp(nv("sigRescueStartInput",270),0,299)),
+    H_RESCUE_END_S:299,
+    H_RESCUE_PRICE_HIGH:0.02,
+    H_RESCUE_PRICE_LOW:0.01,
+    H_RESCUE_TOTAL_RISK_USD:clamp(nv("sigRescueRiskInput",2),2,100),
+    H_RESCUE_RETAIN_SH:clamp(nv("sigRescueRetainInput",25),0,1000),
+    H_RESCUE_REQUIRE_BOTH:true,
+    H_RESCUE_MAKER_LATENCY_MS:130,
+    H_RESCUE_SIM_FILL_PCT:clamp(nv("sigRescueFillPctInput",100),0,100),
+    H_RESCUE_SIM_TOUCH_MS:Math.round(clamp(nv("sigRescueTouchMsInput",250),1,10000)),
     H_COOLDOWN_MS:Math.round(clamp(nv("sigReleaseCooldownInput",1000),0,30000)),
     MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
   };
@@ -3419,6 +3482,7 @@ function setSessFrom(v){
     const P=shadowParams();
     const normalized={
       sigClobMidOn:P.H_CLOB_MID_VELOCITY_ON,
+      sigSessionPolicyOn:P.H_SESSION_POLICY_ON,
       sigMidVelocityLookbackInput:P.H_MID_VELOCITY_LOOKBACK_MS,
       sigMidVelocityMinInput:P.H_MID_VELOCITY_MIN,
       sigBinanceGapOn:P.H_BINANCE_GAP_MOMENTUM_ON,
@@ -3432,10 +3496,29 @@ function setSessFrom(v){
       sigBinanceGapAgreeOn:P.H_BINANCE_GAP_AGREE_ON,
       sigHedgeOn:P.H_HEDGE_ON,
       sigReversalOn:P.H_REVERSAL_ON,
+      sigReversalConfirmInput:P.H_REVERSAL_CONFIRM_MS,
+      sigReversalRiskInput:P.H_REVERSAL_RISK_USD,
       sigStartInput:P.H_START_S,
       sigStopInput:P.H_STOP_S,
       sigLiveOrderTypeInput:P.H_LIVE_ORDER_TYPE,
       sigBaseOrderInput:P.H_BASE_ORDER_SH,
+      sigDynamicSizeOn:P.H_DYNAMIC_SIZE_ON,
+      sigEntryRiskInput:P.H_ENTRY_RISK_USD,
+      sigRiskLimitsOn:P.H_RISK_LIMITS_ON,
+      sigMaxOrderInput:P.H_MAX_ORDER_SH,
+      sigMaxGrossInput:P.H_MAX_GROSS_SH,
+      sigMaxRoundCostInput:P.H_MAX_ROUND_COST_USD,
+      sigMaxWorstLossInput:P.H_MAX_ROUND_WORST_LOSS_USD,
+      sigMaxSignalOrdersInput:P.H_MAX_SIGNAL_ORDERS,
+      sigParticipationOn:P.H_PARTICIPATION_ON,
+      sigParticipationStartInput:P.H_PARTICIPATION_START_S,
+      sigParticipationRiskInput:P.H_PARTICIPATION_RISK_USD,
+      sigRescueMakerOn:P.H_RESCUE_MAKER_ON,
+      sigRescueStartInput:P.H_RESCUE_START_S,
+      sigRescueRiskInput:P.H_RESCUE_TOTAL_RISK_USD,
+      sigRescueRetainInput:P.H_RESCUE_RETAIN_SH,
+      sigRescueFillPctInput:P.H_RESCUE_SIM_FILL_PCT,
+      sigRescueTouchMsInput:P.H_RESCUE_SIM_TOUCH_MS,
       sigReleaseCooldownInput:P.H_COOLDOWN_MS,
     };
     for(const [id,value] of Object.entries(normalized)){ const el=document.getElementById(id); if(!el)continue;
@@ -3499,6 +3582,7 @@ function setSessFrom(v){
     V("sigSessStopInput",25);
     V("sigLatencyInput",520);
     C("sigClobMidOn",true);
+    C("sigSessionPolicyOn",true);
     V("sigMidVelocityLookbackInput",3000);
     V("sigMidVelocityMinInput",0.02);
     C("sigBinanceGapOn",true);
@@ -3512,10 +3596,29 @@ function setSessFrom(v){
     C("sigBinanceGapAgreeOn",false);
     C("sigHedgeOn",false);
     C("sigReversalOn",false);
+    V("sigReversalConfirmInput",1000);
+    V("sigReversalRiskInput",2);
     V("sigStartInput",0);
     V("sigStopInput",285);
     V("sigLiveOrderTypeInput","GTC");
     V("sigBaseOrderInput",7);
+    C("sigDynamicSizeOn",true);
+    V("sigEntryRiskInput",2);
+    C("sigRiskLimitsOn",true);
+    V("sigMaxOrderInput",100);
+    V("sigMaxGrossInput",500);
+    V("sigMaxRoundCostInput",250);
+    V("sigMaxWorstLossInput",10);
+    V("sigMaxSignalOrdersInput",4);
+    C("sigParticipationOn",true);
+    V("sigParticipationStartInput",90);
+    V("sigParticipationRiskInput",1);
+    C("sigRescueMakerOn",true);
+    V("sigRescueStartInput",270);
+    V("sigRescueRiskInput",2);
+    V("sigRescueRetainInput",25);
+    V("sigRescueFillPctInput",100);
+    V("sigRescueTouchMsInput",250);
     V("sigReleaseCooldownInput",1000);
     const verbose=document.getElementById("verboseInput"); if(verbose) verbose.checked=false;
     document.getElementById("verboseInput")?.dispatchEvent(new Event("change"));
@@ -3669,6 +3772,11 @@ refreshExecBadge();
 { // ── DURABLE CONFIG round-trip — every Apply saves the sidebar's control values server-side (data/runtime-config.json);
   //   on load we restore them so the dashboard reflects the persisted config (server file = source of truth). ──
   const CFG_IDS=["btVersionInput","strategySelect","sigSessStopInput","sigLatencyInput","sigLiveOrderTypeInput",
+    "sigSessionPolicyOn","sigDynamicSizeOn","sigEntryRiskInput","sigRiskLimitsOn",
+    "sigMaxOrderInput","sigMaxGrossInput","sigMaxRoundCostInput","sigMaxWorstLossInput","sigMaxSignalOrdersInput",
+    "sigParticipationOn","sigParticipationStartInput","sigParticipationRiskInput",
+    "sigRescueMakerOn","sigRescueStartInput","sigRescueRiskInput","sigRescueRetainInput",
+    "sigRescueFillPctInput","sigRescueTouchMsInput","sigReversalConfirmInput","sigReversalRiskInput",
     "sigClobMidOn","sigMidVelocityLookbackInput","sigMidVelocityMinInput",
     "sigBinanceGapOn","sigBinanceGapLookbackInput","sigBinanceGapMinInput",
     "sigBinanceTrendOn","sigBinanceTrendLookbackSecInput","sigBinanceTrendMinInput",
@@ -4096,7 +4204,14 @@ function sessCfgSummary(r){
 }
 // FastMX parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
-  return `<span style="color:#cdb8ff">shadow · fastmx · aligned signal → ${P.H_BASE_ORDER_SH??7}sh entry @ ≤${P.H_MAX_ASK??0.98}`
+  const profileSizing=P.H_SESSION_POLICY_ON===true&&P.H_SESSION_PROFILES
+    ?Object.entries(P.H_SESSION_PROFILES).map(([name,cfg])=>`${name.replace("late_us","late-US")} $${cfg.H_ENTRY_RISK_USD??P.H_ENTRY_RISK_USD??4}`).join(" / ")
+    :null;
+  const sizing=P.H_DYNAMIC_SIZE_ON===true
+    ?`${profileSizing||`$${P.H_ENTRY_RISK_USD??4}`} risk dynamic`
+    :`${P.H_BASE_ORDER_SH??7}sh static`;
+  return `<span style="color:#cdb8ff">shadow · fastmx · ${sizing} entry @ ≤${P.H_MAX_ASK??0.98}`
+    +` · UTC sessions ${P.H_SESSION_POLICY_ON===true?"ON":"OFF"}`
     +` · CLOB mid ${P.H_CLOB_MID_VELOCITY_ON!==false?"ON":"OFF"} ${((P.H_MID_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(1)}s ≥${P.H_MID_VELOCITY_MIN??0.02}`
     +` · Binance gap ${P.H_BINANCE_GAP_MOMENTUM_ON!==false?"ON":"OFF"} ${((P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(1)}s ≥$${P.H_BINANCE_GAP_VELOCITY_MIN??5}`
     +` · Binance trend regime ${P.H_BINANCE_TREND_ON!==false?"ON":"OFF"} ${P.H_BINANCE_TREND_LOOKBACK_SEC??30}s ≥${P.H_BINANCE_TREND_MIN_PCT??0.05}%`
@@ -4105,9 +4220,13 @@ function sessShadowCfg(P){
     +` · Binance window-gap agree ${P.H_BINANCE_GAP_AGREE_ON===true?"ON":"OFF"}`
     +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"}`
     +` · strong reversal ${P.H_REVERSAL_ON===true?"ON":"OFF"}`
+    +`/${P.H_REVERSAL_CONFIRM_MS??0}ms · economic gate ${P.H_REVERSAL_ECONOMIC_GATE_ON===true?"ON":"OFF"}`
+    +` · participation ${P.H_PARTICIPATION_ON===true?"ON":"OFF"}@${P.H_PARTICIPATION_START_S??240}s`
+    +` · rescue maker ${P.H_RESCUE_MAKER_ON===true?"ON":"OFF"} [${P.H_RESCUE_PRICE_HIGH??0.02},${P.H_RESCUE_PRICE_LOW??0.01}]`
+    +` · risk worst≤$${P.H_MAX_ROUND_WORST_LOSS_USD??25} cost≤$${P.H_MAX_ROUND_COST_USD??250} gross≤${P.H_MAX_GROSS_SH??500}sh`
     +` · depth ≥${P.H_MIN_DEPTH_SH??4}sh`
     +` · cooldown ${P.H_COOLDOWN_MS??1000}ms`
-    +` · simulation fixed-USD FAK · live ${(P.H_LIVE_ORDER_TYPE||"GTC")} · cap ask+${P.H_CAP_HEADROOM??0.01} · latency ${P.LATENCY_MS||0}ms</span>`; }
+    +` · simulation ${P.H_DYNAMIC_SIZE_ON===true?"exact-share":"fixed-USD FAK"} · live ${(P.H_LIVE_ORDER_TYPE||"GTC")} · cap ask+${P.H_CAP_HEADROOM??0.01} · latency ${P.LATENCY_MS||0}ms</span>`; }
 function smoney(v){ return (v>=0?"+$":"−$")+Math.abs(v).toFixed(2); }
 function sessCard(title,cls,g){
   const row=(k,v)=>`<div class="sess-row"><span class="k">${k}</span><span class="v">${v}</span></div>`;

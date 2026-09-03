@@ -1,43 +1,67 @@
 # FastMX current state
 
-_Updated: 2026-08-27 UTC_
+_Updated: 2026-09-03 UTC_
 
-- Runtime: `poly-fastmx-simulation`, online under PM2
+- Runtime: local simulation process online on port 4520; PM2 entry currently stopped
 - Dashboard: `https://dev-fastmx.polywinbot.com`
 - Local port: `4520`
 - Execution: hard-locked simulation; no real orders
 - Target wallet: `0x75cc3b63a2f2423085e10706c78b494017b93ce1`
-- Active strategy: only `helpme`, in `engine/strategies/helpme.js`
+- Active strategy: FastMX (`helpme`) in `engine/strategies/helpme.js`
 
-The active policy exposes two direction-source toggles and the `poly-mom-bot` Binance trend-regime toggle. CLOB midpoint velocity uses
-`mid(now) - mid(at-or-before now - lookback)`, with `mid = (best bid + best ask) / 2`, a required configurable
-lookback fixed at the required `3000` ms default and a fitted absolute threshold of `0.02`. Binance gap momentum uses the dev-tool raw-dollar formula
-`(priceNow-open)-(pricePrior-open) = priceNow-pricePrior`, with a three-second lookback and
-`$5` minimum. Binance trend uses the `poly-mom-bot` formula
-`100 × (current Binance spot - Binance spot 30 seconds earlier) / prior spot`. At `0.05%` or stronger,
-a trend-following Binance signal passes normally; an opposing fast signal must also clear `0.075%` on both its fast
-clock and a causal 60-second Binance clock in the same direction. Weak/range trend and missing trend history leave
-the fast signal unchanged, matching `poly-mom-bot`. Trend is not a standalone direction source and requires Binance
-momentum. UI and server validation guarantee at least one fast source is enabled and enforce that dependency.
-`H_BINANCE_GAP_AGREE_ON` independently applies the `poly-mom-bot` window-gap rule: selected velocity direction
-must agree with Binance spot versus the five-minute Binance open. It is currently off.
-Every distinct qualified signal aligned with flat/current inventory creates a seven-share entry. Two independent
-opposite-signal controls are available: partial hedge retains at least a one-share old-side lead, while reversal
-requires CLOB + Binance fast momentum + strong trailing trend + window-gap confirmation, crosses only an old
-imbalance up to 25 shares, and targets a ten-share new-side residual. Inventory orders are exact-share sized and
-force live GTC plus immediate remainder cancellation. Both controls default off because partial hedging degraded
-fit and holdout, while reversal improved holdout but failed fit. Executable-duration, cap-cell, order-count, and
-per-window inventory-loss branches remain removed. Cooldown remains the sole release throttle at `1000` ms.
-The external session circuit breaker remains at `-$25`.
-Chainlink, ask differentials, imbalance, microprice, and weighted scores are not direction gates.
+## Active FastMX policy
 
-Current deployed PM2 profile: CLOB velocity OFF, Binance velocity ON at `3000ms/$5`, Binance trend regime ON at
-`30s/0.05%` with `60s/0.075%` countertrend confirmation, window-gap agreement ON, active through `T+300`,
-`2000ms` cooldown, hedge OFF, and reversal OFF.
+The 2026-09-03 entry review tested source ablation, price/timing/threshold/lookback combinations, a 10-share
+minimum, one/two-entry limits, and unlimited return-efficiency sizing. None passed all temporal splits while
+also preserving 100% replay participation and loss control. The strongest minimum-10 candidate made only
+`+$62.16` and lost `-$195.32` in the later segment. Unlimited return sizing made `+$949.12` retrospectively but
+lost `-$184.07` later, increased the worst round from `-$10.00` to `-$80.99`, and increased maximum drawdown to
+`$1,363.74`. Those candidates are not active. See
+`research/FASTMX_ENTRY_SIGNAL_REVIEW_2026-09-03.md`.
 
-Each simulated/backtested automatic BUY is a fixed-USDC FAK: `budget = signed cap × minimum shares`. Modeled matching is delayed 520 ms,
-walks the future visible L2 ladder, can receive more shares through price improvement, books partials at actual
-VWAP, and cancels any unspent remainder.
+An optional ordinary-entry cap (`H_MAX_ENTRY_ORDERS`) and `return-efficiency` sizing implementation now exist,
+but both remain inactive in the validated default (`H_MAX_ENTRY_ORDERS=null`, `H_ENTRY_SIZE_MODE=risk-usd`).
+The active minimum remains 4 shares; changing it to 10 is not promoted because every tested minimum-10 variant
+failed the later-period screen.
+
+The strategy remains simulation-only. The selected policy uses separate UTC signal and sizing regimes while
+keeping one global hard-risk envelope:
+
+| UTC session | CLOB velocity | Binance velocity | Trend | Gap agree | Entry/reversal target | Reversal | Cooldown |
+|---|---:|---:|---:|:---:|---:|:---:|---:|
+| Asia 00–07 | 3s / $0.02 | 12s / $10 | 60s / 0.10% | off | $2 / $2 | off | 10s |
+| Europe 07–13 | 5s / $0.02 | 8s / $10 | 30s / 0.05% | off | $4 / $4 | 1s confirmed | 5s |
+| US 13–21 | 8s / $0.03 | 8s / $10 | 30s / 0.05% | on | $2 / $2 | off | 15s |
+| late-US 21–24 | 3s / $0.02 | 5s / $10 | 15s / 0.05% | off | $2 / $2 | 1s confirmed | 15s |
+
+CLOB velocity is `mid(now) - mid(at-or-before now-lookback)`, where midpoint is `(best bid + best ask) / 2`.
+Binance velocity is the raw-dollar spot move over its causal lookback. Binance trend is
+`100 × (spotNow - spotPrior) / spotPrior`; it is a regime/filter, not an independent direction source.
+Normal signal entry is active from second 60 through 239. Opposing signals only reverse in the Europe and late-US
+profiles, and only while CLOB direction, Binance velocity, strong Binance trend, and spot versus the window open
+continuously agree for 1,000ms. The separate pair-edge filter is off because it rejected reversals that improved
+both fit and holdout; the post-order worst-settlement-loss constraint remains mandatory.
+
+Normal and reversal order size is dynamic: the session target is divided by the worst-price cap to obtain exact
+shares. Europe uses $4; the other sessions use $2. A
+single order is capped at 100 shares; a round is capped at 500 gross shares, $250 cost, $10 modeled loss in its
+worse settlement, and four signal/fallback orders. An untouched round begins $1 minimum-risk attempts at second
+90, retrying until second 299. This produced fills in every available historical replay round; it guarantees order
+attempts in operation, not an exchange fill when data, connectivity, or liquidity is unavailable. The session
+circuit breaker remains `-$25`.
+
+At second 270, an eligible losing/opposite token receives two resting post-only GTC bids at $0.02 and $0.01 only
+while its ask remains above both prices. The combined allocation is $2 (at least 50 and 100 shares to satisfy the
+$1 per-order minimum). The ladder is skipped unless complete fills at both levels preserve a 25-share lead on the
+currently predicted winner and pass every global risk limit. The simulator models 130ms maker arrival and a
+250ms touch interval; a bid that would cross when it reaches the venue is rejected rather than treated as a maker.
+
+The corrected exact Aug 22–Sep 3 BAPI v2 replay traded all 3,353 rounds with 6,516 fills: 1,976 wins, 1,377 losses,
+`+$279.44` P&L, `$20,520.72` cost, and `$264.94` maximum drawdown. Average cost was `$6.1201` per round and the
+maximum observed loss was exactly `$10.00`. The Aug 31–Sep 3 segment remained `-$83.24`; it was inspected for the
+Europe sizing decision and is no longer a sealed holdout. This is not proof of future profitability. The passive
+rescue ladder still has no credited P&L. See `research/FASTMX_SIZING_AND_LOSS_AUDIT_2026-09-03.md`, the generated
+loss CSV, and `research/fastmx-loss-cause-analysis.mjs`.
 
 Real execution remains disabled in the PM2 process, but the isolated live executor was production-probed on
 August 27. It now reads market-specific tick/minimum constraints, signs a true fixed-USD CLOB V2 market order

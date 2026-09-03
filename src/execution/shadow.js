@@ -5,8 +5,9 @@ import path from "node:path";
 import { config } from "../config/config.js";
 import { fillFee, isFeeFill } from "../../engine/fees.js";
 import { DEFAULT_STRATEGY, getStrategy } from "../../engine/strategies/index.js";
+import { resolveFastMxSessionParams } from "../../engine/strategies/fastmx-session-policy.js";
 import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim — apply a merge record to the live ledger
-import { walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
+import { makerTouchFill, walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
 import { isRunning } from "./botState.js";
 import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
@@ -118,6 +119,43 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     recordFill({ ...rec, slug: w.slug, windowStart: w.windowStart });   // → MongoDB shadow_fills_<mode>
   }
 
+  function resolveRestingMakers(w, { up, down, tInto, dtMs, nowMs }) {
+    if (!Array.isArray(w.restingMakers) || !w.restingMakers.length) return;
+    const keep = [];
+    for (const pending of w.restingMakers) {
+      const rec = pending?.rec;
+      if (!rec) continue;
+      if (rec.expireT != null && tInto > rec.expireT + 1e-9) continue;
+      const ask = rec.side === "Up" ? up?.bestAsk : down?.bestAsk;
+      if (!pending.activated) {
+        if (tInto + 1e-9 < (+pending.activeAfterT || rec.tInto)) {
+          keep.push(pending); continue;
+        }
+        if (ask == null || ask <= rec.limitPx + 1e-9) continue;
+        pending.activated = true;
+        keep.push(pending); continue;
+      }
+      const previous = +pending.filled || 0;
+      const target = +pending.target || +rec.shares || 0;
+      const filled = makerTouchFill({ askNow: ask, limit: rec.limitPx,
+        filled: previous, target, dtMs,
+        touchMs: mergedP.H_RESCUE_SIM_TOUCH_MS,
+        fillPct: mergedP.H_RESCUE_SIM_FILL_PCT });
+      pending.filled = filled;
+      const delta = filled - previous;
+      if (delta > 1e-9) {
+        const fill = { ...rec, decidedT: rec.tInto, placedT: rec.tInto,
+          tInto, requestedShares: target, shares: +delta.toFixed(4),
+          effPx: rec.limitPx, usdc: +(delta * rec.limitPx).toFixed(4),
+          status: filled + 1e-9 >= target ? "full" : "partial",
+          filledLate: true, ts: nowMs };
+        bookFill(w, fill);
+      }
+      if (filled + 1e-9 < target) keep.push(pending);
+    }
+    w.restingMakers = keep;
+  }
+
   // Apply a MERGE record (leg:"merge") from stepSignalHedge — reclaim the MAIN complete sets: remove them
   // from the position, BANK the realized profit (moved out of if-up/if-down into mergedRealized so they reset),
   // and emit shadow_merge (which index.js routes to the REAL on-chain mergePositions tx in live mode). The
@@ -139,10 +177,16 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   // Full config snapshot for a window — the SINGLE source of truth for what settings produced these fills.
   // Stamped into every window_open / settle verbose line AND into the persisted settle record, so a later
   // live-vs-backtest comparison never has to GUESS the config (the #1 cause of spurious "divergence").
-  function cfgStamp() {
-    const P = mergedP;
+  function cfgStamp(windowStart) {
+    const winHour = Number.isFinite(+windowStart)
+      ? new Date(+windowStart * 1000).getUTCHours() : null;
+    const resolved = resolveFastMxSessionParams(mergedP, { winHour });
+    const P = resolved.params;
     return {
       strategy: DEFAULT_STRATEGY,
+      utcSession: resolved.session,
+      sessionPolicyApplied: resolved.applied,
+      sessionPolicyOn: P.H_SESSION_POLICY_ON,
       latencyMs: P.LATENCY_MS || 0,
       baseOrderShares: P.H_BASE_ORDER_SH,
       cooldownMs: P.H_COOLDOWN_MS,
@@ -165,10 +209,45 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       reversalOn: P.H_REVERSAL_ON,
       reversalResidualShares: P.H_REVERSAL_RESIDUAL_SH,
       reversalMaxImbalanceShares: P.H_REVERSAL_MAX_IMBALANCE_SH,
+      reversalConfirmMs: P.H_REVERSAL_CONFIRM_MS,
+      reversalDynamicSizeOn: P.H_REVERSAL_DYNAMIC_SIZE_ON,
+      reversalRiskUsd: P.H_REVERSAL_RISK_USD,
+      reversalEconomicGateOn: P.H_REVERSAL_ECONOMIC_GATE_ON,
+      reversalMinPairEdge: P.H_REVERSAL_MIN_PAIR_EDGE,
+      reversalMaxLockedLossUsd: P.H_REVERSAL_MAX_LOCKED_LOSS_USD,
       priceMin: P.H_MIN_ASK,
       priceMax: P.H_MAX_ASK,
       capHeadroom: P.H_CAP_HEADROOM,
       liveOrderType: P.H_LIVE_ORDER_TYPE || config.liveTakerOrderType,
+      minDepthShares: P.H_MIN_DEPTH_SH,
+      minOrderShares: P.H_MIN_ORDER_SH,
+      minOrderUsd: P.H_MIN_ORDER_USD,
+      dynamicSizeOn: P.H_DYNAMIC_SIZE_ON,
+      entryRiskUsd: P.H_ENTRY_RISK_USD,
+      riskLimitsOn: P.H_RISK_LIMITS_ON,
+      maxOrderShares: P.H_MAX_ORDER_SH,
+      maxGrossShares: P.H_MAX_GROSS_SH,
+      maxRoundCostUsd: P.H_MAX_ROUND_COST_USD,
+      maxRoundWorstLossUsd: P.H_MAX_ROUND_WORST_LOSS_USD,
+      maxSignalOrders: P.H_MAX_SIGNAL_ORDERS,
+      participationOn: P.H_PARTICIPATION_ON,
+      participationStartS: P.H_PARTICIPATION_START_S,
+      participationEndS: P.H_PARTICIPATION_END_S,
+      participationRetryMs: P.H_PARTICIPATION_RETRY_MS,
+      participationRiskUsd: P.H_PARTICIPATION_RISK_USD,
+      participationMaxAsk: P.H_PARTICIPATION_MAX_ASK,
+      participationSide: P.H_PARTICIPATION_SIDE,
+      rescueMakerOn: P.H_RESCUE_MAKER_ON,
+      rescueStartS: P.H_RESCUE_START_S,
+      rescueEndS: P.H_RESCUE_END_S,
+      rescuePrices: [P.H_RESCUE_PRICE_HIGH, P.H_RESCUE_PRICE_LOW],
+      rescueRiskUsd: P.H_RESCUE_TOTAL_RISK_USD,
+      rescueRetainShares: P.H_RESCUE_RETAIN_SH,
+      rescueRequireBoth: P.H_RESCUE_REQUIRE_BOTH,
+      rescueMakerLatencyMs: P.H_RESCUE_MAKER_LATENCY_MS,
+      rescueSimFillPct: P.H_RESCUE_SIM_FILL_PCT,
+      rescueSimTouchMs: P.H_RESCUE_SIM_TOUCH_MS,
+      maxSessionLoss: P.MAX_SESSION_LOSS,
       limit: P.LIMIT,
       apiVer: config.backtestApiVersion,
       mode: config.executionMode,
@@ -196,7 +275,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     // FIRST driven tick of this window — snapshot the EXACT config (always, cheap once/window) so the persisted
     //   settle record is self-describing; also the verbose header for everything that follows.
     if (w.cfgAtOpen == null) {
-      w.cfgAtOpen = cfgStamp();
+      w.cfgAtOpen = cfgStamp(w.windowStart);
       if (openChainlink != null) w.openChainlink = openChainlink;
       if (w.vDiag) w.vDiag.open = true;
       if (verboseOn) verbose("shadow.window_open", { slug, ws: w.windowStart, openBz: w.openBinance, openCl: openChainlink, ...w.cfgAtOpen });
@@ -217,9 +296,12 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         || recTick.t - previous.t >= 1) recTicks.push(recTick);
     }
     const clGapPct = (clGap != null && openChainlink) ? (clGap / openChainlink) * 100 : null;
+    resolveRestingMakers(w, { up, down, tInto, dtMs, nowMs });
     const got = curStrat.step(w, { t: tInto, up, down, bzPrice, clPrice, openBinance: w.openBinance,
       binanceAtMs,
-      openChainlink, bzGap, bzGapPct, clGap, clGapPct }, P, dtMs, nowMs);
+      openChainlink, bzGap, bzGapPct, clGap, clGapPct,
+      winHour: new Date(w.windowStart * 1000).getUTCHours(),
+      winDay: new Date(w.windowStart * 1000).getUTCDay() }, P, dtMs, nowMs);
     // Per-tick cadence and gate diagnostics. Guarded so it has no hot-path cost
     // when verbose logging is disabled.
     if (verboseOn && w.vDiag) {
@@ -269,9 +351,9 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       }
       if (rec.leg === "merge") { applyMerge(w, rec); continue; }
       // route the REAL order NOW (at the decision) — index.js listens to shadow_order. Display/PnL booked below.
-      if (rec.exec === "marketable") { try { onEvent({ kind: "shadow_order", slug, windowStart: w.windowStart, rec }); } catch {} }
+      if (rec.exec === "marketable" || rec.exec === "maker") { try { onEvent({ kind: "shadow_order", slug, windowStart: w.windowStart, rec }); } catch {} }
       // ORDER STATUS — the strategy DECIDED to place this order (fires in sim AND live; live adds real stages downstream).
-      if (rec.exec === "marketable" && rec.leg !== "merge") { try { onEvent({ kind: "order_status", stage: STAGES.DECIDED,
+      if ((rec.exec === "marketable" || rec.exec === "maker") && rec.leg !== "merge") { try { onEvent({ kind: "order_status", stage: STAGES.DECIDED,
         key: `${w.windowStart}:${rec.oid}`, slug, ws: w.windowStart, oid: rec.oid, side: rec.side, leg: rec.leg,
         reason: rec.reason, tInto: rec.tInto, reqShares: rec.shares, decPx: rec.effPx,
         limitPx: rec.limitPx, budgetUsd: rec.budgetUsd ?? null,
@@ -279,7 +361,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       if (simLat > 0 && rec.exec === "marketable") (w.pendingFills = w.pendingFills || []).push(
         { rec, dueMs: nowMs + simLat, dueTInto: rec.tInto + simLat / 1000, upA: up.bestAsk, dnA: down.bestAsk,
           upBook: up, dnBook: down, decPx0: rec.effPx });  // snapshot decision book + decision px, track fwd
-      else bookFill(w, rec);
+      else if (rec.exec !== "maker") bookFill(w, rec);
     }
     // resolve deferred fills now due → fill at the CURRENT (delayed) ask, capped at the order's limit.
     if (w.pendingFills && w.pendingFills.length) {
@@ -356,7 +438,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   // Record a REAL on-chain fill (from a live order's response) into a parallel "real" ledger for the window —
   // real shares (takingAmount) + real USDC spent (makingAmount). This is the HONEST cost, used to report the
   // actual on-chain PnL alongside the (optimistic) modeled shadow PnL. Real fee estimated on the real fill price.
-  function recordRealFill(slug, windowStart, { side, shares, spent, price, leg, oid, latencyMs, tInto }) {
+  function recordRealFill(slug, windowStart, { side, shares, spent, price, leg, oid, latencyMs, tInto, maker = false }) {
     const w = windows.get(slug); if (!w) return;
     const sh = +shares || 0, usd = +spent || 0; if (!(sh > 0)) return;
     const px = price != null ? price : (sh ? usd / sh : null);
@@ -364,7 +446,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     //   marketable match, or at the reconcile-poll moment for a resting order that fills LATE. So this is the real
     //   fill x-position (vs `tInto` = the decision time). The chart plots the solid circle here in live mode.
     const fillTInto = +((Date.now() / 1000) - windowStart).toFixed(2);
-    const fee = fillFee(px, sh, true);
+    const fee = fillFee(px, sh, !maker);
     w.realUp = w.realUp || 0; w.realDn = w.realDn || 0; w.realCost = w.realCost || 0; w.realFee = w.realFee || 0; w.realFills = w.realFills || 0;
     if (side === "Up") w.realUp += sh; else w.realDn += sh;   // every active leg is an entry BUY
     w.realCost += usd; w.realFee += fee; w.realFills += 1;

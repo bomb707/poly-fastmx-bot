@@ -27,6 +27,8 @@
 // Repeated feed heartbeats with identical signal inputs are de-duplicated.
 
 import { midOf } from "../momentum.js";
+import { fillFee } from "../fees.js";
+import { FASTMX_SESSION_PROFILES, resolveFastMxSessionParams } from "./fastmx-session-policy.js";
 
 export const NAME = "helpme";
 export const LABEL = "FastMX · dual momentum + Binance trend regime";
@@ -43,6 +45,8 @@ export const STRAT = {
   FEE_ALL_FILLS: false,
 
   H_ON: true,
+  H_SESSION_POLICY_ON: true,
+  H_SESSION_PROFILES: FASTMX_SESSION_PROFILES,
   H_START_S: 0,
   H_STOP_S: 285,
   H_CLOB_MID_VELOCITY_ON: true,
@@ -63,13 +67,19 @@ export const STRAT = {
   // Share-denominated hedges preserve this old-side lead even when execution
   // receives price improvement.
   H_HEDGE_RETAIN_SH: 1,
-  // Backtest default OFF: reversal improved holdout but failed the fit segment,
-  // so it is not promoted as a stable runtime default.
+  // Global fallback is off; the validated Europe and late-US session profiles
+  // selectively enable persistent reversals.
   H_REVERSAL_ON: false,
   // Target extraction: median post-cross residual=10.44sh and p90 old
   // imbalance among crosses=25.35sh.
   H_REVERSAL_RESIDUAL_SH: 10,
   H_REVERSAL_MAX_IMBALANCE_SH: 25,
+  H_REVERSAL_CONFIRM_MS: 1000,
+  H_REVERSAL_DYNAMIC_SIZE_ON: true,
+  H_REVERSAL_RISK_USD: 2,
+  H_REVERSAL_ECONOMIC_GATE_ON: false,
+  H_REVERSAL_MIN_PAIR_EDGE: -0.03,
+  H_REVERSAL_MAX_LOCKED_LOSS_USD: 2,
   H_MIN_ASK: 0.05,
   H_MAX_ASK: 0.98,
   H_CAP_HEADROOM: 0.01,
@@ -77,6 +87,54 @@ export const STRAT = {
   H_MIN_DEPTH_SH: 4,
   H_BASE_ORDER_SH: 7,
   H_MIN_ORDER_SH: 4,
+  H_MIN_ORDER_USD: 1,
+  // Return-efficiency sizing uses the user's economic anchor: 60 shares at
+  // $0.60. Gross win ROI is (1-price)/price, so lower-priced qualifying
+  // entries receive more shares and high-priced entries fall back toward the
+  // configured minimum (10 in the reviewed candidate). This has no payout
+  // target; visible depth is the final execution bound. The legacy risk-usd
+  // mode remains available explicitly.
+  // Price-only return scaling failed the complete replay and is therefore not
+  // active by default. It remains available for a future probability/edge
+  // gate; the deployed mode retains fixed-expenditure sizing.
+  H_DYNAMIC_SIZE_ON: true,
+  H_ENTRY_SIZE_MODE: "risk-usd",
+  H_RETURN_REFERENCE_PRICE: 0.60,
+  H_RETURN_REFERENCE_SH: 60,
+  H_RETURN_SIZE_SCALE: 1,
+  H_ENTRY_RISK_USD: 2,
+  H_RISK_LIMITS_ON: true,
+  H_MAX_ORDER_SH: 100,
+  H_MAX_GROSS_SH: 500,
+  H_MAX_ROUND_COST_USD: 250,
+  H_MAX_ROUND_WORST_LOSS_USD: 10,
+  // Optional cap for ordinary same-side entries. Null preserves the validated
+  // policy; 1 and 2 were tested but failed the later-period return screen.
+  H_MAX_ENTRY_ORDERS: null,
+  H_MAX_SIGNAL_ORDERS: 4,
+  // If normal signals never fill, begin minimum-risk marketable attempts late
+  // in the round. This guarantees a causal attempt/retry policy; no software
+  // can guarantee a venue fill when liquidity or connectivity is absent.
+  H_PARTICIPATION_ON: true,
+  H_PARTICIPATION_START_S: 90,
+  H_PARTICIPATION_END_S: 299,
+  H_PARTICIPATION_RETRY_MS: 1000,
+  H_PARTICIPATION_RISK_USD: 1,
+  H_PARTICIPATION_MAX_ASK: 0.99,
+  H_PARTICIPATION_SIDE: "clob",
+  // End-game reversal insurance. Both limits are submitted while still below
+  // the ask, so post-only protects them from ever becoming takers.
+  H_RESCUE_MAKER_ON: true,
+  H_RESCUE_START_S: 270,
+  H_RESCUE_END_S: 299,
+  H_RESCUE_PRICE_HIGH: 0.02,
+  H_RESCUE_PRICE_LOW: 0.01,
+  H_RESCUE_TOTAL_RISK_USD: 2,
+  H_RESCUE_RETAIN_SH: 25,
+  H_RESCUE_REQUIRE_BOTH: true,
+  H_RESCUE_MAKER_LATENCY_MS: 130,
+  H_RESCUE_SIM_FILL_PCT: 100,
+  H_RESCUE_SIM_TOUCH_MS: 250,
   H_COOLDOWN_MS: 1000,
   MAX_SESSION_LOSS: 25,
 };
@@ -104,6 +162,30 @@ export function validateParams(P = STRAT) {
   }
   if (toggles.binanceTrend && !toggles.binanceGap) {
     throw new RangeError("the poly-mom Binance trend regime requires Binance gap momentum");
+  }
+  const sizeMode = String(P.H_ENTRY_SIZE_MODE || "risk-usd").toLowerCase();
+  if (enabled(P.H_DYNAMIC_SIZE_ON, false) && sizeMode === "return-efficiency") {
+    const referencePrice = finite(P.H_RETURN_REFERENCE_PRICE);
+    if (!(referencePrice > 0 && referencePrice < 1)) {
+      throw new RangeError("return-efficiency sizing requires 0 < H_RETURN_REFERENCE_PRICE < 1");
+    }
+    if (!(finite(P.H_RETURN_REFERENCE_SH) > 0)) {
+      throw new RangeError("return-efficiency sizing requires H_RETURN_REFERENCE_SH > 0");
+    }
+  } else if (enabled(P.H_DYNAMIC_SIZE_ON, false) && !(finite(P.H_ENTRY_RISK_USD) > 0)) {
+    throw new RangeError("risk-usd FastMX sizing requires H_ENTRY_RISK_USD > 0");
+  }
+  if (enabled(P.H_RESCUE_MAKER_ON, false)) {
+    const high = finite(P.H_RESCUE_PRICE_HIGH), low = finite(P.H_RESCUE_PRICE_LOW);
+    if (!(high > 0 && high < 1 && low > 0 && low <= high)) {
+      throw new RangeError("rescue maker prices must satisfy 0 < low <= high < 1");
+    }
+    const levels = high === low ? 1 : 2;
+    const minUsd = Math.max(0, finite(P.H_MIN_ORDER_USD) ?? 1);
+    if (enabled(P.H_RESCUE_REQUIRE_BOTH, true)
+      && (finite(P.H_RESCUE_TOTAL_RISK_USD) ?? 0) + EPS < levels * minUsd) {
+      throw new RangeError("rescue total risk must fund the venue minimum at every required level");
+    }
   }
   return true;
 }
@@ -151,7 +233,130 @@ function effectiveShares(state) {
     if (r.side === "Up") up += shares;
     else if (r.side === "Down") down += shares;
   }
+  for (const p of (state.restingMakers || [])) {
+    const r = p?.rec;
+    if (!r) continue;
+    const shares = Math.max(0, (+p.target || +r.shares || 0) - (+p.filled || 0));
+    if (r.side === "Up") up += shares;
+    else if (r.side === "Down") down += shares;
+  }
   return { up, down, net: up - down };
+}
+
+function effectivePosition(state) {
+  let up = +state.upShares || 0, down = +state.downShares || 0;
+  let cost = +state.cost || ((+state.upCost || 0) + (+state.downCost || 0));
+  let fee = +state.fee || 0;
+  for (const pending of (state.pendingFills || [])) {
+    const rec = pending?.rec;
+    if (!rec) continue;
+    const shares = finite(rec.minimumShares) ?? (+rec.shares || 0);
+    const px = finite(rec.limitPx) ?? finite(rec.effPx) ?? 0;
+    const orderCost = rec.budgetUsd != null ? (+rec.budgetUsd || 0) : shares * px;
+    if (rec.side === "Up") up += shares; else if (rec.side === "Down") down += shares;
+    cost += orderCost;
+    if (rec.kind !== "maker" && !rec.maker) fee += fillFee(px, shares, true);
+  }
+  for (const pending of (state.restingMakers || [])) {
+    const rec = pending?.rec;
+    if (!rec) continue;
+    const shares = Math.max(0, (+pending.target || +rec.shares || 0) - (+pending.filled || 0));
+    const px = finite(rec.limitPx) ?? finite(rec.effPx) ?? 0;
+    if (rec.side === "Up") up += shares; else if (rec.side === "Down") down += shares;
+    cost += shares * px;
+  }
+  return { up, down, cost, fee, gross: up + down,
+    ifUp: up - cost - fee, ifDown: down - cost - fee };
+}
+
+function projectedPosition(position, side, shares, price, taker = true) {
+  const fee = taker ? fillFee(price, shares, true) : 0;
+  const next = { ...position, cost: position.cost + shares * price,
+    fee: position.fee + fee, gross: position.gross + shares };
+  if (side === "Up") next.up += shares; else next.down += shares;
+  next.ifUp = next.up - next.cost - next.fee;
+  next.ifDown = next.down - next.cost - next.fee;
+  next.worstLoss = Math.max(0, -Math.min(next.ifUp, next.ifDown));
+  return next;
+}
+
+function floor4(value) {
+  return Math.floor((Math.max(0, +value || 0) + EPS) * 1e4) / 1e4;
+}
+
+function minimumSharesAt(price, P) {
+  const minShares = Math.max(1, finite(P.H_MIN_ORDER_SH) ?? 1);
+  const minUsd = Math.max(0, finite(P.H_MIN_ORDER_USD) ?? 1);
+  return Math.max(minShares, price > 0 ? Math.ceil((minUsd / price - EPS) * 100) / 100 : Infinity);
+}
+
+export function returnEfficiencyShares(price, P = STRAT) {
+  const px = finite(price);
+  const minShares = Math.max(1, finite(P.H_MIN_ORDER_SH) ?? 1);
+  const referencePrice = finite(P.H_RETURN_REFERENCE_PRICE);
+  const referenceShares = Math.max(minShares, finite(P.H_RETURN_REFERENCE_SH) ?? minShares);
+  const scale = Math.max(0, finite(P.H_RETURN_SIZE_SCALE) ?? 1);
+  if (!(px > 0 && px < 1) || !(referencePrice > 0 && referencePrice < 1)
+    || scale <= 0) return minShares;
+  const roi = (1 - px) / px;
+  const referenceRoi = (1 - referencePrice) / referencePrice;
+  return Math.max(minShares, referenceShares * scale * roi / referenceRoi);
+}
+
+function participationSides(rule, tk, momentum) {
+  const midpoint = momentum?.midpoint ?? finite(midOf(tk.up));
+  const clob = midpoint == null ? null : (midpoint >= 0.5 ? "Up" : "Down");
+  const spot = finite(tk.bzPrice), open = finite(tk.openBinance);
+  const binance = spot == null || open == null ? null : (spot >= open ? "Up" : "Down");
+  const upAsk = finite(tk.up?.bestAsk), downAsk = finite(tk.down?.bestAsk);
+  const cheap = upAsk == null ? "Down" : downAsk == null ? "Up"
+    : (upAsk <= downAsk ? "Up" : "Down");
+  const preferred = rule === "cheap" ? cheap
+    : rule === "binance" ? (binance || clob || cheap)
+      : rule === "consensus" && clob && binance && clob === binance ? clob
+        : (clob || binance || cheap);
+  return [preferred, preferred === "Up" ? "Down" : "Up"];
+}
+
+function boundedOrderShares(state, side, desiredShares, price, P, { taker = true } = {}) {
+  const position = effectivePosition(state);
+  if (!enabled(P.H_RISK_LIMITS_ON, false)) {
+    return { shares: floor4(Math.max(0, desiredShares)), position };
+  }
+  const maxOrder = Math.max(0, finite(P.H_MAX_ORDER_SH) ?? Infinity);
+  const grossRoom = Math.max(0, (finite(P.H_MAX_GROSS_SH) ?? Infinity) - position.gross);
+  const costRoom = Math.max(0, (finite(P.H_MAX_ROUND_COST_USD) ?? Infinity) - position.cost);
+  let shares = Math.min(Math.max(0, desiredShares), maxOrder, grossRoom,
+    price > 0 ? costRoom / price : 0);
+  const maxWorstLoss = finite(P.H_MAX_ROUND_WORST_LOSS_USD) ?? Infinity;
+  if (Number.isFinite(maxWorstLoss)
+    && projectedPosition(position, side, shares, price, taker).worstLoss > maxWorstLoss + EPS) {
+    // Opposite-side buys can first improve and later worsen the settlement
+    // floor, so feasibility is V-shaped rather than always monotone. Locate
+    // the highest feasible interval, then refine its upper boundary.
+    const desired = shares, slices = 256;
+    let best = -1, firstFailAbove = desired;
+    for (let i = 0; i <= slices; i++) {
+      const candidate = desired * i / slices;
+      if (projectedPosition(position, side, candidate, price, taker).worstLoss <= maxWorstLoss + EPS) {
+        best = candidate;
+      } else if (best >= 0) {
+        firstFailAbove = candidate;
+        break;
+      }
+    }
+    if (best < 0) shares = 0;
+    else {
+      let low = best, high = firstFailAbove;
+      for (let i = 0; i < 40; i++) {
+        const mid = (low + high) / 2;
+        if (projectedPosition(position, side, mid, price, taker).worstLoss <= maxWorstLoss + EPS) low = mid;
+        else high = mid;
+      }
+      shares = low;
+    }
+  }
+  return { shares: floor4(shares), position };
 }
 
 function pruneHistory(model, key, headKey, keepAfter) {
@@ -352,7 +557,7 @@ function makeOrder(state, model, tk, clockMs, {
     reason,
     status: "full",
     postOnly: false,
-    orderType: "FAK",
+    orderType: fixedUsd ? "FAK" : "GTC",
     liveOrderType,
     oid,
     signal: {
@@ -397,15 +602,75 @@ function makeOrder(state, model, tk, clockMs, {
   };
   model.lastOrderMs = clockMs;
   model.orderCount++;
+  if (leg === "entry" || leg === "hedge" || leg === "reversal" || leg === "fallback") {
+    model.signalOrderCount = (+model.signalOrderCount || 0) + 1;
+  }
+  if (leg === "entry") model.entryOrderCount = (+model.entryOrderCount || 0) + 1;
   state.orders = state.orders || [];
   state.orders.push({ oid, side, limit: cap, kind: leg, budgetUsd, filledUsd: 0, placedT: tk.t });
-  state.placedThisTick = [{ oid, side, shares: rec.shares, minimumShares: rec.minimumShares,
-    budgetUsd, limitPx: cap, leg, role, reason }];
+  state.placedThisTick.push({ oid, side, shares: rec.shares, minimumShares: rec.minimumShares,
+    budgetUsd, limitPx: cap, leg, role, reason, postOnly: false });
+  return rec;
+}
+
+function makeMakerOrder(state, model, tk, clockMs, {
+  side, shares, limit, reason, signal, expireT, makerLatencyMs = 130,
+}) {
+  const oid = state.seq = (+state.seq || 0) + 1;
+  const rec = {
+    tInto: tk.t,
+    placedT: tk.t,
+    side,
+    shares: round4(shares),
+    minimumShares: round4(shares),
+    budgetUsd: null,
+    amountMode: "shares",
+    effPx: round4(limit),
+    usdc: round4(limit * shares),
+    exec: "maker",
+    limitPx: round4(limit),
+    kind: "maker",
+    leg: "rescue",
+    role: "rescue",
+    reason,
+    status: "resting",
+    postOnly: true,
+    maker: true,
+    orderType: "GTC",
+    liveOrderType: "GTC",
+    expireT,
+    restTimeoutMs: Math.max(0, (expireT - tk.t) * 1000),
+    oid,
+    signal: {
+      midpoint: round4(signal.midpoint),
+      midVelocity: round4(signal.midVelocity),
+      binancePrice: round4(signal.binancePrice),
+      binanceGapVelocity: round4(signal.binanceGapVelocity),
+      binanceWindowGap: round4(signal.binanceWindowGap),
+      binanceTrendPct: round4(signal.binanceTrendPct),
+    },
+  };
+  model.lastOrderMs = clockMs;
+  model.orderCount++;
+  state.orders = state.orders || [];
+  state.orders.push({ oid, side, limit, kind: "rescue", budgetUsd: null,
+    filledUsd: 0, placedT: tk.t, expireS: Math.max(0, expireT - tk.t) });
+  state.restingMakers = state.restingMakers || [];
+  state.restingMakers.push({ rec, target: rec.shares, filled: 0,
+    placedMs: clockMs, expireT,
+    activeAfterT: tk.t + Math.max(0, finite(makerLatencyMs) ?? 130) / 1000,
+    activated: false });
+  state.placedThisTick.push({ oid, side, shares: rec.shares,
+    minimumShares: rec.minimumShares, budgetUsd: null, limitPx: limit,
+    leg: "rescue", role: "rescue", reason, postOnly: true,
+    expireT, restTimeoutMs: rec.restTimeoutMs });
   return rec;
 }
 
 export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   state.placedThisTick = [];
+  const sessionResolution = resolveFastMxSessionParams(P, tk);
+  P = sessionResolution.params;
   const model = state.helpme || (state.helpme = { history: [], historyHead: 0,
     binanceHistory: [], binanceHistoryHead: 0,
     lastSignalKey: null, lastOrderMs: -Infinity, orderCount: 0 });
@@ -415,6 +680,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   model.binanceHistoryHead ||= 0;
   if (!Number.isFinite(model.lastOrderMs)) model.lastOrderMs = -Infinity;
   model.orderCount ||= 0;
+  model.signalOrderCount ||= 0;
 
   const midLookbackMs = Math.max(1000, +P.H_MID_VELOCITY_LOOKBACK_MS || 3000);
   const binanceLookbackMs = Math.max(1000, +P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS || 3000);
@@ -510,6 +776,8 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   const inv = effectiveShares(state);
   const baseStatus = {
     t: tk.t,
+    utcSession: sessionResolution.session,
+    sessionPolicyApplied: sessionResolution.applied,
     midpoint: momentum.midpoint ?? finite(midOf(tk.up)),
     clobMidVelocityOn: toggles.clobMid,
     binanceGapMomentumOn: toggles.binanceGap,
@@ -549,9 +817,112 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     downShares: inv.down,
     net: inv.net,
     orders: model.orderCount,
+    signalOrders: model.signalOrderCount,
   };
 
   if (P.H_ON === false) return resetSignal(state, model, { ...baseStatus, gate: "disabled" });
+
+  const rescueOn = enabled(P.H_RESCUE_MAKER_ON, false);
+  const rescueStart = Math.max(0, finite(P.H_RESCUE_START_S) ?? 270);
+  const rescueEnd = Math.min(+P.WINDOW_SEC || 300,
+    Math.max(rescueStart, finite(P.H_RESCUE_END_S) ?? 299));
+  if (rescueOn && tk.t >= rescueStart && tk.t <= rescueEnd) {
+    const position = effectivePosition(state);
+    const net = position.up - position.down;
+    const predictedWinner = Math.abs(net) > EPS
+      ? (net > 0 ? "Up" : "Down") : model.lastConfirmedSide;
+    if (predictedWinner) {
+      const rescueSide = predictedWinner === "Up" ? "Down" : "Up";
+      const winnerAsk = finite((predictedWinner === "Up" ? tk.up : tk.down)?.bestAsk);
+      const rescueAsk = finite((rescueSide === "Up" ? tk.up : tk.down)?.bestAsk);
+      const high = Math.max(0.01, Math.min(0.99,
+        finite(P.H_RESCUE_PRICE_HIGH) ?? 0.02));
+      const low = Math.max(0.01, Math.min(high,
+        finite(P.H_RESCUE_PRICE_LOW) ?? 0.01));
+      const prices = [...new Set([high, low])].sort((a, b) => b - a);
+      const totalRiskUsd = Math.max(0, finite(P.H_RESCUE_TOTAL_RISK_USD) ?? 2);
+      const perLevelRisk = totalRiskUsd / prices.length;
+      const retain = Math.max(0, finite(P.H_RESCUE_RETAIN_SH) ?? 25);
+      const planned = prices.filter((price) => {
+        const key = `${rescueSide}:${price.toFixed(4)}`;
+        return !model.rescuePlaced?.[key] && rescueAsk != null && rescueAsk > price + EPS;
+      }).map((price) => ({ price, shares: Math.max(minimumSharesAt(price, P),
+        perLevelRisk > 0 ? perLevelRisk / price : 0) }));
+      const requireBoth = enabled(P.H_RESCUE_REQUIRE_BOTH, true);
+      const allLevelsAvailable = planned.length === prices.length;
+      const totalShares = planned.reduce((sum, row) => sum + row.shares, 0);
+      const dominantLead = Math.abs(net);
+      let riskFeasible = planned.length > 0 && dominantLead - totalShares >= retain - EPS;
+      let trial = position;
+      for (const row of planned) {
+        if (row.shares > (finite(P.H_MAX_ORDER_SH) ?? Infinity) + EPS) riskFeasible = false;
+        trial = projectedPosition(trial, rescueSide, row.shares, row.price, false);
+      }
+      const maxGross = finite(P.H_MAX_GROSS_SH) ?? Infinity;
+      const maxCost = finite(P.H_MAX_ROUND_COST_USD) ?? Infinity;
+      const maxWorst = finite(P.H_MAX_ROUND_WORST_LOSS_USD) ?? Infinity;
+      if (trial.gross > maxGross + EPS || trial.cost > maxCost + EPS
+        || trial.worstLoss > maxWorst + EPS) riskFeasible = false;
+      if ((!requireBoth || allLevelsAvailable) && riskFeasible
+        && rescueAsk < winnerAsk - EPS) {
+        const out = [];
+        model.rescuePlaced ||= {};
+        for (const row of planned) {
+          const rec = makeMakerOrder(state, model, tk, clockMs, {
+            side: rescueSide, shares: row.shares, limit: row.price,
+            reason: `end-rescue-maker-${row.price.toFixed(2)}`,
+            signal, expireT: rescueEnd,
+            makerLatencyMs: P.H_RESCUE_MAKER_LATENCY_MS,
+          });
+          model.rescuePlaced[`${rescueSide}:${row.price.toFixed(4)}`] = true;
+          out.push(rec);
+        }
+        setStatus(state, { ...baseStatus, gate: "rescue-maker-placed",
+          side: rescueSide, predictedWinner, rescueAsk, winnerAsk,
+          rescueLevels: planned.map((row) => ({ price: row.price, shares: round4(row.shares) })),
+          retainedLeadAfterAllFills: dominantLead - totalShares,
+          projectedIfUp: trial.ifUp, projectedIfDown: trial.ifDown });
+        return out;
+      }
+    }
+  }
+
+  const participationOn = enabled(P.H_PARTICIPATION_ON, false);
+  const participationStart = Math.max(0, finite(P.H_PARTICIPATION_START_S) ?? 240);
+  const participationEnd = Math.min(+P.WINDOW_SEC || 300,
+    Math.max(participationStart, finite(P.H_PARTICIPATION_END_S) ?? 299));
+  const participationRetryMs = Math.max(0, finite(P.H_PARTICIPATION_RETRY_MS) ?? 1000);
+  const effectiveNow = effectivePosition(state);
+  if (participationOn && effectiveNow.gross <= EPS
+    && tk.t >= participationStart && tk.t <= participationEnd
+    && clockMs - (finite(model.lastParticipationAttemptMs) ?? -Infinity) >= participationRetryMs) {
+    model.lastParticipationAttemptMs = clockMs;
+    const maxAsk = Math.max(0.01, Math.min(0.99,
+      finite(P.H_PARTICIPATION_MAX_ASK) ?? 0.99));
+    for (const fallbackSide of participationSides(P.H_PARTICIPATION_SIDE, tk, momentum)) {
+      const fallbackBook = fallbackSide === "Up" ? tk.up : tk.down;
+      const ask = finite(fallbackBook?.bestAsk);
+      if (!(ask > 0) || ask > maxAsk + EPS) continue;
+      const cap = Math.min(maxAsk, ceilCent(ask + Math.max(0, +P.H_CAP_HEADROOM || 0)));
+      const quote = { ask, cap, available: cappedDepth(levels(fallbackBook?.asks, true), cap) };
+      const riskUsd = Math.max(0, finite(P.H_PARTICIPATION_RISK_USD) ?? 1);
+      const wanted = Math.max(minimumSharesAt(ask, P), cap > 0 ? riskUsd / cap : 0);
+      const bounded = boundedOrderShares(state, fallbackSide, wanted, cap, P, { taker: true });
+      const shares = Math.min(floor4(wanted), bounded.shares, quote.available);
+      if (shares + EPS < minimumSharesAt(ask, P)) continue;
+      const rec = makeOrder(state, model, tk, clockMs, { side: fallbackSide,
+        minimumShares: shares, ask, cap, reason: `mandatory-participation-${P.H_PARTICIPATION_SIDE || "clob"}`,
+        signal, quote, liveOrderType: P.H_LIVE_ORDER_TYPE,
+        leg: "fallback", role: "fallback", amountMode: "shares" });
+      setStatus(state, { ...baseStatus, gate: "fallback-fired", side: fallbackSide,
+        role: "fallback", ask, cap, minimumShares: shares,
+        participationStart, participationEnd });
+      return [rec];
+    }
+    setStatus(state, { ...baseStatus, gate: "fallback-no-liquidity",
+      participationStart, participationEnd });
+    return [];
+  }
   if (tk.t < (+P.H_START_S || 0)) return resetSignal(state, model, { ...baseStatus, gate: "wait-open" });
   if (tk.t > (+P.H_STOP_S || P.WINDOW_SEC || 300)) return resetSignal(state, model, { ...baseStatus, gate: "end-cutoff" });
   if (!toggles.clobMid && !toggles.binanceGap) {
@@ -591,6 +962,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   if (binanceGapAgreeOn && binanceWindowGapDir !== side) {
     return resetSignal(state, model, { ...baseStatus, gate: "binance-gap-disagreement", side });
   }
+  model.lastConfirmedSide = side;
 
   const cooldownMs = Math.max(0, +P.H_COOLDOWN_MS || 0);
   if (clockMs - model.lastOrderMs < cooldownMs) {
@@ -618,23 +990,65 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
       capDepth: quote.available }); return [];
   }
 
-  const baseShares = Math.max(minOrder, +P.H_BASE_ORDER_SH || +P.SIZE || 7);
+  const dynamicSizeOn = enabled(P.H_DYNAMIC_SIZE_ON, false);
+  const entrySizeMode = String(P.H_ENTRY_SIZE_MODE || "risk-usd").toLowerCase();
+  const entryRiskUsd = Math.max(0, finite(P.H_ENTRY_RISK_USD) ?? 4);
+  const staticBaseShares = Math.max(minOrder, +P.H_BASE_ORDER_SH || +P.SIZE || 7);
+  const desiredBaseShares = dynamicSizeOn && quote.cap > 0
+    ? (entrySizeMode === "return-efficiency"
+      ? returnEfficiencyShares(quote.cap, P)
+      : entryRiskUsd / quote.cap)
+    : staticBaseShares;
+  const baseShares = Math.max(minOrder, floor4(desiredBaseShares));
   const orientedNet = side === "Up" ? inv.net : -inv.net;
   const oppositeSignal = orientedNet < -EPS;
   const oldImbalance = oppositeSignal ? Math.abs(orientedNet) : 0;
   const reversalResidual = Math.max(minOrder,
-    finite(P.H_REVERSAL_RESIDUAL_SH) ?? 10);
+    enabled(P.H_REVERSAL_DYNAMIC_SIZE_ON, false) && quote.cap > 0
+      ? (finite(P.H_REVERSAL_RISK_USD) ?? 4) / quote.cap
+      : (finite(P.H_REVERSAL_RESIDUAL_SH) ?? 10));
   const reversalMaxImbalance = Math.max(0,
     finite(P.H_REVERSAL_MAX_IMBALANCE_SH) ?? 25);
   // A reversal is intentionally stricter than an ordinary entry: both raw
   // momentum sources, the strong trailing trend, and spot-vs-window-open must
   // all point to the new side. This remains true even if ordinary entries use
   // only one source or have window-gap agreement disabled.
-  const reversalConfirmed = velocityDir === side
+  const reversalSnapshotConfirmed = velocityDir === side
     && binanceDir === side
     && trendRegime.strongTrend
     && trendRegime.trendDirection === side
     && binanceWindowGapDir === side;
+  if (oppositeSignal && reversalSnapshotConfirmed) {
+    if (model.reversalCandidateSide !== side) {
+      model.reversalCandidateSide = side;
+      model.reversalCandidateSinceMs = clockMs;
+    }
+  } else {
+    model.reversalCandidateSide = null;
+    model.reversalCandidateSinceMs = null;
+  }
+  const reversalConfirmMs = Math.max(0, finite(P.H_REVERSAL_CONFIRM_MS) ?? 0);
+  const reversalConfirmedMs = model.reversalCandidateSide === side
+    && Number.isFinite(model.reversalCandidateSinceMs)
+    ? Math.max(0, clockMs - model.reversalCandidateSinceMs) : 0;
+  const reversalConfirmed = reversalSnapshotConfirmed
+    && reversalConfirmedMs + EPS >= reversalConfirmMs;
+
+  const oldSide = side === "Up" ? "Down" : "Up";
+  const oldShares = oldSide === "Up" ? (+state.upShares || 0) : (+state.downShares || 0);
+  const oldCost = oldSide === "Up" ? (+state.upCost || 0) : (+state.downCost || 0);
+  const allocatedOldFee = (+state.fee || 0) * (oldShares / Math.max(EPS,
+    (+state.upShares || 0) + (+state.downShares || 0)));
+  const oldUnitCost = oldShares > EPS ? (oldCost + allocatedOldFee) / oldShares : null;
+  const pairEdge = oldUnitCost == null ? null
+    : 1 - oldUnitCost - quote.cap - fillFee(quote.cap, 1, true);
+  const lockedLossUsd = pairEdge == null ? Infinity
+    : Math.max(0, -pairEdge) * oldImbalance;
+  const minPairEdge = finite(P.H_REVERSAL_MIN_PAIR_EDGE) ?? -Infinity;
+  const maxLockedLossUsd = finite(P.H_REVERSAL_MAX_LOCKED_LOSS_USD) ?? Infinity;
+  const reversalEconomic = !enabled(P.H_REVERSAL_ECONOMIC_GATE_ON, false)
+    || (pairEdge != null && pairEdge + EPS >= minPairEdge
+      && lockedLossUsd <= maxLockedLossUsd + EPS);
 
   let leg = "entry", role = "entry", amountMode = "usd";
   let shares = baseShares;
@@ -642,13 +1056,14 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     : toggles.clobMid ? "clob-mid-velocity-entry" : "binance-gap-momentum-entry";
 
   if (oppositeSignal) {
-    if (reversalOn && reversalConfirmed && oldImbalance <= reversalMaxImbalance + EPS) {
+    if (reversalOn && reversalConfirmed && reversalEconomic
+      && oldImbalance <= reversalMaxImbalance + EPS) {
       // Exact-share intent: planned post-fill oriented inventory is the new
       // residual and cannot expand merely because execution improves in price.
       shares = oldImbalance + reversalResidual;
       leg = role = "reversal";
       amountMode = "shares";
-      reason = "strong-confirmed-inventory-reversal";
+      reason = "persistent-economic-inventory-reversal";
     } else if (hedgeOn) {
       const retain = Math.max(EPS, finite(P.H_HEDGE_RETAIN_SH) ?? 1);
       // Q <= old imbalance - retained lead, so the pre-existing inventory side
@@ -662,15 +1077,50 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
       }
       leg = role = "hedge";
       amountMode = "shares";
-      reason = reversalOn && reversalConfirmed
+      reason = reversalOn && reversalConfirmed && reversalEconomic
         ? "reversal-imbalance-limit-partial-hedge"
         : "opposite-signal-partial-hedge";
     } else {
-      const gate = reversalOn ? "reversal-confirmation" : "opposite-signal-disabled";
+      const gate = reversalOn && reversalConfirmed && !reversalEconomic
+        ? "reversal-economics" : reversalOn ? "reversal-confirmation" : "opposite-signal-disabled";
       setStatus(state, { ...baseStatus, gate, side, oldImbalance,
-        reversalConfirmed, reversalMaxImbalance });
+        reversalSnapshotConfirmed, reversalConfirmed, reversalConfirmedMs,
+        reversalConfirmMs, reversalEconomic, pairEdge, lockedLossUsd,
+        minPairEdge, maxLockedLossUsd, reversalMaxImbalance });
       return [];
     }
+  }
+
+  const maxEntryOrders = Math.max(1, Math.floor(finite(P.H_MAX_ENTRY_ORDERS) ?? Infinity));
+  if (enabled(P.H_RISK_LIMITS_ON, false) && leg === "entry"
+    && (+model.entryOrderCount || 0) >= maxEntryOrders) {
+    setStatus(state, { ...baseStatus, gate: "entry-count-risk", side, role,
+      entryOrders: +model.entryOrderCount || 0, maxEntryOrders });
+    return [];
+  }
+  const maxSignalOrders = Math.max(1, Math.floor(finite(P.H_MAX_SIGNAL_ORDERS) ?? Infinity));
+  if (enabled(P.H_RISK_LIMITS_ON, false) && model.signalOrderCount >= maxSignalOrders) {
+    setStatus(state, { ...baseStatus, gate: "order-count-risk", side, role,
+      signalOrders: model.signalOrderCount, maxSignalOrders });
+    return [];
+  }
+
+  // Dynamic-size entries and all inventory-control orders use exact shares.
+  // This prevents price improvement from silently exceeding gross exposure.
+  if (dynamicSizeOn && leg === "entry") amountMode = "shares";
+  const bounded = boundedOrderShares(state, side, shares, quote.cap, P, { taker: true });
+  shares = Math.min(shares, bounded.shares, quote.available);
+  const venueMinShares = minimumSharesAt(quote.cap, P);
+  if (shares + EPS < Math.max(minOrder, venueMinShares)) {
+    const projected = projectedPosition(bounded.position, side, Math.max(0, shares), quote.cap, true);
+    setStatus(state, { ...baseStatus, gate: "risk-size", side, role,
+      requestedShares: baseShares, allowedShares: shares,
+      minimumShares: Math.max(minOrder, venueMinShares),
+      projectedWorstLoss: projected.worstLoss,
+      maxWorstLoss: finite(P.H_MAX_ROUND_WORST_LOSS_USD),
+      maxGrossShares: finite(P.H_MAX_GROSS_SH),
+      maxRoundCostUsd: finite(P.H_MAX_ROUND_COST_USD) });
+    return [];
   }
 
   // A crossing needs enough decision-time depth for its whole exact-share
@@ -682,7 +1132,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
       capDepth: quote.available });
     return [];
   }
-  if (amountMode === "shares" && shares * quote.ask + EPS < 1) {
+  if (amountMode === "shares" && shares * quote.cap + EPS < Math.max(0, finite(P.H_MIN_ORDER_USD) ?? 1)) {
     setStatus(state, { ...baseStatus, gate: "inventory-order-min-notional", side,
       role, requestedShares: shares, ask: quote.ask,
       notionalUsd: shares * quote.ask });
@@ -697,10 +1147,32 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     ask: quote.ask, cap: quote.cap, minimumShares: shares,
     budgetUsd: rec.budgetUsd, capDepth: quote.available,
     oldImbalance, reversalConfirmed,
+    reversalSnapshotConfirmed, reversalConfirmedMs, reversalConfirmMs,
+    reversalEconomic, pairEdge, lockedLossUsd,
     plannedPostOrientedShares: oppositeSignal
       ? (leg === "reversal" ? reversalResidual : oldImbalance - shares)
       : orientedNet + shares });
   return [rec];
 }
 
-export function clearLivePending() {}
+export function injectRealFill(state, fill) {
+  if (!state || !fill || fill.oid == null || !Array.isArray(state.restingMakers)) return;
+  const pending = state.restingMakers.find((row) => row?.rec?.oid === fill.oid);
+  if (!pending) return;
+  pending.filled = Math.min(+pending.target || 0,
+    (+pending.filled || 0) + Math.max(0, +fill.shares || 0));
+  if (pending.filled + EPS >= (+pending.target || 0)) {
+    state.restingMakers = state.restingMakers.filter((row) => row !== pending);
+  }
+}
+
+export function clearLivePending(state, oid) {
+  if (!state || oid == null) return;
+  if (Array.isArray(state.restingMakers)) {
+    const pending = state.restingMakers.find((row) => row?.rec?.oid === oid);
+    if (pending?.rec && state.helpme?.rescuePlaced) {
+      delete state.helpme.rescuePlaced[`${pending.rec.side}:${Number(pending.rec.limitPx).toFixed(4)}`];
+    }
+    state.restingMakers = state.restingMakers.filter((row) => row?.rec?.oid !== oid);
+  }
+}

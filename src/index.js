@@ -350,7 +350,7 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
         // Register this real order id so user-channel WS pushes (status/price/shares) attribute to THIS panel row.
         if (r.orderId) registerOsOrder(r.orderId, { emitOS, slug: e.slug, oid: rec.oid, reqShares: rec.shares });
         if (shares > 0) {
-          shadow.recordRealFill(e.slug, e.windowStart, { side: rec.side, shares, spent: cash, price: r.avgPx, leg: rec.leg, oid: rec.oid, latencyMs, tInto: rec.tInto });
+          shadow.recordRealFill(e.slug, e.windowStart, { side: rec.side, shares, spent: cash, price: r.avgPx, leg: rec.leg, oid: rec.oid, latencyMs, tInto: rec.tInto, maker: !!rec.maker });
           if (verboseOn) verbose("route.realfill", { slug: String(e.slug).split("-").pop(), side: rec.side, shares, cash, avgPx: r.avgPx, shadowPx: rec.effPx });
           emitOS(STAGES.REAL_FILLED, { orderId: r.orderId || null, realShares: shares, realSpent: cash, realAvgPx: r.avgPx ?? null,
             realStatus: r.status || null, realLatencyMs: latencyMs, full: shares >= rec.shares - 1e-6 });
@@ -364,10 +364,11 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
         //   (live→partially_matched→matched→canceled/expired) + on-chain trade (MATCHED→MINED→CONFIRMED) — to the
         //   Order Status panel, each timestamped. Runs for every real order so the on-chain confirm is tracked too.
         if (r.orderId) {
-          live.reconcileOrder(r.orderId, { seedShares: shares, seedSpent: cash, restTimeoutMs: config.liveRestTimeoutMs,
+          live.reconcileOrder(r.orderId, { seedShares: shares, seedSpent: cash,
+            restTimeoutMs: rec.exec === "maker" ? Math.max(1, +rec.restTimeoutMs || 1) : config.liveRestTimeoutMs,
             onDelta: ({ shares: ds, spent: dc, avgPx: dpx, matched }) => {
               if (!(ds > 1e-6)) return;
-              shadow.recordRealFill(e.slug, e.windowStart, { side: rec.side, shares: ds, spent: dc, price: dpx, leg: rec.leg, oid: rec.oid, latencyMs: null, tInto: rec.tInto });
+              shadow.recordRealFill(e.slug, e.windowStart, { side: rec.side, shares: ds, spent: dc, price: dpx, leg: rec.leg, oid: rec.oid, latencyMs: null, tInto: rec.tInto, maker: !!rec.maker });
               if (verboseOn) verbose("route.reconcile", { slug: String(e.slug).split("-").pop(), side: rec.side, deltaShares: +ds.toFixed(4), deltaCash: +dc.toFixed(4), avgPx: dpx });
               emitOS(STAGES.RECONCILED, { deltaShares: ds, deltaSpent: dc, realAvgPx: dpx ?? null, matched });
             },

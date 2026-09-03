@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { STRAT, evaluateBinanceTrendRegime, step, validateParams } from "./helpme.js";
+import { STRAT, evaluateBinanceTrendRegime, returnEfficiencyShares, step, validateParams } from "./helpme.js";
+import { fastMxSessionOfHour, resolveFastMxSessionParams } from "./fastmx-session-policy.js";
 
 function book(ask, bid = ask - 0.02, askSizes = [20, 20, 20]) {
   return {
@@ -30,6 +31,13 @@ function state(extra = {}) {
 
 const FAST = {
   ...STRAT,
+  H_SESSION_POLICY_ON: false,
+  H_DYNAMIC_SIZE_ON: false,
+  H_RISK_LIMITS_ON: false,
+  H_PARTICIPATION_ON: false,
+  H_RESCUE_MAKER_ON: false,
+  H_REVERSAL_CONFIRM_MS: 0,
+  H_REVERSAL_DYNAMIC_SIZE_ON: false,
   H_COOLDOWN_MS: 0,
   H_MID_VELOCITY_MIN: 0.01,
   H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 5000,
@@ -350,6 +358,18 @@ test("cooldown is the only release throttle", () => {
   assert.equal(STRAT.H_COOLDOWN_MS, 1000);
 });
 
+test("entry count blocks repeated same-side accumulation without consuming reversal capacity", () => {
+  const s = state();
+  const P = { ...FAST, H_RISK_LIMITS_ON: true, H_MAX_ENTRY_ORDERS: 1,
+    H_MAX_SIGNAL_ORDERS: 4, H_BINANCE_GAP_MOMENTUM_ON: false };
+  step(s, tick(0, 0.50, 0.50), P, 120, 0);
+  assert.equal(step(s, tick(5, 0.52, 0.48), P, 120, 5000).length, 1);
+  assert.deepEqual(step(s, tick(6, 0.53, 0.47), P, 120, 6000), []);
+  assert.equal(s.gateReason, "entry-count-risk");
+  assert.equal(s.helpme.entryOrderCount, 1);
+  assert.equal(s.helpme.signalOrderCount, 1);
+});
+
 test("poly-mom trend regime keeps a fast signal that follows a strong trend", () => {
   const s = state();
   const P = { ...FAST, H_CLOB_MID_VELOCITY_ON: false, H_BINANCE_TREND_ON: true,
@@ -450,4 +470,130 @@ test("removed action and release controls are absent from the active strategy co
     "H_MAX_CELL_USES",
     "H_MAX_WINDOW_LOSS_USD",
   ]) assert.equal(key in STRAT, false, key);
+});
+
+test("end rescue pre-places passive 2-cent and 1-cent bids before either price is reached", () => {
+  const s = state({ upShares: 200, upCost: 140, cost: 140 });
+  const P = { ...FAST, H_RESCUE_MAKER_ON: true, H_RESCUE_START_S: 270,
+    H_RESCUE_END_S: 299, H_RESCUE_TOTAL_RISK_USD: 2,
+    H_RESCUE_RETAIN_SH: 25, H_MAX_ROUND_WORST_LOSS_USD: 25,
+    H_MAX_GROSS_SH: 500, H_MAX_ROUND_COST_USD: 250 };
+  const orders = step(s, tick(270, 0.90, 0.10), P, 120, 270_000);
+  assert.deepEqual(orders.map((order) => [order.side, order.limitPx, order.shares]), [
+    ["Down", 0.02, 50],
+    ["Down", 0.01, 100],
+  ]);
+  assert.ok(orders.every((order) => order.exec === "maker" && order.postOnly
+    && order.orderType === "GTC" && order.status === "resting"));
+  assert.equal(s.restingMakers.length, 2);
+  assert.equal(s.helpmeStatus.retainedLeadAfterAllFills, 50);
+});
+
+test("rescue ladder refuses to cross and refuses sizing that would erase the dominant lead", () => {
+  const crossed = state({ upShares: 200, upCost: 140, cost: 140 });
+  const P = { ...FAST, H_RESCUE_MAKER_ON: true, H_RESCUE_START_S: 270,
+    H_RESCUE_END_S: 299, H_RESCUE_TOTAL_RISK_USD: 2,
+    H_RESCUE_RETAIN_SH: 25, H_MAX_ROUND_WORST_LOSS_USD: 200,
+    H_MAX_GROSS_SH: 500, H_MAX_ROUND_COST_USD: 250 };
+  assert.deepEqual(step(crossed, tick(270, 0.99, 0.02), P, 120, 270_000), []);
+  assert.equal(crossed.restingMakers, undefined);
+
+  const small = state({ upShares: 170, upCost: 100, cost: 100 });
+  assert.deepEqual(step(small, tick(270, 0.90, 0.10), P, 120, 270_000), []);
+  assert.equal(small.restingMakers, undefined);
+});
+
+test("UTC session policy applies tested entry sources and return-size regimes", () => {
+  assert.deepEqual([0, 7, 13, 21].map(fastMxSessionOfHour),
+    ["asia", "europe", "us", "late_us"]);
+  const base = { ...STRAT, H_SESSION_POLICY_ON: true, H_ENTRY_RISK_USD: 3.25 };
+  const resolved = resolveFastMxSessionParams(base, { winHour: 14 });
+  assert.equal(resolved.session, "us");
+  assert.equal(resolved.applied, true);
+  assert.equal(resolved.params.H_COOLDOWN_MS, 15_000);
+  assert.equal(resolved.params.H_BINANCE_GAP_AGREE_ON, true);
+  assert.equal(resolved.params.H_ENTRY_RISK_USD, 2);
+  assert.equal(resolved.params.H_RETURN_SIZE_SCALE, 1);
+  assert.equal(resolved.params.H_PARTICIPATION_START_S, 90);
+  assert.equal(resolved.params.H_PARTICIPATION_RISK_USD, 1);
+  const europe = resolveFastMxSessionParams(base, { winHour: 9 });
+  assert.equal(europe.params.H_ENTRY_RISK_USD, 4);
+  assert.equal(europe.params.H_REVERSAL_RISK_USD, 4);
+  assert.equal(europe.params.H_RETURN_SIZE_SCALE, 1);
+  assert.equal(europe.params.H_MAX_ASK, STRAT.H_MAX_ASK);
+  assert.equal(europe.params.H_BINANCE_GAP_AGREE_ON, false);
+  assert.equal(europe.params.H_MAX_ROUND_WORST_LOSS_USD,
+    STRAT.H_MAX_ROUND_WORST_LOSS_USD);
+  assert.equal(europe.params.H_REVERSAL_ON, true);
+  assert.equal(europe.params.H_REVERSAL_CONFIRM_MS, 1000);
+  assert.equal(europe.params.H_REVERSAL_ECONOMIC_GATE_ON, false);
+});
+
+test("dynamic entry sizing converts a fixed risk budget into bounded exact shares", () => {
+  const s = state();
+  const P = { ...FAST, H_BINANCE_GAP_MOMENTUM_ON: false,
+    H_DYNAMIC_SIZE_ON: true, H_ENTRY_SIZE_MODE: "risk-usd", H_ENTRY_RISK_USD: 6,
+    H_MAX_ORDER_SH: 100, H_MAX_GROSS_SH: 100,
+    H_MAX_ROUND_COST_USD: 10, H_MAX_ROUND_WORST_LOSS_USD: 10 };
+  step(s, tick(0, 0.50, 0.50), P, 120, 0);
+  const [order] = step(s, tick(5, 0.50, 0.50, { upBid: 0.50 }), P, 120, 5000);
+  assert.equal(order.amountMode, "shares");
+  assert.equal(order.budgetUsd, null);
+  assert.equal(order.minimumShares, 11.7647);
+  assert.ok(order.minimumShares * order.limitPx <= 6 + 1e-4);
+});
+
+test("return-efficiency sizing anchors 60 shares at 0.60 and preserves the 10-share floor", () => {
+  const Q = { ...STRAT, H_BASE_ORDER_SH: 10, H_MIN_ORDER_SH: 10 };
+  assert.ok(Math.abs(returnEfficiencyShares(0.60, Q) - 60) < 1e-9);
+  assert.equal(returnEfficiencyShares(0.98, Q), 10);
+  assert.ok(Math.abs(returnEfficiencyShares(0.40, Q) - 135) < 1e-9);
+  assert.equal(returnEfficiencyShares(0.40, { ...Q, H_RETURN_SIZE_SCALE: 0 }), 10);
+
+  const s = state();
+  const P = { ...FAST, H_BINANCE_GAP_MOMENTUM_ON: false,
+    H_DYNAMIC_SIZE_ON: true, H_ENTRY_SIZE_MODE: "return-efficiency",
+    H_BASE_ORDER_SH: 10, H_MIN_ORDER_SH: 10,
+    H_RETURN_REFERENCE_PRICE: 0.60, H_RETURN_REFERENCE_SH: 60,
+    H_RETURN_SIZE_SCALE: 1 };
+  step(s, tick(0, 0.57, 0.43, { upAskSizes: [100, 100, 100] }), P, 120, 0);
+  const [order] = step(s,
+    tick(5, 0.59, 0.41, { upBid: 0.57, upAskSizes: [100, 100, 100] }), P, 120, 5000);
+  assert.equal(order.limitPx, 0.60);
+  assert.equal(order.minimumShares, 60);
+  assert.equal(order.amountMode, "shares");
+});
+
+test("mandatory participation emits a minimum-risk fallback after an untouched round", () => {
+  const s = state();
+  const P = { ...FAST, H_CLOB_MID_VELOCITY_ON: false,
+    H_BINANCE_GAP_MOMENTUM_ON: true, H_BINANCE_TREND_ON: false,
+    H_PARTICIPATION_ON: true, H_PARTICIPATION_START_S: 240,
+    H_PARTICIPATION_END_S: 299, H_PARTICIPATION_SIDE: "clob",
+    H_MAX_ROUND_WORST_LOSS_USD: 25 };
+  step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), P, 120, 0);
+  const [fallback] = step(s, tick(240, 0.60, 0.40, { bzPrice: 100 }), P, 120, 240_000);
+  assert.equal(fallback.leg, "fallback");
+  assert.equal(fallback.side, "Up");
+  assert.equal(fallback.amountMode, "shares");
+  assert.equal(fallback.minimumShares, 4);
+  assert.equal(s.gateReason, "fallback-fired");
+});
+
+test("reversal confirmation must remain continuously valid for its configured duration", () => {
+  const s = state({ upShares: 7, upCost: 3.5, cost: 3.5 });
+  const P = { ...FAST, H_BINANCE_GAP_VELOCITY_MIN: 0.1,
+    H_BINANCE_TREND_ON: true, H_BINANCE_TREND_LOOKBACK_SEC: 5,
+    H_BINANCE_TREND_MIN_PCT: 0.05,
+    H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 5,
+    H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
+    H_HEDGE_ON: false, H_REVERSAL_ON: true,
+    H_REVERSAL_CONFIRM_MS: 3000, H_REVERSAL_ECONOMIC_GATE_ON: false };
+  step(s, tick(0, 0.55, 0.45, { openBinance: 100, bzPrice: 101 }), P, 120, 0);
+  assert.deepEqual(step(s, tick(5, 0.45, 0.55, { openBinance: 100, bzPrice: 99 }), P, 120, 5000), []);
+  assert.equal(s.gateReason, "reversal-confirmation");
+  assert.deepEqual(step(s, tick(7, 0.44, 0.56, { openBinance: 100, bzPrice: 98.8 }), P, 120, 7000), []);
+  const [reversal] = step(s, tick(8, 0.43, 0.57, { openBinance: 100, bzPrice: 98.6 }), P, 120, 8000);
+  assert.equal(reversal.leg, "reversal");
+  assert.equal(s.helpmeStatus.reversalConfirmedMs, 3000);
 });

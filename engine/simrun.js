@@ -2,7 +2,7 @@
 // Pure ESM.
 import { fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
-import { stampLatencyDisplay, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
+import { makerTouchFill, stampLatencyDisplay, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
 
 // NOTE (browser-safe): this module is dynamically imported by the dashboard and
 // must not import Node-only modules.
@@ -70,11 +70,55 @@ export function simulateFills(d, params) {
   };
   const applyInventory = (f) => {
     state.upShares = +state.upShares || 0; state.downShares = +state.downShares || 0;
-    state.upCost = +state.upCost || 0; state.downCost = +state.downCost || 0; state.cost = +state.cost || 0;
+    state.upCost = +state.upCost || 0; state.downCost = +state.downCost || 0;
+    state.cost = +state.cost || 0; state.fee = +state.fee || 0;
     if (f.side === "Up") { state.upShares += f.shares; state.upCost += f.usdc; }
     else { state.downShares += f.shares; state.downCost += f.usdc; }
     state.cost += f.usdc;
+    // The strategy's risk projection includes state.fee. Keep replay state in
+    // parity with shadow/live after each resolved fill so a completed taker
+    // fee cannot disappear from the next order's worst-settlement-loss check.
+    state.fee += fillFee(f.effPx ?? (f.shares ? f.usdc / f.shares : null),
+      f.shares, isFeeFill(f));
     (state.fills = state.fills || []).push(f);
+  };
+  const resolveMakers = (tk, dtMs) => {
+    if (!Array.isArray(state.restingMakers) || !state.restingMakers.length) return;
+    const keep = [];
+    for (const pendingMaker of state.restingMakers) {
+      const rec = pendingMaker?.rec;
+      if (!rec) continue;
+      if (rec.expireT != null && tk.t > rec.expireT + 1e-9) continue;
+      const ask = bookAt(tk, rec.side).bestAsk;
+      if (!pendingMaker.activated) {
+        if (tk.t + 1e-9 < (+pendingMaker.activeAfterT || rec.tInto)) {
+          keep.push(pendingMaker); continue;
+        }
+        // If the limit is already marketable when it reaches the venue, a
+        // post-only order is rejected rather than retrospectively filled.
+        if (ask == null || ask <= rec.limitPx + 1e-9) continue;
+        pendingMaker.activated = true;
+        keep.push(pendingMaker); continue;
+      }
+      const previous = +pendingMaker.filled || 0;
+      const target = +pendingMaker.target || +rec.shares || 0;
+      const filled = makerTouchFill({ askNow: ask, limit: rec.limitPx,
+        filled: previous, target, dtMs,
+        touchMs: P.H_RESCUE_SIM_TOUCH_MS, fillPct: P.H_RESCUE_SIM_FILL_PCT });
+      pendingMaker.filled = filled;
+      const delta = filled - previous;
+      if (delta > 1e-9) {
+        const fill = { ...rec, decidedT: rec.tInto, placedT: rec.tInto,
+          tInto: tk.t, requestedShares: target, shares: +delta.toFixed(4),
+          effPx: rec.limitPx, usdc: +(delta * rec.limitPx).toFixed(4),
+          status: filled + 1e-9 >= target ? "full" : "partial",
+          filledLate: true };
+        applyInventory(fill);
+        fills.push(fill);
+      }
+      if (filled + 1e-9 < target) keep.push(pendingMaker);
+    }
+    state.restingMakers = keep;
   };
   const resolveDue = (throughT) => {
     while (pending.length && pending[0].dueT <= throughT + 1e-9) {
@@ -121,6 +165,7 @@ export function simulateFills(d, params) {
     const bzGap = (bz != null && openBz != null) ? bz - openBz : null;
     const bzGapPct = (bzGap != null && openBz) ? (bzGap / openBz) * 100 : null;
     const dtMs = gapMs > 0 ? Math.max(1, gapMs) : REF_MS;
+    resolveMakers(tk, dtMs);
     // The strategy derives its deterministic clock from window time.
     const cl = tk.cl != null ? tk.cl : null;
     const got = strat.step(state, { t: tk.t, up, down, bzPrice: bz, clPrice: cl,
@@ -128,6 +173,7 @@ export function simulateFills(d, params) {
       openChainlink: openCl, bzGap, bzGapPct,
       winHour, winDay }, P, dtMs);
     for (const f of got) {
+      if (f.exec === "maker") continue; // resting lifecycle is resolved above on later ticks
       const ai = arrivalIndex[i];
       pending.push({ rec: f, dueT: tk.t + latSec, arrivalTick: bk[ai] });
     }
