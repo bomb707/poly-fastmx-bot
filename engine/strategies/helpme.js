@@ -116,7 +116,6 @@ export const STRAT = {
   H_BASE_ORDER_SH: 7,
   H_MIN_ORDER_SH: 4,
   H_COOLDOWN_MS: 1000,
-  MAX_SESSION_LOSS: 25,
 };
 
 const EPS = 1e-9;

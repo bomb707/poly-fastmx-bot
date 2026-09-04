@@ -9,7 +9,6 @@ import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim �
 import { walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
 import { isRunning } from "./botState.js";
-import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
 import { recordFill, recordSession } from "../sources/db.js";   // MongoDB record store (mode-split collections)
 import { verbose, verboseOn } from "../logging/verbose.js";     // diagnostic trace (verbose switch) → pm2 logs
 
@@ -20,10 +19,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   let curStrat = getStrategy(DEFAULT_STRATEGY);
   let mergedP = { ...curStrat.STRAT, LIVE_FILLS: false };      // Helpme is permanently shadow-only.
                                    //   config-object spread on EVERY book update). Read-only in the hot path.
-  const circuitBreaker = createSessionCircuitBreaker(
-    () => (mergedP && mergedP.MAX_SESSION_LOSS != null) ? (+mergedP.MAX_SESSION_LOSS || 0) : (config.maxSessionLoss || 0),
-    (event) => { try { onEvent({ kind: "circuit_breaker", ...event }); } catch {} },
-  );
   let activeSlug = null;           // the currently-ticking window's slug — target for MANUAL buys
 
   fs.mkdirSync(config.dataDir, { recursive: true });
@@ -33,7 +28,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     if (!w) {
       w = { slug, windowStart, openBinance, winSide: null, upShares: 0, downShares: 0, cost: 0, fee: 0,
             upCost: 0, downCost: 0, mergedRealized: 0, mergedUsd: 0, fills: [], settled: false,
-            breakerGeneration: circuitBreaker.stamp(),
             // strategy state (self-initialized by Helpme on the first tick)
             orders: [], seq: 0, lastTickMs: null,
             // Per-window cadence and gate diagnostics.
@@ -474,13 +468,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     ab.pnlErr = ab.bot && ab.bot.pnl != null ? r2(Math.abs(ab.sim.pnl - ab.bot.pnl)) : null;
     recordSession(ab);   // → local session ledger + optional MongoDB mirror
     try { onEvent({ kind: "shadow_resolved", slug, ab }); } catch {}
-    // SESSION CIRCUIT-BREAKER: accumulate the session's realized PnL (REAL in live, else sim) and, if it breaches
-    //   the configured max loss, emit `circuit_breaker` ONCE (index.js halts the bot). Re-arms via resetBreaker().
-    // A stopped engine can leave unresolved windows in memory. Starting a new
-    // session resets the breaker, after which lifecycle may settle one of those
-    // old windows. Count only windows created in this Start generation; otherwise
-    // the stale settlement immediately halts the freshly re-armed session.
-    circuitBreaker.record(w.breakerGeneration, ab.real ? ab.real.pnl : ab.sim.pnl);
     return ab;
   }
 
@@ -530,9 +517,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     mergedP = nextMerged;
   } }
   function getParams() { return { ...curStrat.STRAT, ...liveParams }; }
-  // Circuit-breaker controls: reset re-arms it on Start.
-  function resetBreaker() { circuitBreaker.reset(); }
-  function breakerState() { const { sessionRealized, tripped, limit } = circuitBreaker.state(); return { sessionRealized, tripped, limit }; }
 
   // MANUAL buy (SIM): book a taker fill into the CURRENT live window at the latest ask (≤ limit) — flows through
   //   bookFill exactly like a strategy fill, so it draws a circle, updates the position/PnL, and lands in live
@@ -586,7 +570,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     return { strategy: DEFAULT_STRATEGY, gate: w.gateReason || null };
   }
   return { tick, settle, prune, recordPending, hydrateWindow, windows, setParams, getParams,
-    recordRealFill, cancelLivePending, resetBreaker, breakerState,
+    recordRealFill, cancelLivePending,
     manualBuy, emitManualFill, liveStatus };
 }
 

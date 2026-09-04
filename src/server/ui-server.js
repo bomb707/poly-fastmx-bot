@@ -45,18 +45,6 @@ let _sessProgress = { phase: "idle", done: 0, total: 0, runId: 0, used: 0 };
 const BOOT_MS = Date.now();
 const bootFloorSec = () => Math.floor(BOOT_MS / 1000 / config.windowSec) * config.windowSec;
 
-// The circuit breaker is hot-configurable through the strategy parameter
-// endpoint. /api/market must report that effective value rather than the
-// process-start environment fallback, otherwise a fresh browser can display 0
-// while the running engine is actually armed at (for example) $25.
-export function effectiveMaxSessionLoss(getShadowParams, fallback = 0) {
-  try {
-    const value = Number(getShadowParams?.()?.MAX_SESSION_LOSS);
-    if (Number.isFinite(value) && value >= 0) return value;
-  } catch {}
-  const value = Number(fallback);
-  return Number.isFinite(value) && value >= 0 ? value : 0;
-}
 // PERSISTED session floor — the Session-card / live-history "since" default. Pinned to the FIRST boot and saved
 // in the config store, so it survives bot restarts (history persists). The client's Reset still raises it via
 // reqSince. Only wiped if the user clears runtime-config.json.
@@ -124,9 +112,9 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
         let wallet = config.wallet;
         if (config.executionMode === "live") { try { const f = await resolveFunder(); if (f) wallet = f; } catch {} }
         res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
-        res.end(JSON.stringify({ asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet, showTracker: !!config.showTracker, maxSessionLoss: effectiveMaxSessionLoss(getShadowParams, config.maxSessionLoss), executionMode: config.executionMode }));
+        res.end(JSON.stringify({ asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet, showTracker: !!config.showTracker, executionMode: config.executionMode }));
       })().catch(() => { res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
-        res.end(JSON.stringify({ asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet: config.wallet, showTracker: !!config.showTracker, maxSessionLoss: effectiveMaxSessionLoss(getShadowParams, config.maxSessionLoss), executionMode: config.executionMode })); });
+        res.end(JSON.stringify({ asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet: config.wallet, showTracker: !!config.showTracker, executionMode: config.executionMode })); });
       return;
     }
     // execution mode (real-live vs simulation) — drives the UI badge + disabled controls.
@@ -657,7 +645,6 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
     shadowMerge(m) { broadcast("shadow_merge", m); },   // a MERGE ON PROFIT fired → update the Merged card + reset if-up/down
     shadowReal(m) { broadcast("shadow_real", m); },     // REAL on-chain fill recorded → honest live position/PnL
     orderStatus(e) { broadcast("order_status", e); try { recordOrderStatus(e); } catch {} },   // per-order lifecycle stage (sim + real) → panel + Mongo (reload after refresh)
-    circuitBreaker(e) { broadcast("circuit_breaker", e); },   // session drawdown breached → bot auto-halted
     // Tell connected browsers the tracked market/wallet changed → they reset + reload the live view.
     marketChanged(m) { lastTick = null; activeWindow = null; recentBuys.length = 0; broadcast("market_changed", m); },
     stop() { try { wss.close(); server.close(); } catch {} },

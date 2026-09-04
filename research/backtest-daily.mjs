@@ -109,20 +109,6 @@ const metrics = (raw) => ({
   roiPct: raw.cost + raw.fees > 0 ? round(raw.pnl / (raw.cost + raw.fees) * 100, 4) : null,
 });
 const dateOf = (ws) => new Date(ws * 1000).toISOString().slice(0, 10);
-const sessionBreakerView = (windows, limitValue) => {
-  const limit = Math.max(0, Number(limitValue) || 0);
-  const total = blank();
-  let sessionPnl = 0, haltedAtSlug = null, skippedAfterHalt = 0;
-  for (const row of [...windows].sort((a, b) => a.slug.localeCompare(b.slug))) {
-    if (haltedAtSlug) { skippedAfterHalt++; continue; }
-    add(total, row);
-    sessionPnl += row.pnl;
-    if (limit > 0 && sessionPnl <= -limit) haltedAtSlug = row.slug;
-  }
-  return { enabled: limit > 0, limit, assumedSessionStart: start,
-    haltedAtSlug, skippedAfterHalt, total: metrics(total) };
-};
-
 const reportStates = latencies.map((latencyMs) => {
   const params = { ...bootProfile, ...overrides, LATENCY_MS: latencyMs,
     STRATEGY: "helpme", LIVE_FILLS: false };
@@ -199,7 +185,6 @@ const reports = reportStates.map((report) => ({
   profileSha256: report.profileSha256,
   params: report.params,
   total: metrics(report.total),
-  sessionCircuitBreaker: sessionBreakerView(report.windows, report.params.MAX_SESSION_LOSS),
   daily: Object.fromEntries(Object.entries(report.daily).sort(([a], [b]) => a.localeCompare(b))
     .map(([day, raw]) => [day, metrics(raw)])),
   windows: report.windows.sort((a, b) => a.slug.localeCompare(b.slug)),
@@ -224,11 +209,6 @@ for (const report of reports) {
     + `${`${total.entries}/${total.hedges}/${total.reversals}`.padEnd(15)}`
     + `${(total.pnl >= 0 ? "+" : "") + "$" + total.pnl.toFixed(2)}`.padStart(11)
     + `${total.roiPct == null ? "—" : `${total.roiPct.toFixed(2)}%`}`.padStart(10));
-  const breaker = report.sessionCircuitBreaker;
-  if (breaker.enabled) console.log(`SESSION BREAKER −$${breaker.limit}: `
-    + (breaker.haltedAtSlug
-      ? `halted after ${breaker.haltedAtSlug}; PnL $${breaker.total.pnl.toFixed(2)}; skipped ${breaker.skippedAfterHalt} later windows`
-      : `not reached; PnL $${breaker.total.pnl.toFixed(2)}`));
 }
 
 const outputDir = path.resolve("research/results");

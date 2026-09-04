@@ -34,8 +34,8 @@ The active strategy is a deliberately simple CLOB/Binance velocity policy plus i
 6. The selected side must have a current ask and enough visible depth under the one-cent marketable cap. Entries
    are fixed-USDC FAK intents (`cap × minimum shares`) in simulation; inventory orders are exact-share intents.
    Modeled orders match future visible L2 after 520 ms.
-7. Chainlink, ask differentials, order-book imbalance, and microprice do not participate in direction. The session
-   circuit breaker remains an external emergency stop and defaults to `-$25`.
+7. Chainlink, ask differentials, order-book imbalance, and microprice do not participate in direction. Session-loss
+   auto-halting is disabled for unrestricted strategy testing.
 
 The checked-in PM2 profile enables CLOB velocity, Binance velocity, partial hedge, and strong reversal; the optional
 trend regime and window-gap agreement are off. It uses a `0–300s` entry window and a `2000ms` cooldown. Persisted dashboard

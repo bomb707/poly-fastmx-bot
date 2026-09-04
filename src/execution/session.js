@@ -155,8 +155,6 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
 
   const bot = emptyAgg(initial), sh = emptyAgg(initial);
   const windows = [];
-  const maxSessLoss = +(params && params.MAX_SESSION_LOSS) || 0;
-  let shHalted = false;
   let done = 0, used = 0, miss = 0, errN = 0;
   let lastPartialAt = 0;
   const btRows = [];   // per-window backtest manifest rows (deterministic → diffable across processes)
@@ -233,14 +231,13 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
     const wins = await fetchBatch(batch);
     for (const d of wins) {
       const botFills = (d.buys || []).map((b) => ({ tInto: b.tInto, side: b.side, shares: b.shares, usdc: b.usdc, effPx: b.effPx, taker: b.orderHint?.taker ?? b.taker ?? null }));
-      const simFills = shHalted ? [] : simulateFills({ ticks: d.ticks, openBinance: d.openBinance,
+      const simFills = simulateFills({ ticks: d.ticks, openBinance: d.openBinance,
         openPrice: d.openPrice, windowStart: d.windowStart }, params || {});
 
       const br = runWindowFills(botFills, d.winSide, bot.bal, false, true);
       const sr = runWindowFills(simFills, d.winSide, sh.bal, true, false);
       step(bot, br, d.windowStart);
       step(sh, sr, d.windowStart);
-      if (!shHalted && maxSessLoss > 0 && sh.pnl <= -maxSessLoss) shHalted = true;
       windows.push({ ws: d.windowStart, slug: d.slug ?? null, winSide: d.winSide, bot: side(br), shadow: side(sr) });
       used++;
       // BACKTEST MANIFEST — deterministic per-window record (no timestamp) so two processes' runs of the same range

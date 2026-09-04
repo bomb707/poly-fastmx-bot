@@ -16,7 +16,7 @@ const FILE = process.env.RUNTIME_CONFIG_FILE || path.resolve(HERE, "..", "..", "
 
 let store = {};
 
-const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigSessStopInput", "sigLatencyInput",
+const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigLatencyInput",
   "sigLiveOrderTypeInput", "sigClobMidOn", "sigMidVelocityLookbackInput", "sigMidVelocityMinInput",
   "sigTargetDirectionOn", "sigDirectionLookbackInput", "sigDirectionEnterInput", "sigDirectionExitInput",
   "sigBinanceGapOn", "sigBinanceGapLookbackInput", "sigBinanceGapMinInput",

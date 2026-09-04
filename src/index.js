@@ -398,12 +398,6 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
   else if (e.kind === "shadow_merge") ui.shadowMerge(e);
   else if (e.kind === "shadow_real") ui.shadowReal(e);
   else if (e.kind === "order_status") ui.orderStatus?.(e);   // sim leg stages (decided / sim_filled) → Order Status panel
-  else if (e.kind === "circuit_breaker") {
-    // SESSION DRAWDOWN BREACHED → auto-halt (no more strategy fills). Re-arms when the bot is Started again.
-    console.error(`\n🛑 [CIRCUIT BREAKER] session PnL $${e.sessionRealized} ≤ −$${e.limit} — HALTING the bot. Press Start to re-arm.\n`);
-    setRunning(false);
-    try { ui.circuitBreaker(e); } catch {}
-  }
 }, () => !!(ui && ui.hasClients && ui.hasClients())) : null;   // uiActive → shadow skips the UI-only ladder payload when no browser is watching
 // Restore the last-applied Helpme strategy parameters from the config store.
 if (shadow && _savedCfg.shadowParams && typeof _savedCfg.shadowParams === "object") shadow.setParams(_savedCfg.shadowParams);
@@ -574,8 +568,8 @@ async function recoverPersistedPending(cur) {
     const rows = await pendingSessionsBefore(cur, 50);
     for (const row of rows) {
       // A normal live window remains in Shadow memory until its tracker settles
-      // it. Let that authoritative path emit the UI event, write its replay, and
-      // trip the circuit breaker exactly once. Recovery is only for orphan rows
+      // it. Let that authoritative path emit the UI event and write its replay.
+      // Recovery is only for orphan rows
       // whose process disappeared before resolution.
       if (shadow?.windows?.has(row.slug)) continue;
       const resolution = await fetchResolution(row.slug).catch(() => null);
@@ -776,7 +770,7 @@ function stopEngine() {
   console.log("[engine] STOPPED — feeds disconnected");
 }
 // the Start/Stop switch (UI buttons → /api/bot/start|stop → setRunning) drives the whole engine
-onRunChange((on) => { if (on) { shadow && shadow.resetBreaker(); startEngine().catch((e) => console.error("[engine] start failed:", e)); } else stopEngine(); });
+onRunChange((on) => { if (on) startEngine().catch((e) => console.error("[engine] start failed:", e)); else stopEngine(); });
 
 // render runs regardless of engine state: TTY → clear-screen TUI; non-TTY → 10s heartbeat line.
 if (process.stdout.isTTY) setInterval(() => render(state, tracker), config.dashboardMs);

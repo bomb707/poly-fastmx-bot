@@ -33,8 +33,8 @@ Entry/top-up fills and opposing hedge/reversal fills have independent seven-acti
 successful fills and currently pending latency intents, not historical attempts. A no-fill re-arms its release and
 does not consume the cap. Sizing remains fixed rather than fitted from the target wallet.
 Inventory orders are exact-share sized and force live GTC plus immediate remainder cancellation. The ordinary
-cooldown default is `1000` ms and the external session circuit breaker is `-$25`. Chainlink, ask differentials,
-order-book imbalance, and microprice are not direction gates.
+cooldown default is `1000` ms. Session-loss auto-halting is removed for unrestricted strategy testing. Chainlink,
+ask differentials, order-book imbalance, and microprice are not direction gates.
 
 Configured PM2 simulation profile (effective after process restart): agreeing CLOB/Binance velocity direction ON
 at `3000ms`, Binance trend regime OFF (still available as an optional filter), ordinary window-gap
