@@ -608,7 +608,7 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
   });
   server.on("error", (e) => console.warn(`[ui] server error: ${e.message}`));
   warnPassword();
-  server.listen(port, () => console.log(`[ui] dashboard http://localhost:${port} (${authRequired() ? "password-protected" : "open — simulation"})`));
+  server.listen(port, config.uiHost, () => console.log(`[ui] dashboard http://${config.uiHost}:${port} (${authRequired() ? "password-protected" : "open — simulation"})`));
 
   function broadcast(type, payload) {
     const msg = JSON.stringify({ type, ...payload });

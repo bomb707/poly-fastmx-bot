@@ -89,6 +89,19 @@ written into result files.
 The PM2 deployment auto-starts the live simulation; the dashboard **Stop/Start** controls disconnect and reconnect
 its feeds. No real orders are submitted.
 
+### HTTPS domain
+
+`poly.360-techgroup.com` is served by Caddy, which terminates HTTPS and proxies
+HTTP and WebSocket traffic to the dashboard on `127.0.0.1:4520`. Start it with:
+
+```bash
+docker compose -f deploy/compose.yaml up -d
+```
+
+The DNS `A` record must point `poly` to `157.90.182.161`. Caddy obtains and
+renews the TLS certificate automatically. The Node process can be started with
+either `npm start` or PM2; both use the same loopback dashboard address.
+
 ## Important limitation
 
 This is a reconstruction from observable behavior, not the wallet owner's private source code. Live simulation

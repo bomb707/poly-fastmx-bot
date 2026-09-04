@@ -174,6 +174,9 @@ export const config = {
 
   // Visual dashboard (http + ws). Set UI_PORT=0 to disable.
   uiPort: ENUM("UI_PORT", 4520),   // FastMX dashboard; isolated from the source project
+  // Bind to loopback by default. A reverse proxy can expose the dashboard over
+  // HTTPS without leaving the raw Node port open to the internet.
+  uiHost: E("UI_HOST", "127.0.0.1").trim(),
   // How often to push a spot/book sample to the UI (ms). Lower = smoother chart
   // (more points/sec). Feeds are sub-second, so 120ms tracks the book closely.
   uiSampleMs: ENUM("UI_SAMPLE_MS", 120),
