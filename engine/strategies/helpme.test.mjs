@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { STRAT, evaluateBinanceTrendRegime, step, validateParams } from "./helpme.js";
+import { STRAT, evaluateBinanceTrendRegime, onOrderOutcome, step, validateParams } from "./helpme.js";
 
 function book(ask, bid = ask - 0.02, askSizes = [20, 20, 20]) {
   return {
@@ -58,7 +58,7 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal(STRAT.H_BINANCE_GAP_MOMENTUM_ON, true);
   assert.equal(STRAT.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS, 3000);
   assert.equal(STRAT.H_BINANCE_GAP_VELOCITY_MIN, 5);
-  assert.equal(STRAT.H_BINANCE_TREND_ON, true);
+  assert.equal(STRAT.H_BINANCE_TREND_ON, false);
   assert.equal(STRAT.H_BINANCE_TREND_LOOKBACK_SEC, 30);
   assert.equal("H_BINANCE_TREND_LOOKBACK_MIN" in STRAT, false);
   assert.equal(STRAT.H_BINANCE_TREND_MIN_PCT, 0.05);
@@ -66,13 +66,16 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal(STRAT.H_BINANCE_COUNTERTREND_MIN_PCT, 0.075);
   assert.equal(STRAT.H_BINANCE_GAP_AGREE_ON, false);
   assert.equal(STRAT.H_TARGET_DIRECTION_ON, true);
-  assert.equal(STRAT.H_DIRECTION_LOOKBACK_MS, 5000);
+  assert.equal(STRAT.H_DIRECTION_LOOKBACK_MS, 3000);
+  assert.equal(STRAT.H_DIRECTION_CLOB_WEIGHT, 0.5);
+  assert.equal(STRAT.H_DIRECTION_BINANCE_WEIGHT, 0.5);
   assert.equal(STRAT.H_DIRECTION_ENTER_SCORE, 0.35);
   assert.equal(STRAT.H_DIRECTION_EXIT_SCORE, 0.15);
   assert.equal(STRAT.H_FIRST_ENTRY_EARLIEST_S, 15);
   assert.equal(STRAT.H_MAX_ACTIONS_PER_WINDOW, 7);
+  assert.equal(STRAT.H_MAX_OPPOSITE_ACTIONS_PER_WINDOW, 7);
   assert.equal(STRAT.H_HEDGE_ON, true);
-  assert.equal(STRAT.H_HEDGE_SCORE_MIN, 0.6);
+  assert.equal("H_HEDGE_SCORE_MIN" in STRAT, false);
   assert.equal(STRAT.H_REVERSAL_ON, true);
   assert.equal(STRAT.H_REVERSAL_SCORE_MIN, 0.95);
   assert.equal(STRAT.H_REVERSAL_CONFIRM_MS, 1000);
@@ -101,7 +104,7 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal("executableMs" in order.signal, false);
 });
 
-test("default target policy uses five-second scored direction plus the Binance trend regime", () => {
+test("default target policy uses three-second agreeing velocities without CLOB level", () => {
   const s = state();
   step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), STRAT, 120, 0);
   step(s, tick(27, 0.51, 0.49, { bzPrice: 100 }), STRAT, 120, 27000);
@@ -109,17 +112,13 @@ test("default target policy uses five-second scored direction plus the Binance t
   assert.deepEqual(step(s, tick(30, 0.59, 0.41, { bzPrice: 106 }), STRAT, 120, 30000), []);
   const [order] = step(s, tick(30.5, 0.59, 0.41, { bzPrice: 106 }), STRAT, 120, 30500);
   assert.equal(order.side, "Up");
-  assert.equal(order.signal.midVelocity, 0.09);
+  assert.equal(order.signal.midVelocity, 0.08);
   assert.equal(order.signal.binanceGapVelocity, 6);
-  assert.equal(order.signal.midLookbackMs, 5000);
-  assert.equal(order.signal.binanceLookbackMs, 5000);
-  assert.equal(order.signal.binanceTrendOn, true);
-  assert.equal(order.signal.binanceTrendLookbackSec, 30);
-  assert.equal(order.signal.binanceTrendReferencePrice, 100);
-  assert.equal(order.signal.binanceTrendReferenceMs, 0);
-  assert.equal(order.signal.binanceTrendDir, "Up");
-  assert.equal(order.signal.binanceStrongTrend, true);
-  assert.equal(order.signal.binanceCountertrend, false);
+  assert.equal(order.signal.midLookbackMs, 3000);
+  assert.equal(order.signal.binanceLookbackMs, 3000);
+  assert.equal(order.signal.binanceTrendOn, false);
+  assert.equal(order.signal.directionComponents.level, null);
+  assert.equal(order.signal.velocityAgreement, true);
   assert.equal(order.role, "first-entry");
   assert.equal(order.reason, "target-score-first-entry");
 });
@@ -154,13 +153,11 @@ test("at least one fast momentum source must be enabled", () => {
   assert.equal(s.gateReason, "signal-toggle-required");
 });
 
-test("target policy validates its hysteresis band and sizing bounds", () => {
+test("target policy validates its hysteresis band", () => {
   assert.throws(() => validateParams({ ...STRAT, H_DIRECTION_EXIT_SCORE: 0.35 }),
     /exit < enter/i);
   assert.throws(() => validateParams({ ...STRAT, H_DIRECTION_BINANCE_SCALE: 0 }),
     /component scales/i);
-  assert.throws(() => validateParams({ ...STRAT, H_TARGET_SIZE_ON: true,
-    H_TARGET_SIZE_MAX_SH: 3 }), /max shares/i);
 });
 
 test("live taker transport remains configurable without changing replay FAK intent", () => {
@@ -173,21 +170,7 @@ test("live taker transport remains configurable without changing replay FAK inte
   assert.equal(order.liveOrderType, "FAK");
 });
 
-test("target sizing reshapes an entry by signed price cap while retaining fixed-USD transport", () => {
-  const s = state();
-  const P = { ...FAST, H_TARGET_SIZE_ON: true };
-  step(s, tick(0, 0.92, 0.08, { bzPrice: 100 }), P, 120, 0);
-  const [order] = step(s, tick(5, 0.94, 0.06, { bzPrice: 101 }), P, 120, 5000);
-  assert.equal(order.limitPx, 0.95);
-  assert.equal(order.minimumShares, 12);
-  assert.equal(order.budgetUsd, 11.4);
-  assert.equal(order.amountMode, "usd");
-  assert.equal(s.helpmeStatus.targetSizeOn, true);
-  assert.equal(s.helpmeStatus.staticBaseShares, 7);
-  assert.equal(s.helpmeStatus.targetSizedShares, 12);
-});
-
-test("target policy latches an impulse and enforces the per-window action cap", () => {
+test("target policy counts filled entries, not historical release attempts, against its cap", () => {
   const s = state();
   const P = { ...STRAT, H_BINANCE_TREND_ON: false,
     H_FIRST_ENTRY_EARLIEST_S: 0, H_FIRST_ENTRY_CONFIRM_MS: 0,
@@ -195,27 +178,44 @@ test("target policy latches an impulse and enforces the per-window action cap", 
   step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), P, 120, 0);
   const [entry] = step(s, tick(5, 0.60, 0.40, { bzPrice: 110 }), P, 120, 5000);
   assert.equal(entry.role, "first-entry");
-  assert.deepEqual(step(s, tick(6, 0.61, 0.39, { bzPrice: 111 }), P, 120, 6000), []);
-  assert.equal(s.gateReason, "window-action-cap");
+  s.fills = [{ ...entry, shares: 7, usdc: 4.27 }];
+  step(s, tick(6, 0.50, 0.50, { bzPrice: 100 }), P, 120, 6000);
+  assert.deepEqual(step(s, tick(7, 0.61, 0.39, { bzPrice: 111 }), P, 120, 7000), []);
+  assert.equal(s.gateReason, "window-entry-fill-cap");
+  assert.equal(s.helpmeStatus.actionCounts.entryFilled, 1);
 });
 
-test("target policy blocks an uneconomic partial hedge", () => {
+test("target policy allows a risk-improving partial hedge despite negative pair edge", () => {
   const s = state({ upShares: 14, upCost: 7 });
   const P = { ...STRAT, H_BINANCE_TREND_ON: false, H_REVERSAL_ON: false,
     H_FIRST_ENTRY_EARLIEST_S: 0, H_HEDGE_CONFIRM_MS: 0,
-    H_HEDGE_SCORE_MIN: 0.35, H_HEDGE_MIN_PAIR_EDGE: 0,
     H_COOLDOWN_MS: 0 };
   step(s, tick(0, 0.55, 0.45, { bzPrice: 101 }), P, 120, 0);
-  assert.deepEqual(step(s, tick(5, 0.45, 0.55, { bzPrice: 99 }), P, 120, 5000), []);
-  assert.equal(s.gateReason, "hedge-economics");
+  const [hedge] = step(s, tick(5, 0.45, 0.55, { bzPrice: 99 }), P, 120, 5000);
+  assert.equal(hedge.role, "hedge");
   assert.ok(s.helpmeStatus.pairEdge < 0);
+  assert.equal(hedge.minimumShares, 7);
+});
+
+test("a no-fill re-arms the most recent release and does not consume the fill cap", () => {
+  const s = state();
+  const P = { ...STRAT, H_BINANCE_TREND_ON: false,
+    H_FIRST_ENTRY_EARLIEST_S: 0, H_FIRST_ENTRY_CONFIRM_MS: 0,
+    H_MAX_ACTIONS_PER_WINDOW: 1, H_COOLDOWN_MS: 0 };
+  step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), P, 120, 0);
+  const [first] = step(s, tick(5, 0.60, 0.40, { bzPrice: 110 }), P, 120, 5000);
+  onOrderOutcome(s, { oid: first.oid, filled: false });
+  const [retry] = step(s, tick(5.1, 0.60, 0.40, { bzPrice: 110 }), P, 120, 5100);
+  assert.equal(retry.role, "first-entry");
+  assert.equal(s.helpmeStatus.actionCounts.entryFilled, 0);
+  assert.equal(s.helpme.noFillCount, 1);
 });
 
 test("target policy strong reversal crosses only to the configured residual", () => {
   const s = state({ upShares: 7, upCost: 3.5 });
   const P = { ...STRAT, H_BINANCE_TREND_ON: false,
     H_FIRST_ENTRY_EARLIEST_S: 0, H_REVERSAL_CONFIRM_MS: 0,
-    H_REVERSAL_SCORE_MIN: 0.9, H_REVERSAL_MIN_PAIR_EDGE: -1,
+    H_REVERSAL_SCORE_MIN: 0.9,
     H_REVERSAL_MAX_WORST_LOSS_USD: 100, H_REVERSAL_RESIDUAL_SH: 4,
     H_COOLDOWN_MS: 0 };
   step(s, tick(0, 0.55, 0.45, { bzPrice: 101 }), P, 120, 0);
@@ -428,7 +428,7 @@ test("insufficient reversal depth falls back to a bounded hedge", () => {
     H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 5,
     H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
     H_HEDGE_ON: true, H_REVERSAL_ON: true, H_REVERSAL_CONFIRM_MS: 0,
-    H_REVERSAL_MIN_PAIR_EDGE: -1, H_REVERSAL_MAX_WORST_LOSS_USD: 100 };
+    H_REVERSAL_MAX_WORST_LOSS_USD: 100 };
   step(s, tick(0, 0.55, 0.45, { openBinance: 100, bzPrice: 101 }), P, 120, 0);
   const [order] = step(s, tick(5, 0.45, 0.45, {
     openBinance: 100, bzPrice: 99, downAskSizes: [7],

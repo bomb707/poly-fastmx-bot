@@ -11,25 +11,25 @@ function component(value, scale) {
 }
 
 /**
- * Target-derived direction score. Positive means Up and negative means Down.
- * Every component is causal and normalized before weighting:
- *   - CLOB level: current Up midpoint relative to 0.50
- *   - CLOB impulse: Up midpoint change over the configured short lookback
- *   - Binance impulse: spot change over the same short lookback
- * Missing inputs are omitted and the remaining weights are renormalized.
+ * Causal velocity direction score. Positive means Up and negative means Down.
+ * CLOB and Binance impulses are normalized before weighting. By default both
+ * enabled feeds must be non-zero and agree in sign. CLOB level remains an
+ * optional diagnostic component for callers outside FastMX; it is not part of
+ * the active FastMX direction policy.
  */
 export function evaluateDirectionScore({
   midpoint,
   midVelocity,
   binanceVelocity,
-  clobLevelOn = true,
+  clobLevelOn = false,
   clobVelocityOn = true,
   binanceVelocityOn = true,
+  requireVelocityAgreement = true,
   levelScale = 0.05,
   clobScale = 0.05,
   binanceScale = 10,
-  levelWeight = 0.2,
-  clobWeight = 0.3,
+  levelWeight = 0,
+  clobWeight = 0.5,
   binanceWeight = 0.5,
   enterScore = 0.35,
   exitScore = 0.15,
@@ -54,19 +54,33 @@ export function evaluateDirectionScore({
   const score = availableWeight > EPS ? clamp(weighted / availableWeight, -1, 1) : null;
   const confidence = score == null ? null : Math.abs(score);
   const rawSide = score == null || Math.abs(score) <= EPS ? null : (score > 0 ? "Up" : "Down");
+  const enabledVelocities = [
+    clobVelocityOn ? values.clob : null,
+    binanceVelocityOn ? values.binance : null,
+  ].filter((value) => value != null);
+  const velocityDirections = enabledVelocities
+    .map((value) => Math.abs(value) <= EPS ? 0 : Math.sign(value));
+  const expectedVelocityCount = Number(clobVelocityOn) + Number(binanceVelocityOn);
+  const velocitiesReady = velocityDirections.length === expectedVelocityCount
+    && velocityDirections.every((direction) => direction !== 0);
+  const velocityAgreement = !requireVelocityAgreement || expectedVelocityCount <= 1
+    ? velocitiesReady
+    : velocitiesReady && velocityDirections.every((direction) => direction === velocityDirections[0]);
   const enter = clamp(finite(enterScore) ?? 0.35, 0, 1);
   const exit = clamp(Math.min(enter, finite(exitScore) ?? 0.15), 0, 1);
   return {
     score,
     confidence,
     rawSide,
-    side: confidence != null && confidence + EPS >= enter ? rawSide : null,
-    qualified: confidence != null && confidence + EPS >= enter,
-    released: confidence == null || confidence <= exit + EPS,
+    side: velocityAgreement && confidence != null && confidence + EPS >= enter ? rawSide : null,
+    qualified: velocityAgreement && confidence != null && confidence + EPS >= enter,
+    released: !velocityAgreement || confidence == null || confidence <= exit + EPS,
     enterScore: enter,
     exitScore: exit,
     components: values,
     availableWeight,
+    velocityAgreement,
+    velocityDirections,
   };
 }
 

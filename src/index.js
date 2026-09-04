@@ -14,7 +14,6 @@ import { createTracker } from "./execution/tracker.js";
 import { createShadow } from "./execution/shadow.js";
 import * as live from "./lib/executor.js";
 import { STAGES } from "./lib/orderstatus.js";
-import { mergeOnChain } from "./execution/liveMerge.js";
 import { isRunning, setRunning, onRunChange, isTradeEnabled, setTradeEnabled, isWindowSkipped } from "./execution/botState.js";
 import { verbose, verboseOn, setVerbose, setVerboseInstance } from "./logging/verbose.js";
 import { render, renderHeadless } from "./server/dashboard.js";
@@ -211,11 +210,6 @@ function tokenForSlugSide(slug, side) {
   for (const w of tracker.windows.values()) if (w.slug === slug) return side === "Up" ? w.upTokenId : w.downTokenId;
   return null;
 }
-// resolve a window's CTF conditionId (for the on-chain merge)
-function conditionForSlug(slug) {
-  for (const w of tracker.windows.values()) if (w.slug === slug) return w.conditionId || null;
-  return null;
-}
 // SHADOW A/B: the reverse-engineered strategy running live alongside the bot on the same feeds.
 // (Forced ON in live mode — it's what DECIDES the entries that become real orders.)
 // Place ONE real live buy WITH the stale-book guard. Returns the placeBuy promise (resolves to
@@ -393,17 +387,6 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
             } }).catch(() => {});
         }
       }).catch((err) => { emitOS(STAGES.REJECTED, { error: String(err && err.message || err) }); try { shadow.cancelLivePending?.(e.slug, rec.oid); } catch {} });
-    }
-  }
-  // MERGE ON PROFIT → fire the REAL on-chain merge (live + running). PnL-neutral: if it can't execute
-  // (proxy funder / unsettled), the sets just redeem at settlement; the shadow already banked the profit.
-  if (e.kind === "shadow_merge" && live.isLive() && isRunning()) {
-    const rec = e.rec, cond = conditionForSlug(e.slug);
-    if (rec && rec.sets > 0) {
-      if (verboseOn) verbose("merge.route", { slug: String(e.slug).split("-").pop(), sets: rec.sets, realized: rec.realized, conditionId: cond });
-      mergeOnChain({ conditionId: cond, sets: rec.sets, slug: e.slug })
-        .then((r) => { if (r?.error) console.error("[merge] not executed:", r.error); })
-        .catch((err) => console.error("[merge] route error:", err?.message || err));
     }
   }
   if (!ui) return;

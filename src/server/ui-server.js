@@ -21,7 +21,6 @@ import { WebSocketServer } from "ws";
 import { fetchWindowHistory } from "../sources/history.js";
 import { runSession } from "../execution/session.js";
 import { ordersForTx } from "../sources/onchain.js";
-import { getTrackerBuys, startEstimate, prewarmMids, estProgress } from "./historyCheck.js";
 import { liveStatus, liveAddress, resolveFunder } from "../lib/executor.js";
 import { getBalance } from "../sources/balance.js";
 import { isRunning, setRunning, isTradeEnabled, setTradeEnabled, skippedWindow, setSkippedWindow } from "../execution/botState.js";
@@ -30,7 +29,7 @@ import { setVerbose, isVerbose } from "../logging/verbose.js";
 import { handleAuth, isAuthed, warnPassword, authRequired } from "./auth.js";
 import { config, ASSETS, INTERVALS, setBacktestApiVersion } from "../config/config.js";
 import { patchConfigStore, getConfigStore } from "../config/configStore.js";
-import { fillsCol, sessionsCol, recordOrderStatus, orderStatusOf } from "../sources/db.js";   // MongoDB record store (mode-split: reads THIS process's sim/real collections)
+import { fillsCol, sessionRowsSince, recordOrderStatus, orderStatusOf } from "../sources/db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "..", "public");
@@ -130,17 +129,6 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
         res.end(JSON.stringify({ asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet: config.wallet, showTracker: !!config.showTracker, maxSessionLoss: effectiveMaxSessionLoss(getShadowParams, config.maxSessionLoss), executionMode: config.executionMode })); });
       return;
     }
-    // /history-check: tracked-wallet taker BUY orders (on-chain placed time) over the last N days.
-    if (url === "/api/tracker-buys") {
-      const q = new URL(req.url, "http://x").searchParams;
-      const days = Math.min(40, Math.max(1, Number(q.get("days")) || 20));
-      const refresh = q.get("refresh") === "1";
-      getTrackerBuys({ days, refresh })
-        .then((r) => { res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" }); res.end(JSON.stringify(r));
-          prewarmMids(r.buys); })   // fire-and-forget: warm the tick cache so the estimate is fast
-        .catch((e) => { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: String(e && e.message || e) })); });
-      return;
-    }
     // execution mode (real-live vs simulation) — drives the UI badge + disabled controls.
     if (url === "/api/exec-mode") {
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
@@ -197,26 +185,6 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       else if (url.endsWith("/off")) { setVerbose(false); patchConfigStore({ verbose: false }); }
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
       res.end(JSON.stringify({ verbose: isVerbose() }));
-      return;
-    }
-    // live progress of an in-flight estimate (polled by the page).
-    if (url === "/api/estimate-progress") {
-      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
-      res.end(JSON.stringify(estProgress));
-      return;
-    }
-    // /history-check submit: START the estimate in the BACKGROUND and return immediately. The page polls
-    // /api/estimate-progress for progress + the final result — so no request is held long enough to be
-    // cut by a proxy ("Failed to fetch").
-    if (url === "/api/estimate-momentum") {
-      let raw = ""; req.on("data", (c) => { raw += c; if (raw.length > 5e6) req.destroy(); });
-      req.on("end", () => {
-        let b = {}; try { b = JSON.parse(raw || "{}"); } catch {}
-        const started = startEstimate({ days: Math.min(40, Math.max(1, Number(b.days) || 20)),
-          excluded: Array.isArray(b.excluded) ? b.excluded : [],
-          offBeforeMs: Math.max(0, Number(b.offBeforeMs) || 0), offAfterMs: Math.max(0, Number(b.offAfterMs) || 0), minTInto: Math.max(0, Number(b.minTInto) || 0) });
-        res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ started, busy: !started, id: estProgress.id }));
-      });
       return;
     }
     // Hot-swap the tracked market + wallet (POST { asset, interval, wallet }). Validates the
@@ -501,7 +469,7 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
         .catch((e) => { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: String(e && e.message || e) })); });
       return;
     }
-    // Cumulative LIVE PnL from the A/B ledger (data/shadow-ab.jsonl) — seeds the foot "Session" cards.
+    // Cumulative LIVE PnL from the durable local/Mongo A/B ledger — seeds the foot "Session" cards.
     if (url === "/api/session-live") {
       // count from this boot by default (window count starts at 0 when the bot starts); a later user
       // Reset (?since=) raises the floor further. All-time is never shown unless explicitly asked.
@@ -510,11 +478,11 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       (async () => {
         let bot = 0, shadow = 0, real = 0, nb = 0, ns = 0, nr = 0; const slugs = [];
         try {
-          const rows = await (await sessionsCol()).find({ windowStart: { $gte: since } }).toArray();
+          const rows = await sessionRowsSince(since);
           for (const a of rows) {
-            if (a.sim && a.sim.pnl != null) { shadow += a.sim.pnl; ns++; if (a.slug) slugs.push(a.slug); }
-            if (a.real && a.real.pnl != null) { real += a.real.pnl; nr++; }   // REAL on-chain PnL (honest)
-            if (a.bot && a.bot.pnl != null) { bot += a.bot.pnl; nb++; }
+            if (a.sim && Number.isFinite(Number(a.sim.pnl))) { shadow += Number(a.sim.pnl); ns++; if (a.slug) slugs.push(a.slug); }
+            if (a.real && Number.isFinite(Number(a.real.pnl))) { real += Number(a.real.pnl); nr++; }   // REAL on-chain PnL (honest)
+            if (a.bot && Number.isFinite(Number(a.bot.pnl))) { bot += Number(a.bot.pnl); nb++; }
           }
         } catch {}
         const r2 = (x) => Math.round(x * 100) / 100;
@@ -530,7 +498,7 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       (async () => {
       const windows = [];
       try {
-        const rows = await (await sessionsCol()).find({ windowStart: { $gte: since } }).toArray();
+        const rows = await sessionRowsSince(since);
         for (const a of rows) {
           if (!a.sim) continue;
           windows.push({ slug: a.slug, ws: a.windowStart, winSide: a.winSide, status: a.status || (a.winSide ? "resolved" : "pending"), ts: a.ts, sim: a.sim, real: a.real || null, bot: a.bot || null, pnlErr: a.pnlErr });
@@ -624,7 +592,6 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       return;
     }
     if (url === "/" || url === "") url = "/index.html";
-    if (url === "/history-check") url = "/history-check.html";   // momentum-calibration page
     const file = path.join(PUBLIC_DIR, url);
     if (!file.startsWith(PUBLIC_DIR)) { res.writeHead(403); res.end("Forbidden"); return; }
     fs.readFile(file, (err, data) => {

@@ -1,62 +1,8 @@
-// engine/fillsim.js — REUSABLE fill-simulation model (how a MODELED order fills: resting/maker, crossing/taker, latency).
-//
-// ── LIB BOUNDARY ─────────────────────────────────────────────────────────────────────────────────────
-// Pure, dependency-free functions — the SINGLE SOURCE OF TRUTH for "when and at what price does a modeled order
-// fill". Lives in engine/ (not src/lib/) because engine/strategy.js + engine/simrun.js import it AND are served
-// to the browser at /engine/*.js — a src/lib/ path wouldn't resolve there. Wired into all three consumers:
-//   engine/strategy.js (makerTouchFill) · engine/simrun.js (futureAsks + stampLatencyDisplay) ·
-//   src/execution/shadow.js (latencyFillPrice). Two ORCHESTRATION modes wrap these primitives (same model):
-//   • Backtest — precompute the ask LATENCY_MS in the future per tick (`futureAsks`) and price the fill there.
-//   • Live-shadow — defer the fill in a queue and, at decision+latency, price it against the book AS OF then.
-// The maker touch-fill accrual (`makerTouchFill`) drives the engine's resting-order block; the taker/crossing
-// case is just "fill at the ask" (`latencyFillPrice` with no maker resting).
-//
-// SIM/backtest ONLY — real live books the REAL CLOB fill via lib/executor.js (never a modeled fill).
-// ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// Shared FAK ask-ladder walking and simulated latency display helpers. The
+// production strategy uses visible L2 depth. Replay decisions are causal; an
+// accepted intent is matched only against the book at its modeled arrival.
 
 const EPS = 1e-9;
-
-/**
- * MAKER touch-fill accrual — how much of a resting GTC limit (below the ask, delta −δ) has filled this tick.
- *   askNow > limit           → no fill (the bid rests, waiting for price to come to it) → returns `filled` unchanged.
- *   askNow ≈ limit (touch)    → accrue `fillPct` of the WHOLE target per `touchMs`, scaled by this tick's `dtMs`.
- *   askNow < limit (crossed)  → the remainder fills fully → returns `target`.
- * Pure: no side effects. Caller decides what to do when `filled >= target` (open the leg) or at the end-cutoff.
- *
- * @param {object} a
- * @param {number} a.askNow   the resting side's best ask this tick
- * @param {number} a.limit    the order's limit price (the touch line)
- * @param {number} a.filled   shares filled so far
- * @param {number} a.target   total shares wanted
- * @param {number} a.dtMs     ms since the previous tick
- * @param {number} a.touchMs  ms to accrue one `fillPct` chunk at the touch (V_SIM_TOUCH_MS)
- * @param {number} a.fillPct  0..100 — % of target per touchMs at the touch (V_SIM_FILL_PCT)
- * @returns {number} the new `filled` (clamped to [0, target])
- */
-export function makerTouchFill({ askNow, limit, filled, target, dtMs, touchMs, fillPct }) {
-  filled = +filled || 0; target = +target || 0;
-  if (askNow == null || !(filled < target - EPS)) return filled;
-  if (askNow < limit - EPS) return target;                                   // crossed through → remainder fills fully
-  if (Math.abs(askNow - limit) <= EPS) {                                     // at the touch → touch% of TOTAL per touchMs
-    const tMs = Math.max(1, +touchMs || 250);
-    const r = +fillPct; const fp = Math.max(0, Math.min(100, Number.isFinite(r) ? r : 100)) / 100;  // NaN-safe
-    return Math.min(target, filled + fp * ((+dtMs || 0) / tMs) * target);
-  }
-  return filled;                                                             // askNow > limit → no fill this tick
-}
-
-/**
- * The fill PRICE for a marketable (or touched) buy: the side's ask, capped at the order's limit ceiling.
- *   A taker crosses and pays the ask (≤ limit). A resting maker fills AT its limit. Under latency, `sideAsk`
- *   is the ask AS OF decision+LATENCY_MS (see `futureAsks`), so the price reflects the move while in flight.
- * @param {number} sideAsk   the buy side's ask (at the fill instant)
- * @param {number} [limitPx] the order's limit ceiling (default 1 = uncapped)
- * @returns {number} fill price, rounded to the 0.0001 grid (or null if sideAsk is null)
- */
-export function latencyFillPrice(sideAsk, limitPx) {
-  if (sideAsk == null) return null;
-  return +Math.min(sideAsk, limitPx != null ? limitPx : 1).toFixed(4);
-}
 
 /**
  * Walk the visible ask ladder for a marketable BUY, never paying above the signed limit.
@@ -113,32 +59,11 @@ export function walkVisibleBudget(book, budgetUsd, cap, { allowBbaFallback = tru
 }
 
 /**
- * BACKTEST latency precompute — for each tick i, the Up/Down ask that exists LATENCY_MS in the FUTURE (the ask a
- *   marketable order fills at, since it lands at decision+latency, not now). Two-pointer forward scan, O(n).
- * @param {Array<{t:number,upAsk:number,dnAsk:number}>} book  tick series (ascending t, seconds)
- * @param {number} latSec  latency in seconds (0 ⇒ returns null; caller uses the current ask)
- * @returns {{fUp:number[], fDn:number[], fT:number[]}|null}  future asks + exact fill times (decision+latency), or null
- */
-export function futureAsks(book, latSec) {
-  if (!(latSec > 0) || !Array.isArray(book) || !book.length) return null;
-  const n = book.length, fUp = new Array(n), fDn = new Array(n), fT = new Array(n);
-  let j = 0;
-  for (let i = 0; i < n; i++) {
-    if (j < i) j = i;
-    const dl = book[i].t + latSec;                       // fill lands EXACTLY at decision+latency (no tick-wait)
-    while (j < n - 1 && book[j].t < dl) j++;              // j = first tick at/after the deadline
-    const m = (book[j].t <= dl) ? j : Math.max(i, j - 1); // ask AS OF the deadline = latest tick ≤ deadline
-    fUp[i] = book[m].upAsk; fDn[i] = book[m].dnAsk; fT[i] = dl;
-  }
-  return { fUp, fDn, fT };
-}
-
-/**
  * Restamp a marketable fill's display times for latency parity (fill shows at decision+latency, decision kept as
  *   decidedT). PnL uses effPx, not tInto, so this is display-only — but it keeps chart/circle timing identical
  *   between the backtest and the recorded live fill.
  * @param {object} f       the fill record (mutated in place)
- * @param {number} fillT   the fill time = decision+latency (from `futureAsks().fT[i]`), or null to no-op the time move
+ * @param {number} fillT   the modeled fill time, or null to leave the time unchanged
  * @returns {object} f
  */
 export function stampLatencyDisplay(f, fillT) {

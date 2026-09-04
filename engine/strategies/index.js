@@ -1,14 +1,10 @@
 // engine/strategies/index.js — the strategy REGISTRY.
 //
-// Helpme intentionally exposes ONE active strategy. Legacy modules remain in the copied repository only as
-// research artifacts; they cannot be selected by the runtime or dashboard.
+// FastMX intentionally exposes one active strategy. Experimental strategies live
+// in version history, not beside production code.
 // shadow.js (live-sim + real-live) dispatch every per-tick decision + live-fill hook through getStrategy(), so a
 // strategy is available to ALL execution paths the moment it's registered here.
 //
-// TO ADD A STRATEGY:
-//   1. Copy _template.js → engine/strategies/<name>.js and implement step() (+ optional live hooks).
-//   2. Import it below and call register(<mod>).
-//   3. Add its NAME/LABEL to the UI strategy dropdown (public/index.html) if you want to pick it from the dashboard.
 import * as helpme from "./helpme.js";
 
 const REG = Object.create(null);

@@ -1,41 +1,43 @@
 # FastMX current state
 
-_Updated: 2026-08-27 UTC_
+_Updated: 2026-09-04 UTC_
 
-- Runtime: `poly-fastmx-simulation`, online under PM2
+- Runtime: `poly-fastmx-simulation`, registered under PM2 (currently stopped)
 - Dashboard: `https://dev-fastmx.polywinbot.com`
 - Local port: `4520`
 - Execution: hard-locked simulation; no real orders
 - Target wallet: `0x75cc3b63a2f2423085e10706c78b494017b93ce1`
 - Active strategy: only `helpme`, in `engine/strategies/helpme.js`
 
-The active policy exposes two direction-source toggles and the `poly-mom-bot` Binance trend-regime toggle. CLOB midpoint velocity uses
-`mid(now) - mid(at-or-before now - lookback)`, with `mid = (best bid + best ask) / 2`, a required configurable
-lookback fixed at the required `3000` ms default and a fitted absolute threshold of `0.02`. Binance gap momentum uses the dev-tool raw-dollar formula
-`(priceNow-open)-(pricePrior-open) = priceNow-pricePrior`, with a three-second lookback and
-`$5` minimum. Binance trend uses the `poly-mom-bot` formula
-`100 × (current Binance spot - Binance spot 30 seconds earlier) / prior spot`. At `0.05%` or stronger,
-a trend-following Binance signal passes normally; an opposing fast signal must also clear `0.075%` on both its fast
-clock and a causal 60-second Binance clock in the same direction. Weak/range trend and missing trend history leave
-the fast signal unchanged, matching `poly-mom-bot`. Trend is not a standalone direction source and requires Binance
-momentum. UI and server validation guarantee at least one fast source is enabled and enforce that dependency.
-`H_BINANCE_GAP_AGREE_ON` independently applies the `poly-mom-bot` window-gap rule: selected velocity direction
-must agree with Binance spot versus the five-minute Binance open. It is currently off.
-Every distinct qualified signal aligned with flat/current inventory creates a seven-share entry. When an opposite
-candidate appears, old-side top-ups pause for a three-second reset interval and a bounded exact-share hedge may
-immediately reduce the old-side lead without worsening projected worst-case loss. A reversal requires persistent
-one-second CLOB + Binance fast momentum + strong trailing trend + window-gap confirmation, a minimum `-0.03`
-pair edge, and either a projected worst-case loss no greater than `$10` or a strict reduction from current risk.
-It targets a ten-share new-side residual and caps a single reversal order at 50 shares; there is no fixed old-
-imbalance exclusion, so larger positions de-risk through partial hedges instead of disabling adaptation. Both
-adaptive controls default on. Inventory orders are exact-share sized and force live GTC plus immediate remainder
-cancellation. Executable-duration, cap-cell, total-order-count, and total-cost branches remain removed.
-Cooldown remains the ordinary release throttle at `1000` ms.
-The external session circuit breaker remains at `-$25`.
-Chainlink, ask differentials, imbalance, microprice, and weighted scores are not direction gates.
+The active direction is a normalized score of three-second CLOB Up-midpoint velocity and three-second Binance spot
+velocity. CLOB price level is excluded. Both enabled feeds must be ready, nonzero, and agree in sign. Their weights
+are deliberately equal (`0.5/0.5`), their normalization scales are `0.05/$10`, and the enter/re-arm bands are
+`0.35/0.15`. These magnitudes remain implementation assumptions; only direction-sign agreement is supported by the
+conservative analysis below.
 
-Configured PM2 simulation profile (effective after process restart): CLOB and Binance velocity ON at `3000ms` with `0.02/$5` thresholds,
-Binance trend regime ON at `30s/0.05%` with `60s/0.075%` countertrend confirmation, ordinary window-gap
+Binance trend uses the `poly-mom-bot` formula
+`100 × (current Binance spot - Binance spot 30 seconds earlier) / prior spot`. At `0.05%` or stronger, a fast signal
+opposing that trend also needs a same-direction 60-second move and both moves must clear `0.075%`. Weak/range or
+missing trend history leaves the score unchanged. `H_BINANCE_GAP_AGREE_ON` optionally requires the selected side to
+match Binance spot versus the five-minute open; it is off in the checked-in profile.
+
+A hysteresis latch and role-specific timing gates control releases. An aligned release creates a fixed seven-share
+entry. An opposing release may hedge while preserving one old-side share only if that purchase strictly improves
+projected worst-case portfolio loss. A reversal requires score confidence `0.95`, a persistent one-second opposite
+candidate, agreeing velocities, sufficient depth, a maximum 50-share order, and projected worst loss no greater
+than `$10` or an improvement over current risk. It targets a four-share residual. Pair price is retained as a
+diagnostic but no longer blocks a risk-improving opposite order. These release and inventory parameters have not
+been recovered from the wallet. Both adaptive controls default on.
+
+Entry/top-up fills and opposing hedge/reversal fills have independent seven-action caps. The counters include
+successful fills and currently pending latency intents, not historical attempts. A no-fill re-arms its release and
+does not consume the cap. Sizing remains fixed rather than fitted from the target wallet.
+Inventory orders are exact-share sized and force live GTC plus immediate remainder cancellation. The ordinary
+cooldown default is `1000` ms and the external session circuit breaker is `-$25`. Chainlink, ask differentials,
+order-book imbalance, and microprice are not direction gates.
+
+Configured PM2 simulation profile (effective after process restart): agreeing CLOB/Binance velocity direction ON
+at `3000ms`, Binance trend regime OFF (still available as an optional filter), ordinary window-gap
 agreement OFF so a qualified counter-move can de-risk inventory before crossing the open, active through
 `T+300`, `2000ms` cooldown, and both bounded hedging and confirmed reversal ON.
 
@@ -63,22 +65,15 @@ The CLOB feed follows Polymarket's documented market-channel protocol: full `boo
 as step functions. Obsolete experimental overlays, controls, training endpoints, and artifacts have been
 removed.
 
-The exact 2,875-window audit of the retired guarded policy is in
-`research/wallet-75cc/results/fastmx-execution-final-screen-2026-08-27.json`; it lost `$162.04` after modeled fees.
-That result does not validate the new entry-every-signal rule or establish profitability. The process therefore
-remains simulation-only.
+The canonical wallet-direction analysis is
+`research/wallet-75cc/results/causal-entry-analysis.md`. It uses only predeclared CLOB/Binance features, reads BAPI
+v2 L2 state strictly before each whole-second wallet timestamp, reserves September 4 as a chronological holdout,
+and clusters uncertainty by five-minute market. On that holdout, direction matched CLOB 3-second velocity on
+`92.62%` of usable target actions and Binance 3-second velocity on `93.86%`; when both signs agreed, target direction
+matched on `97.43%` at `82.26%` action coverage. The result is stable at 500, 1000, and 1500 ms pre-event offsets.
 
-The paired current-engine hedge/reversal replay is in
-`research/wallet-75cc/results/fastmx-inventory-mode-backtest-2026-08-27.md`. On the untouched holdout, partial
-hedging changed PnL by `-$599.41` versus entry/top-up-only; reversal changed it by `+$349.28`, but reversal lost
-`-$1,389.19` versus entry/top-up-only on fit. Both together lost `-$1,136.67` on holdout. The realized hedge
-crossing audit recorded zero violations. These results reject automatic promotion and do not establish profit.
-
-The exact trailing-day retired hard-three-direction audit spans 2026-08-26 11:25 UTC through 2026-08-27 11:25 UTC: 2,210 BTC buys,
-1,604 non-simultaneous choices, and 287 complete causal 50 ms feeds. The selected configuration was ranked only on
-the first 12 hours. With the required three-second CLOB lookback it matched `98.48%` of eligible target directions
-on the untouched final 12 hours at `27.40%` coverage, and `98.55%` over the full day at `30.11%` coverage. Full
-splits and Wilson intervals are in `research/wallet-75cc/results/three-signal-last24h-2026-08-27.md`. Those match
-figures do not describe the replacement poly-mom trend regime and require a fresh replay before comparison. This is
-selective direction agreement at target action times, not 98% market participation, exact release-time cloning, or
-proof of profit. The private release state remains unidentified, so frozen forward monitoring is still required.
+These are conditional direction correlations at times the wallet acted. They do not prove which feed the wallet
+reads, identify its release timing, recover its sizing rule, or establish profitability. Historical parameter grids,
+fitted trees, threshold rankings, inventory-mode screens, and sizing variants were removed to prevent them being
+mistaken for forward evidence. Exact trigger and sizing work requires every eligible non-entry timestamp and a later
+untouched period. The process therefore remains simulation-only.

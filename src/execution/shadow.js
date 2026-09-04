@@ -104,6 +104,9 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     else { w.downShares += rec.shares; w.downCost += rec.usdc; }
     w.cost += rec.usdc; w.fee += fee;
     w.fills.push(rec);
+    if (rec.manual !== true && rec.leg !== "merge") {
+      curStrat.onOrderOutcome?.(w, { oid: rec.oid, filled: true, filledUsd: rec.usdc });
+    }
     try {
       onEvent({ kind: "shadow_buy", slug: w.slug, windowStart: w.windowStart, rec,
         pos: { upShares: w.upShares, downShares: w.downShares, cost: w.cost, fee: w.fee,
@@ -121,7 +124,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   // Apply a MERGE record (leg:"merge") from stepSignalHedge — reclaim the MAIN complete sets: remove them
   // from the position, BANK the realized profit (moved out of if-up/if-down into mergedRealized so they reset),
   // and emit shadow_merge (which index.js routes to the REAL on-chain mergePositions tx in live mode). The
-  // special-hedge shares are excluded (they stay in the position). PnL-neutral; see strategy.maybeMerge.
+  // special-hedge shares are excluded. Kept for historical merge records; the
+  // active FastMX strategy does not generate merge decisions.
   function applyMerge(w, rec) {
     const posBefore = { upShares: w.upShares, downShares: w.downShares, upCost: w.upCost, downCost: w.downCost, totalCost: w.cost,
                         ifUpWins: w.upShares - w.cost - w.fee, ifDownWins: w.downShares - w.cost - w.fee };
@@ -145,21 +149,16 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       strategy: DEFAULT_STRATEGY,
       latencyMs: P.LATENCY_MS || 0,
       baseOrderShares: P.H_BASE_ORDER_SH,
-      targetSizeOn: P.H_TARGET_SIZE_ON === true,
-      targetSizeScale: P.H_TARGET_SIZE_SCALE,
-      targetSizeMaxShares: P.H_TARGET_SIZE_MAX_SH,
-      targetTopupMinScale: P.H_TARGET_TOPUP_MIN_SCALE,
-      targetReversalSizeOn: P.H_TARGET_REVERSAL_SIZE_ON === true,
       targetDirectionOn: P.H_TARGET_DIRECTION_ON === true,
       directionLookbackMs: P.H_DIRECTION_LOOKBACK_MS,
-      directionWeights: [P.H_DIRECTION_LEVEL_WEIGHT, P.H_DIRECTION_CLOB_WEIGHT,
-        P.H_DIRECTION_BINANCE_WEIGHT],
+      directionWeights: [P.H_DIRECTION_CLOB_WEIGHT, P.H_DIRECTION_BINANCE_WEIGHT],
       directionEnterScore: P.H_DIRECTION_ENTER_SCORE,
       directionExitScore: P.H_DIRECTION_EXIT_SCORE,
       signalHysteresisOn: P.H_SIGNAL_HYSTERESIS_ON === true,
       firstEntryEarliestS: P.H_FIRST_ENTRY_EARLIEST_S,
       topupCooldownMs: P.H_TOPUP_COOLDOWN_MS,
-      maximumActions: P.H_MAX_ACTIONS_PER_WINDOW,
+      maximumEntryActions: P.H_MAX_ACTIONS_PER_WINDOW,
+      maximumOppositeActions: P.H_MAX_OPPOSITE_ACTIONS_PER_WINDOW,
       cooldownMs: P.H_COOLDOWN_MS,
       activeFromS: P.H_START_S,
       stopAtS: P.H_STOP_S,
@@ -177,15 +176,11 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       binanceGapAgreeOn: P.H_BINANCE_GAP_AGREE_ON,
       hedgeOn: P.H_HEDGE_ON,
       hedgeRetainShares: P.H_HEDGE_RETAIN_SH,
-      hedgeRetainMaxShares: P.H_HEDGE_RETAIN_MAX_SH,
-      hedgeScoreMin: P.H_HEDGE_SCORE_MIN,
-      hedgeMinPairEdge: P.H_HEDGE_MIN_PAIR_EDGE,
       reversalOn: P.H_REVERSAL_ON,
       reversalResidualShares: P.H_REVERSAL_RESIDUAL_SH,
       reversalConfirmMs: P.H_REVERSAL_CONFIRM_MS,
       reversalScoreMin: P.H_REVERSAL_SCORE_MIN,
       oppositeCandidateResetMs: P.H_OPPOSITE_CANDIDATE_RESET_MS,
-      reversalMinPairEdge: P.H_REVERSAL_MIN_PAIR_EDGE,
       reversalMaxWorstLossUsd: P.H_REVERSAL_MAX_WORST_LOSS_USD,
       reversalMaxOrderShares: P.H_REVERSAL_MAX_ORDER_SH,
       priceMin: P.H_MIN_ASK,
@@ -346,6 +341,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
             arrivalAsk: r2(px0), reason: px0 == null ? "no-ask" : "outside-cap-or-no-depth", latencyMs: simLat });
           if (fill.shares > 0) bookFill(w, r);
           else {
+            curStrat.onOrderOutcome?.(w, { oid: r.oid, filled: false });
             try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
               slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
               note: px0 == null ? "no ask at simulated match time" : `ask/depth outside cap ${r.limitPx}`,
@@ -476,7 +472,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     }
     ab.netMatch = ab.bot ? ab.sim.net === ab.bot.net : null;
     ab.pnlErr = ab.bot && ab.bot.pnl != null ? r2(Math.abs(ab.sim.pnl - ab.bot.pnl)) : null;
-    recordSession(ab);   // → MongoDB shadow_sessions_<mode>
+    recordSession(ab);   // → local session ledger + optional MongoDB mirror
     try { onEvent({ kind: "shadow_resolved", slug, ab }); } catch {}
     // SESSION CIRCUIT-BREAKER: accumulate the session's realized PnL (REAL in live, else sim) and, if it breaches
     //   the configured max loss, emit `circuit_breaker` ONCE (index.js halts the bot). Re-arms via resetBreaker().

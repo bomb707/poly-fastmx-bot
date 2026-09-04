@@ -6,7 +6,7 @@ import {
   markReleaseFired,
 } from "./fastmx-signal-policy.js";
 
-test("direction score combines CLOB level, CLOB impulse, and Binance impulse", () => {
+test("direction score combines agreeing CLOB and Binance velocities without CLOB level", () => {
   const result = evaluateDirectionScore({
     midpoint: 0.55,
     midVelocity: 0.025,
@@ -14,11 +14,12 @@ test("direction score combines CLOB level, CLOB impulse, and Binance impulse", (
   });
   assert.equal(result.side, "Up");
   assert.equal(result.qualified, true);
-  assert.deepEqual(result.components, { level: 1, clob: 0.5, binance: 1 });
-  assert.ok(result.score > 0.8);
+  assert.deepEqual(result.components, { level: null, clob: 0.5, binance: 1 });
+  assert.equal(result.score, 0.75);
+  assert.equal(result.velocityAgreement, true);
 });
 
-test("direction score abstains on a weak conflict", () => {
+test("direction score abstains when enabled velocities are quiet or disagree", () => {
   const result = evaluateDirectionScore({
     midpoint: 0.51,
     midVelocity: -0.01,
@@ -27,6 +28,13 @@ test("direction score abstains on a weak conflict", () => {
   assert.equal(result.rawSide, "Down");
   assert.equal(result.side, null);
   assert.equal(result.qualified, false);
+  assert.equal(result.velocityAgreement, false);
+
+  const conflict = evaluateDirectionScore({ midpoint: 0.7, midVelocity: 0.05,
+    binanceVelocity: -10 });
+  assert.equal(conflict.side, null);
+  assert.equal(conflict.qualified, false);
+  assert.equal(conflict.velocityAgreement, false);
 });
 
 test("release fires once and re-arms only after crossing the exit band", () => {

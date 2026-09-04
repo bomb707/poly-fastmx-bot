@@ -757,12 +757,12 @@
       <div class="scfg-section">
         <span class="scfg-grp" title="STRATEGY — which trading strategy the bot runs (backtest + live). Selectable while the bot is STOPPED; the config below belongs to the selected strategy. Add more in engine/strategies/.">strategy</span>
         <label class="cfgsel" title="The simulation-only FastMX momentum strategy."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option></select></label>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">5s CLOB/Binance score selects direction; a hysteresis latch controls entries, top-ups, hedges, and strong reversals</span>
+        <span style="font-size:10px;color:var(--txt2);line-height:1.45">Agreeing 3s CLOB/Binance velocities select direction; portfolio risk controls opposite-side hedges and reversals</span>
       </div>
       <div class="scfg-section">
-        <span class="scfg-grp" title="MOMENTUM — CLOB and Binance are direction sources; at least one must remain enabled. Binance trend is the poly-mom regime filter and requires Binance momentum.">momentum</span>
-        <label class="cfgtgl" title="TARGET DIRECTION POLICY — use the target-derived weighted CLOB level, 5-second CLOB impulse, and 5-second Binance impulse score with an abstention band and causal release latch."><input type="checkbox" id="sigTargetDirectionOn" checked><span class="tgl-track"></span><span class="tgl-lbl">target direction</span></label>
-        <label class="cfgnum" title="TARGET LOOKBACK — causal lookback shared by the target-derived CLOB and Binance impulse components.">target lookback ms<input id="sigDirectionLookbackInput" type="number" min="1000" max="30000" step="500" value="5000" required></label>
+        <span class="scfg-grp" title="MOMENTUM — CLOB and Binance velocities are the primary direction sources. When both are enabled, both must be ready, nonzero, and agree.">momentum</span>
+        <label class="cfgtgl" title="TARGET DIRECTION POLICY — combine causal CLOB-mid and Binance-price velocities with equal weight. Enabled feeds must agree before the bot acts."><input type="checkbox" id="sigTargetDirectionOn" checked><span class="tgl-track"></span><span class="tgl-lbl">target direction</span></label>
+        <label class="cfgnum" title="TARGET LOOKBACK — causal lookback shared by the CLOB and Binance velocity components.">target lookback ms<input id="sigDirectionLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
         <label class="cfgnum" title="ENTER SCORE — minimum absolute normalized direction score needed to arm an action.">enter score<input id="sigDirectionEnterInput" type="number" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="cfgnum" title="EXIT SCORE — lower hysteresis boundary. A fired impulse re-arms only after confidence falls to this level or direction changes.">exit score<input id="sigDirectionExitInput" type="number" min="0" max="1" step="0.05" value="0.15"></label>
         <label class="cfgtgl" title="Use Up-token CLOB midpoint velocity as a signal. At least one momentum toggle must stay on."><input type="checkbox" id="sigClobMidOn" checked><span class="tgl-track"></span><span class="tgl-lbl">CLOB mid</span></label>
@@ -771,7 +771,7 @@
         <label class="cfgtgl" title="Use raw-dollar Binance gap velocity as a signal. At least one momentum toggle must stay on."><input type="checkbox" id="sigBinanceGapOn" checked><span class="tgl-track"></span><span class="tgl-lbl">Binance gap</span></label>
         <label class="cfgnum" title="BINANCE GAP LOOKBACK — causal lookback for (price − open) velocity; default 3000 ms.">Binance lookback ms<input id="sigBinanceGapLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
         <label class="cfgnum" title="BINANCE GAP VELOCITY MIN — minimum absolute raw-dollar move over the lookback. Gap velocity equals price(now) − price(prior) because the opening price cancels.">Binance velocity $<input id="sigBinanceGapMinInput" type="number" min="0" max="1000" step="0.5" value="5"></label>
-        <label class="cfgtgl" title="BINANCE TREND REGIME — poly-mom behavior: normal and trend-following Binance signals pass unchanged; a signal opposing a strong trend needs sustained countertrend confirmation."><input type="checkbox" id="sigBinanceTrendOn" checked><span class="tgl-track"></span><span class="tgl-lbl">Binance trend regime</span></label>
+        <label class="cfgtgl" title="BINANCE TREND REGIME — optional filter: normal and trend-following Binance signals pass unchanged; a signal opposing a strong trend needs sustained countertrend confirmation."><input type="checkbox" id="sigBinanceTrendOn"><span class="tgl-track"></span><span class="tgl-lbl">Binance trend regime</span></label>
         <label class="cfgnum" title="BINANCE TREND LOOKBACK — compare current Binance spot with Binance spot this many seconds earlier.">trend lookback s<input id="sigBinanceTrendLookbackSecInput" type="number" min="1" max="300" step="1" value="30" required></label>
         <label class="cfgnum" title="STRONG TREND — minimum absolute trailing open-to-open move that activates the poly-mom countertrend rule.">strong trend %<input id="sigBinanceTrendMinInput" type="number" min="0.001" max="10" step="0.001" value="0.05"></label>
         <label class="cfgnum" title="COUNTERTREND LOOKBACK — sustained Binance confirmation window used only when the fast signal opposes a strong trend.">countertrend s<input id="sigBinanceCountertrendLookbackInput" type="number" min="1" max="60" step="1" value="60"></label>
@@ -785,15 +785,14 @@
         <label class="cfgsel" title="LIVE ORDER TYPE — GTC crosses immediately, then the bot cancels any unfilled remainder; FAK fills available liquidity and atomically cancels the rest. This affects real-live automatic orders only; simulation/backtest remains fixed-USD FAK.">live order type
           <select id="sigLiveOrderTypeInput" class="momsel"><option value="GTC">GTC + cancel remainder</option><option value="FAK">FAK</option></select>
         </label>
-        <label class="cfgnum" title="BASE ORDER — fixed minimum shares, or the normalization anchor when target sizing is enabled. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
-        <label class="cfgtgl" title="TARGET SIZE CURVE (EXPERIMENTAL) — reshape base shares using the target wallet's decoded signed cap-to-size menu. It remained profitable but reduced held-out PnL versus fixed seven, so it stays off by default."><input type="checkbox" id="sigTargetSizeOn"><span class="tgl-track"></span><span class="tgl-lbl">target sizing</span></label>
+        <label class="cfgnum" title="BASE ORDER — fixed minimum shares. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
         <label class="cfgnum" title="FIRST ENTRY — do not release the first action before this time. The target's first-action distribution supports 15 seconds.">first entry s<input id="sigFirstEntryInput" type="number" min="0" max="120" step="1" value="15"></label>
         <label class="cfgnum" title="TOP-UP COOLDOWN — minimum spacing between same-side additions; a new impulse or material score/price step is still required.">top-up cooldown ms<input id="sigTopupCooldownInput" type="number" min="0" max="60000" step="500" value="8000"></label>
-        <label class="cfgnum" title="ACTION CAP — maximum releases in one five-minute market across all roles.">max actions<input id="sigMaxActionsInput" type="number" min="1" max="50" step="1" value="7"></label>
+        <label class="cfgnum" title="ENTRY CAP — maximum successful plus currently pending entry/top-up orders in one five-minute market. Rejected or no-fill attempts do not consume it.">max entry fills<input id="sigMaxActionsInput" type="number" min="1" max="50" step="1" value="7"></label>
+        <label class="cfgnum" title="OPPOSITE CAP — maximum successful plus currently pending hedge/reversal orders in one five-minute market. Rejected or no-fill attempts do not consume it.">max opposite fills<input id="sigMaxOppositeActionsInput" type="number" min="1" max="50" step="1" value="7"></label>
         <label class="cfgnum" title="GLOBAL COOLDOWN — minimum spacing between any two releases after role-specific gates pass.">global cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="2000"></label>
-        <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal immediately reduces the old-side lead when doing so does not worsen projected worst-case loss."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
-        <label class="cfgnum" title="HEDGE SCORE — minimum target-direction confidence for a partial hedge; hedge pair economics and risk must also pass.">hedge score<input id="sigHedgeScoreInput" type="number" min="0" max="1" step="0.05" value="0.60"></label>
-        <label class="cfgtgl" title="REVERSAL — after persistent CLOB, Binance, trailing-trend, and window-gap confirmation, cross inventory only when pair economics and projected worst-case loss pass."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
+        <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal reduces the old-side lead only when the projected worst-case portfolio loss strictly improves."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
+        <label class="cfgtgl" title="REVERSAL — after a persistent agreeing CLOB/Binance signal, cross inventory only when confirmation, depth, size, and projected portfolio-risk limits pass."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
         <label class="cfgnum" title="REVERSAL SCORE — minimum target-direction confidence before inventory may be crossed into a new four-share residual.">reversal score<input id="sigReversalScoreInput" type="number" min="0" max="1" step="0.05" value="0.95"></label>
       </div>
       <div class="scfg-section">
@@ -802,7 +801,7 @@
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="SIMULATION knobs — how the BACKTEST/shadow models fills. No effect on REAL live (live fills come from the actual order book).">simulation</span>
-        <label class="cfgnum" title="TAKER LATENCY (ms) — the shadow/backtest fills a marketable order at the ask that exists this many ms AFTER the decision. The current taker setting is 520ms; passive-maker research models maker arrival separately. NO effect on real live fills.">taker latency ms<input id="sigLatencyInput" type="number" min="0" max="10000" step="20" value="520"></label>
+        <label class="cfgnum" title="TAKER LATENCY (ms) — shadow and replay delay marketable execution by this amount. It does not alter confirmed real-live fills.">taker latency ms<input id="sigLatencyInput" type="number" min="0" max="10000" step="20" value="520"></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="diagnostics — does NOT affect strategy or performance">debug</span>
@@ -1366,12 +1365,6 @@ let histGroup="shadow";       // which group owns the shared Buy-history panel (
 let momModalOpen=false;       // MOM "huge view" modal open? (the visible group renders into #momBig)
 const MOM_CHART_TYPES=new Set(["vel_mid","vel_bz"]);
 let momChartType=(()=>{ try{ const v=localStorage.getItem("momChartType"); return MOM_CHART_TYPES.has(v)?v:"vel_mid"; }catch{ return "vel_mid"; } })();
-// ── SHADOW maker-placement preview (momentum-driven candidate points on the shadow chart) ──
-// A resting BUY fills when its side's price FALLS to it, so we mark candidates on the side OPPOSITE
-// the binance momentum (the falling side). fillSpeed sets how tight the bid rests below the touch:
-// higher → shallower (limit nearer the price) → fills faster. Applied via the top-bar slider+Apply.
-let fillSpeed=(()=>{ const v=parseFloat(localStorage.getItem("shadowFillSpeed")); return Number.isFinite(v)?Math.max(0,Math.min(1,v)):0.5; })();
-const SHADOW_DMAX=0.15;       // max bid depth below touch (price units) at fillSpeed=0
 // Normalize a compact /api/live-ticks payload for the chart builders.
 function liveTicksToD(lt){
   if(!lt||!Array.isArray(lt.ticks)||!lt.ticks.length) return null;
@@ -1420,12 +1413,10 @@ function shadowParams(){
     H_BINANCE_COUNTERTREND_MIN_PCT:clamp(nv("sigBinanceCountertrendMinInput",0.075),0.001,10),
     H_BINANCE_GAP_AGREE_ON:document.getElementById("sigBinanceGapAgreeOn")?.checked===true,
     H_TARGET_DIRECTION_ON:document.getElementById("sigTargetDirectionOn")?.checked!==false,
-    H_DIRECTION_LOOKBACK_MS:Math.round(clamp(nv("sigDirectionLookbackInput",5000),1000,30000)),
-    H_DIRECTION_LEVEL_SCALE:0.05,
+    H_DIRECTION_LOOKBACK_MS:Math.round(clamp(nv("sigDirectionLookbackInput",3000),1000,30000)),
     H_DIRECTION_CLOB_SCALE:0.05,
     H_DIRECTION_BINANCE_SCALE:10,
-    H_DIRECTION_LEVEL_WEIGHT:0.2,
-    H_DIRECTION_CLOB_WEIGHT:0.3,
+    H_DIRECTION_CLOB_WEIGHT:0.5,
     H_DIRECTION_BINANCE_WEIGHT:0.5,
     H_DIRECTION_ENTER_SCORE:directionEnter,
     H_DIRECTION_EXIT_SCORE:directionExit,
@@ -1438,19 +1429,16 @@ function shadowParams(){
     H_TOPUP_PRICE_STEP:0.05,
     H_HEDGE_CONFIRM_MS:600,
     H_HEDGE_COOLDOWN_MS:6000,
-    H_HEDGE_SCORE_MIN:clamp(nv("sigHedgeScoreInput",0.60),0,1),
-    H_HEDGE_MIN_PAIR_EDGE:-0.03,
-    H_HEDGE_RETAIN_MAX_SH:8,
     H_REVERSAL_SCORE_MIN:clamp(nv("sigReversalScoreInput",0.95),0,1),
     H_REVERSAL_COOLDOWN_MS:3000,
     H_MAX_ACTIONS_PER_WINDOW:Math.round(clamp(nv("sigMaxActionsInput",7),1,50)),
+    H_MAX_OPPOSITE_ACTIONS_PER_WINDOW:Math.round(clamp(nv("sigMaxOppositeActionsInput",7),1,50)),
     H_HEDGE_ON:document.getElementById("sigHedgeOn")?.checked===true,
     H_HEDGE_RETAIN_SH:1,
     H_REVERSAL_ON:document.getElementById("sigReversalOn")?.checked===true,
     H_REVERSAL_RESIDUAL_SH:4,
     H_REVERSAL_CONFIRM_MS:1000,
     H_OPPOSITE_CANDIDATE_RESET_MS:3000,
-    H_REVERSAL_MIN_PAIR_EDGE:-0.1,
     H_REVERSAL_MAX_WORST_LOSS_USD:10,
     H_REVERSAL_MAX_ORDER_SH:50,
     H_MIN_ASK:0.05, H_MAX_ASK:0.98,
@@ -1458,11 +1446,6 @@ function shadowParams(){
     H_LIVE_ORDER_TYPE:liveOrderType,
     H_BASE_ORDER_SH:clamp(nv("sigBaseOrderInput",7),1,100),
     H_MIN_ORDER_SH:4,
-    H_TARGET_SIZE_ON:document.getElementById("sigTargetSizeOn")?.checked===true,
-    H_TARGET_SIZE_SCALE:1,
-    H_TARGET_SIZE_MAX_SH:50,
-    H_TARGET_TOPUP_MIN_SCALE:0.65,
-    H_TARGET_REVERSAL_SIZE_ON:false,
     H_COOLDOWN_MS:Math.round(clamp(nv("sigReleaseCooldownInput",2000),0,30000)),
     MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
   };
@@ -1505,17 +1488,10 @@ function roundSection(){ const r=liveRound; if(!r) return '';
 // null for non-entry/hedge fills so the caller can fall back.
 function legLabel(leg, reason){
   if(leg==='hedge'){
-    // hedge outcome: STOP = the leg FAILED (stop-out, loss); PULL/CEILING = the leg SUCCEEDED (locked profit)
-    const st = reason==='stop'    ? {t:'FAIL',    c:'#ff5d7a', d:'via STOP · leg went wrong (adverse)'}
-             : reason==='pull'    ? {t:'SUCCESS', c:'#19e3a0', d:'via PULL · take-profit off the extreme'}
-             : reason==='ceiling' ? {t:'SUCCESS', c:'#19e3a0', d:'via CEILING · winning side hit the limit'}
-             : null;
-    return `<span style="color:#ff9f43;font-weight:700">hedge</span>`
-         + (st ? ` <span style="color:${st.c};font-weight:800">${st.t}</span> <span class="legs">· ${st.d} (opposite side)</span>`
-               : ` <span class="legs">· closes the cycle (opposite side)</span>`);
+    return `<span style="color:#ff9f43;font-weight:700">hedge</span> <span class="legs">· risk-reducing opposite-side fill</span>`;
   }
   if(leg==='entry'){
-    return `<span style="color:#7fd0ff;font-weight:700">1st leg · open</span> <span class="legs">· room to run (opens a cycle)</span>`;
+    return `<span style="color:#7fd0ff;font-weight:700">entry</span> <span class="legs">· confirmed CLOB/Binance direction</span>`;
   }
   return null;
 }
@@ -1747,13 +1723,6 @@ function popHtml(d,pinned){
     +prow('binance',`${priceFmt(d.bz)} <span class="${cls(d.bzGap)}">${sgn(d.bzGap,2)} (${sgn(d.bzGapPct,3)}%)</span>`)
     +prow('chainlink',`${priceFmt(d.cl)} <span class="${cls(d.clGap)}">${sgn(d.clGap,2)} (${sgn(d.clGapPct,3)}%)</span>`)
     +(d.spread!=null?prow('bz − cl spread',`${sgn(d.spread,2)} (${sgn(d.spreadPct,3)}%)`,cls(d.spread)):'')
-    +(d.leg==='entry'&&d.pMove!=null?(()=>{ const g=d.sigGap!=null?d.sigGap:Math.abs(d.bzGap||0);
-        const prog=d.pMove>0?Math.round(g/d.pMove*100):0;
-        return `<div class="psep"></div><div class="dhead">signal @ lock</div>`
-          +prow('gap',`$${fmt(g,2)} <span class="legs">· BTC from open</span>`,cls(d.bzGap))
-          +prow('possible move',`$${fmt(d.pMove,2)} <span class="legs">· intensity $${fmt(d.intensity,0)} × time-left + edge</span>`)
-          +prow('progress',`${prog}% <span class="legs">· gap ÷ possible move (⚑ locks ≥ 100%)</span>`,'pos')
-          +prow('cleared by',`$${fmt(g-d.pMove,2)} <span class="legs">· gap beyond the lock line ⚑</span>`,'pos'); })():'')
     +`<div class="psep"></div><div class="dhead">position${hasCostP?' (before → after)':''}</div>`
     +posRowsP
     +(d.slug?`<div class="pwin mono">${d.slug}</div>`:'')
@@ -2617,9 +2586,8 @@ function createGroup(rootEl, kind){
       bz, cl, spread:(bz!=null&&cl!=null)?bz-cl:null, spreadPct:(bz!=null&&cl!=null&&cl)?((bz-cl)/cl)*100:null,
       bzGap:(f.bzGap!=null?f.bzGap:(bzGap??null)), bzGapPct:(f.bzGapPct!=null?f.bzGapPct:(bzGapPct??null)),
       clGap:(f.clGap!=null?f.clGap:null), clGapPct:(f.clGapPct!=null?f.clGapPct:null),
-      intensity:(f.intensity!=null?f.intensity:null), pMove:(f.pMove!=null?f.pMove:null), sigGap:(f.sigGap!=null?f.sigGap:null),   // signal @ lock
       orderHint:{ taker, bookWalk:false, askBefore:null, askAfter:null, askJump:null,
-                  label: f.manual ? "✋ manual buy (you) · taker" : (isHedge?"marketable GTC · hedge leg":"marketable GTD · momentum entry") },
+                  label: f.manual ? "✋ manual buy (you) · taker" : (isHedge?"marketable · risk hedge":"marketable · velocity entry") },
       manual:!!f.manual,
       posClass: isHedge ? "HISTORICAL HEDGE" : "ENTRY", kind:f.kind, leg, reason:(f.reason!=null?f.reason:null),
       cyclePnl:(f.cyclePnl!=null?f.cyclePnl:null), cycleEntryPx:(f.cycleEntryPx!=null?f.cycleEntryPx:null), exec:f.exec, limitPx:(f.limitPx!=null?f.limitPx:null),
@@ -3132,7 +3100,8 @@ const GATE_LABELS={
   "hedge-retained-majority":["○ retained lead","dim"],
   "hedge-risk":["○ hedge worsens risk","warn"],
   "reversal-confirmation":["◷ reversal confirmation","warn"],
-  "reversal-economics":["○ reversal economics","warn"],
+  "window-entry-fill-cap":["○ entry fill cap","warn"],
+  "window-opposite-fill-cap":["○ opposite fill cap","warn"],
   "reversal-risk":["○ reversal risk","warn"],
   "reversal-order-cap":["○ reversal order cap","warn"],
   "reversal-depth":["○ reversal depth","warn"],
@@ -3491,17 +3460,16 @@ function setSessFrom(v){
       sigDirectionEnterInput:P.H_DIRECTION_ENTER_SCORE,
       sigDirectionExitInput:P.H_DIRECTION_EXIT_SCORE,
       sigHedgeOn:P.H_HEDGE_ON,
-      sigHedgeScoreInput:P.H_HEDGE_SCORE_MIN,
       sigReversalOn:P.H_REVERSAL_ON,
       sigReversalScoreInput:P.H_REVERSAL_SCORE_MIN,
       sigStartInput:P.H_START_S,
       sigStopInput:P.H_STOP_S,
       sigLiveOrderTypeInput:P.H_LIVE_ORDER_TYPE,
       sigBaseOrderInput:P.H_BASE_ORDER_SH,
-      sigTargetSizeOn:P.H_TARGET_SIZE_ON,
       sigFirstEntryInput:P.H_FIRST_ENTRY_EARLIEST_S,
       sigTopupCooldownInput:P.H_TOPUP_COOLDOWN_MS,
       sigMaxActionsInput:P.H_MAX_ACTIONS_PER_WINDOW,
+      sigMaxOppositeActionsInput:P.H_MAX_OPPOSITE_ACTIONS_PER_WINDOW,
       sigReleaseCooldownInput:P.H_COOLDOWN_MS,
     };
     for(const [id,value] of Object.entries(normalized)){ const el=document.getElementById(id); if(!el)continue;
@@ -3570,18 +3538,17 @@ function setSessFrom(v){
     C("sigBinanceGapOn",true);
     V("sigBinanceGapLookbackInput",3000);
     V("sigBinanceGapMinInput",5);
-    C("sigBinanceTrendOn",true);
+    C("sigBinanceTrendOn",false);
     V("sigBinanceTrendLookbackSecInput",30);
     V("sigBinanceTrendMinInput",0.05);
     V("sigBinanceCountertrendLookbackInput",60);
     V("sigBinanceCountertrendMinInput",0.075);
     C("sigBinanceGapAgreeOn",false);
     C("sigTargetDirectionOn",true);
-    V("sigDirectionLookbackInput",5000);
+    V("sigDirectionLookbackInput",3000);
     V("sigDirectionEnterInput",0.35);
     V("sigDirectionExitInput",0.15);
     C("sigHedgeOn",true);
-    V("sigHedgeScoreInput",0.60);
     C("sigReversalOn",true);
     V("sigReversalScoreInput",0.95);
     V("sigStartInput",0);
@@ -3592,6 +3559,7 @@ function setSessFrom(v){
     V("sigFirstEntryInput",15);
     V("sigTopupCooldownInput",8000);
     V("sigMaxActionsInput",7);
+    V("sigMaxOppositeActionsInput",7);
     V("sigReleaseCooldownInput",2000);
     const verbose=document.getElementById("verboseInput"); if(verbose) verbose.checked=false;
     document.getElementById("verboseInput")?.dispatchEvent(new Event("change"));
@@ -4164,16 +4132,16 @@ function sessCfgSummary(r){
 }
 // FastMX parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
-  return `<span style="color:#cdb8ff">shadow · fastmx · target score ${P.H_TARGET_DIRECTION_ON!==false?"ON":"OFF"} ${((P.H_DIRECTION_LOOKBACK_MS??5000)/1000).toFixed(1)}s enter≥${P.H_DIRECTION_ENTER_SCORE??0.35}/exit≤${P.H_DIRECTION_EXIT_SCORE??0.15}`
-    +` · weights level/CLOB/Binance ${(P.H_DIRECTION_LEVEL_WEIGHT??0.2)}/${(P.H_DIRECTION_CLOB_WEIGHT??0.3)}/${(P.H_DIRECTION_BINANCE_WEIGHT??0.5)}`
-    +` · ${P.H_BASE_ORDER_SH??7}sh ${P.H_TARGET_SIZE_ON===true?"target-shaped":"fixed"} entry @ ≤${P.H_MAX_ASK??0.98}`
+  return `<span style="color:#cdb8ff">shadow · fastmx · agreeing velocity score ${P.H_TARGET_DIRECTION_ON!==false?"ON":"OFF"} ${((P.H_DIRECTION_LOOKBACK_MS??3000)/1000).toFixed(1)}s enter≥${P.H_DIRECTION_ENTER_SCORE??0.35}/exit≤${P.H_DIRECTION_EXIT_SCORE??0.15}`
+    +` · weights CLOB/Binance ${(P.H_DIRECTION_CLOB_WEIGHT??0.5)}/${(P.H_DIRECTION_BINANCE_WEIGHT??0.5)}`
+    +` · ${P.H_BASE_ORDER_SH??7}sh fixed entry @ ≤${P.H_MAX_ASK??0.98}`
     +` · Binance trend regime ${P.H_BINANCE_TREND_ON!==false?"ON":"OFF"} ${P.H_BINANCE_TREND_LOOKBACK_SEC??30}s ≥${P.H_BINANCE_TREND_MIN_PCT??0.05}%`
     +` · countertrend ${P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC??60}s ≥${P.H_BINANCE_COUNTERTREND_MIN_PCT??0.075}%`
     +` · Binance window-gap agree ${P.H_BINANCE_GAP_AGREE_ON===true?"ON":"OFF"}`
-    +` · first≥t+${P.H_FIRST_ENTRY_EARLIEST_S??15}s · top-up gap ${P.H_TOPUP_COOLDOWN_MS??8000}ms · max ${P.H_MAX_ACTIONS_PER_WINDOW??7}`
-    +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"} score≥${P.H_HEDGE_SCORE_MIN??0.6} edge≥${P.H_HEDGE_MIN_PAIR_EDGE??-0.03}`
+    +` · first≥t+${P.H_FIRST_ENTRY_EARLIEST_S??15}s · top-up gap ${P.H_TOPUP_COOLDOWN_MS??8000}ms · entry/opposite caps ${P.H_MAX_ACTIONS_PER_WINDOW??7}/${P.H_MAX_OPPOSITE_ACTIONS_PER_WINDOW??7} filled+pending`
+    +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"} only when worst-case loss improves`
     +` · strong reversal ${P.H_REVERSAL_ON===true?"ON":"OFF"} score≥${P.H_REVERSAL_SCORE_MIN??0.95}`
-    +` ${P.H_REVERSAL_CONFIRM_MS??1000}ms · pair edge ≥${P.H_REVERSAL_MIN_PAIR_EDGE??-0.1}`
+    +` ${P.H_REVERSAL_CONFIRM_MS??1000}ms confirmation`
     +` · worst loss ≤$${P.H_REVERSAL_MAX_WORST_LOSS_USD??10} or improving · order ≤${P.H_REVERSAL_MAX_ORDER_SH??50}sh`
     +` · depth ≥${P.H_MIN_DEPTH_SH??4}sh`
     +` · cooldown ${P.H_COOLDOWN_MS??2000}ms`

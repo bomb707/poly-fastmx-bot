@@ -71,7 +71,7 @@ test("a one-sided coherent frame can trade only the side with real L2 liquidity"
   assert.equal(fills[0].side, "Up");
 });
 
-test("replay inventory economics include fees already paid by completed fills", () => {
+test("risk-approved reversal is not blocked by negative pair economics", () => {
   const ticks = [
     tick(0, 0.50, 0.50, 100),
     tick(1, 0.52, 0.48, 101),
@@ -88,10 +88,12 @@ test("replay inventory economics include fees already paid by completed fills", 
     H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 1,
     H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
     H_HEDGE_ON: false, H_REVERSAL_ON: true, H_REVERSAL_CONFIRM_MS: 0,
-    H_REVERSAL_MIN_PAIR_EDGE: -0.01,
     H_REVERSAL_MAX_WORST_LOSS_USD: 100, H_REVERSAL_MAX_ORDER_SH: 50,
   });
-  assert.deepEqual(fills.map((fill) => [fill.side, fill.role]), [["Up", "entry"]]);
+  assert.deepEqual(fills.map((fill) => [fill.side, fill.role]), [
+    ["Up", "entry"],
+    ["Down", "reversal"],
+  ]);
 });
 
 test("completed inventory transitions from entry through hedge into a confirmed reversal", () => {
@@ -112,7 +114,7 @@ test("completed inventory transitions from entry through hedge into a confirmed 
     H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
     H_BINANCE_GAP_AGREE_ON: false,
     H_HEDGE_ON: true, H_REVERSAL_ON: true,
-    H_REVERSAL_CONFIRM_MS: 1000, H_REVERSAL_MIN_PAIR_EDGE: -0.1,
+    H_REVERSAL_CONFIRM_MS: 1000,
     H_REVERSAL_RESIDUAL_SH: 10,
     H_REVERSAL_MAX_WORST_LOSS_USD: 10, H_REVERSAL_MAX_ORDER_SH: 50,
   });

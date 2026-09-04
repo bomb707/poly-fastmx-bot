@@ -96,7 +96,10 @@ export function simulateFills(d, params) {
       stampLatencyDisplay(f, p.dueT);
       f.requestedShares = requestedShares;
       if (fixedUsd) f.requestedBudgetUsd = requestedBudgetUsd;
-      if (!(match.shares > 0)) continue;
+      if (!(match.shares > 0)) {
+        strat.onOrderOutcome?.(state, { oid: f.oid, filled: false });
+        continue;
+      }
       f.shares = +match.shares.toFixed(4);
       f.effPx = +match.avgPx.toFixed(4);
       f.usdc = +match.cost.toFixed(4);
@@ -110,6 +113,7 @@ export function simulateFills(d, params) {
       }
       if (at.cl != null) f.cl = at.cl;
       applyInventory(f);
+      strat.onOrderOutcome?.(state, { oid: f.oid, filled: true, filledUsd: f.usdc });
       fills.push(f);
     }
   };
@@ -147,7 +151,8 @@ export function simulateFills(d, params) {
 /** Settlement position/PnL from a set of fills, given the winning side. Taker fills pay the modeled fee. */
 export function positionFromFills(fills, winSide, ticks, params = undefined) {
   // MERGE records (leg:"merge") reclaim complete sets: they REMOVE `sets` from BOTH sides and return
-  // `reclaimUsd` cash (reducing net cost). PnL-neutral vs holding to settlement; see strategy.maybeMerge.
+  // `reclaimUsd` cash (reducing net cost). This remains for historical records;
+  // the active FastMX strategy does not generate merge decisions.
   // Every non-merge leg is a BUY (entry + hedge; sell-to-close removed) → all add shares to their side.
   const opens = fills.filter((f) => f.leg !== "merge");
   const merges = fills.filter((f) => f.leg === "merge");

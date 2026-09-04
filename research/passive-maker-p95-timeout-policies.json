@@ -1,8 +1,0 @@
-[
-  { "name": "p95_q3_hold", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p95_q3_timeout5", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "unpairedTimeoutS": 5 },
-  { "name": "p95_q3_timeout10", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "unpairedTimeoutS": 10 },
-  { "name": "p95_q3_timeout20", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "unpairedTimeoutS": 20 },
-  { "name": "p95_q3_timeout30", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "unpairedTimeoutS": 30 },
-  { "name": "p95_q3_timeout60", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "exposureCap": 3, "takerLatencyMs": 520, "minTimeS": 5, "maxTimeS": 255, "unpairedTimeoutS": 60 }
-]

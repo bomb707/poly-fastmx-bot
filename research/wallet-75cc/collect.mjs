@@ -6,8 +6,39 @@
 // maker-inclusive response so role labels remain exact even for duplicate rows.
 import fs from "node:fs";
 import path from "node:path";
-import { labelTradeRoles, normalizeTrade } from "../wallet-3048/core.mjs";
 import { TARGET_COINS, TARGET_WALLET } from "./constants.mjs";
+
+const numberKey = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(8) : "nan";
+const tradeFingerprint = (row) => [
+  String(row?.transactionHash || "").toLowerCase(), String(row?.asset || ""),
+  String(row?.side || "").toUpperCase(), String(row?.outcome || ""),
+  Number(row?.timestamp) || 0, numberKey(row?.price), numberKey(row?.size),
+].join(":");
+
+function labelTradeRoles(allRows, takerRows) {
+  const takerCounts = new Map();
+  for (const row of takerRows || []) {
+    const key = tradeFingerprint(row);
+    takerCounts.set(key, (takerCounts.get(key) || 0) + 1);
+  }
+  return (allRows || []).map((row) => {
+    const key = tradeFingerprint(row), count = takerCounts.get(key) || 0;
+    if (count > 0) takerCounts.set(key, count - 1);
+    return { ...row, role: count > 0 ? "taker" : "maker" };
+  });
+}
+
+function normalizeTrade(row) {
+  const size = Number(row?.size), price = Number(row?.price);
+  return {
+    slug: String(row?.slug || ""), conditionId: String(row?.conditionId || "").toLowerCase(),
+    asset: String(row?.asset || ""), outcome: /^up$/i.test(row?.outcome || "") ? "Up" : "Down",
+    action: String(row?.side || "BUY").toUpperCase(), role: row?.role === "maker" ? "maker" : "taker",
+    size: Number.isFinite(size) ? size : 0, price: Number.isFinite(price) ? price : 0,
+    timestamp: Number(row?.timestamp) || 0,
+    transactionHash: String(row?.transactionHash || "").toLowerCase(),
+  };
+}
 
 try { process.loadEnvFile?.(path.resolve(import.meta.dirname, "../../.env")); } catch {}
 

@@ -1,0 +1,805 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-09-04T16:15:00.003Z",
+  "wallet": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "input": "data/wallet-75cc/fresh-2026-09-03_2026-09-04.json",
+  "cache": {
+    "sourceRequired": "v2-orderbook-l2",
+    "directory": "data/wincache",
+    "targetWindows": 429,
+    "replayedWindows": 376,
+    "missingWindows": 53,
+    "unreadableCaches": 0
+  },
+  "design": {
+    "asset": "BTC 5-minute Up/Down",
+    "event": "target BUY fills collapsed by market, side, and whole-second timestamp",
+    "primaryLagMs": 1000,
+    "lagSensitivityMs": [
+      500,
+      1000,
+      1500
+    ],
+    "splitAt": "2026-09-04T00:00:00.000Z",
+    "bootstrap": "2000 market-window cluster resamples",
+    "fixedFeatures": {
+      "clobMid3s": "CLOB Up midpoint change, 3s",
+      "clobMid5s": "CLOB Up midpoint change, 5s",
+      "binance3s": "Binance BTC spot change, 3s",
+      "binance5s": "Binance BTC spot change, 5s",
+      "clobLevel": "CLOB Up midpoint minus 0.50",
+      "binanceWindowGap": "Binance spot minus window open",
+      "chainlink3s": "Chainlink change, 3s (control)",
+      "crossVenueDelta3s": "Binance change minus Chainlink change, 3s (control)",
+      "upDepthImbalance": "CLOB Up top-3 bid/ask depth imbalance (control)"
+    },
+    "caveat": "Public timestamps may lag the private decision. Conditional direction agreement is not a trigger test, causal attribution, sizing model, or profitability estimate."
+  },
+  "counts": {
+    "rawBtcFills": 4983,
+    "collapsedActions": 2895,
+    "replayableActions": 2483
+  },
+  "publicBehavior": {
+    "discovery": {
+      "actions": 1642,
+      "windows": 245,
+      "upActions": 797,
+      "downActions": 845,
+      "bothSideWindows": 161,
+      "bothSideWindowRate": 0.6571428571428571,
+      "sideTransitions": 426
+    },
+    "holdout": {
+      "actions": 1253,
+      "windows": 184,
+      "upActions": 621,
+      "downActions": 632,
+      "bothSideWindows": 123,
+      "bothSideWindowRate": 0.6684782608695652,
+      "sideTransitions": 331
+    }
+  },
+  "scopes": {
+    "discovery": {
+      "allActions": {
+        "actions": 1632,
+        "windows": 243,
+        "features": {
+          "clobMid3s": {
+            "observations": 1575,
+            "windows": 243,
+            "coverage": 0.9650735294117647,
+            "accuracy": 0.9288888888888889,
+            "clusterBootstrap95": [
+              0.9153506001263424,
+              0.9421926910299003
+            ]
+          },
+          "clobMid5s": {
+            "observations": 1585,
+            "windows": 243,
+            "coverage": 0.9712009803921569,
+            "accuracy": 0.9066246056782334,
+            "clusterBootstrap95": [
+              0.888145896656535,
+              0.9246666666666666
+            ]
+          },
+          "binance3s": {
+            "observations": 1550,
+            "windows": 243,
+            "coverage": 0.9497549019607843,
+            "accuracy": 0.9329032258064516,
+            "clusterBootstrap95": [
+              0.919431279620853,
+              0.946417820590006
+            ]
+          },
+          "binance5s": {
+            "observations": 1555,
+            "windows": 243,
+            "coverage": 0.9528186274509803,
+            "accuracy": 0.8906752411575563,
+            "clusterBootstrap95": [
+              0.8701953371140516,
+              0.9106041923551171
+            ]
+          },
+          "clobLevel": {
+            "observations": 1630,
+            "windows": 243,
+            "coverage": 0.9987745098039216,
+            "accuracy": 0.7938650306748466,
+            "clusterBootstrap95": [
+              0.7584337349397591,
+              0.8256113256113257
+            ]
+          },
+          "binanceWindowGap": {
+            "observations": 1628,
+            "windows": 243,
+            "coverage": 0.9975490196078431,
+            "accuracy": 0.726044226044226,
+            "clusterBootstrap95": [
+              0.6925465838509317,
+              0.759235668789809
+            ]
+          },
+          "chainlink3s": {
+            "observations": 1600,
+            "windows": 242,
+            "coverage": 0.9803921568627451,
+            "accuracy": 0.639375,
+            "clusterBootstrap95": [
+              0.608433734939759,
+              0.6693154034229829
+            ]
+          },
+          "crossVenueDelta3s": {
+            "observations": 1632,
+            "windows": 243,
+            "coverage": 1,
+            "accuracy": 0.8676470588235294,
+            "clusterBootstrap95": [
+              0.8492983526540574,
+              0.885143570536829
+            ]
+          },
+          "upDepthImbalance": {
+            "observations": 1608,
+            "windows": 243,
+            "coverage": 0.9852941176470589,
+            "accuracy": 0.4533582089552239,
+            "clusterBootstrap95": [
+              0.4253098499673842,
+              0.48058902275769744
+            ]
+          }
+        },
+        "clobBinanceAgreement3s": {
+          "observations": 1387,
+          "windows": 242,
+          "coverage": 0.8498774509803921,
+          "accuracy": 0.966113914924297,
+          "clusterBootstrap95": [
+            0.9563581640331076,
+            0.975346687211094
+          ]
+        }
+      },
+      "firstActions": {
+        "actions": 243,
+        "windows": 243,
+        "features": {
+          "clobMid3s": {
+            "observations": 242,
+            "windows": 242,
+            "coverage": 0.9958847736625515,
+            "accuracy": 0.9338842975206612,
+            "clusterBootstrap95": [
+              0.9008264462809917,
+              0.9628099173553719
+            ]
+          },
+          "clobMid5s": {
+            "observations": 239,
+            "windows": 239,
+            "coverage": 0.9835390946502057,
+            "accuracy": 0.9205020920502092,
+            "clusterBootstrap95": [
+              0.8870292887029289,
+              0.9539748953974896
+            ]
+          },
+          "binance3s": {
+            "observations": 223,
+            "windows": 223,
+            "coverage": 0.9176954732510288,
+            "accuracy": 0.8968609865470852,
+            "clusterBootstrap95": [
+              0.8565022421524664,
+              0.9327354260089686
+            ]
+          },
+          "binance5s": {
+            "observations": 225,
+            "windows": 225,
+            "coverage": 0.9259259259259259,
+            "accuracy": 0.8666666666666667,
+            "clusterBootstrap95": [
+              0.8177777777777778,
+              0.9111111111111111
+            ]
+          },
+          "clobLevel": {
+            "observations": 243,
+            "windows": 243,
+            "coverage": 1,
+            "accuracy": 0.8395061728395061,
+            "clusterBootstrap95": [
+              0.7901234567901234,
+              0.8847736625514403
+            ]
+          },
+          "binanceWindowGap": {
+            "observations": 240,
+            "windows": 240,
+            "coverage": 0.9876543209876543,
+            "accuracy": 0.7541666666666667,
+            "clusterBootstrap95": [
+              0.7,
+              0.8041666666666667
+            ]
+          },
+          "chainlink3s": {
+            "observations": 238,
+            "windows": 238,
+            "coverage": 0.9794238683127572,
+            "accuracy": 0.7352941176470589,
+            "clusterBootstrap95": [
+              0.680672268907563,
+              0.7899159663865546
+            ]
+          },
+          "crossVenueDelta3s": {
+            "observations": 243,
+            "windows": 243,
+            "coverage": 1,
+            "accuracy": 0.7942386831275721,
+            "clusterBootstrap95": [
+              0.7366255144032922,
+              0.8477366255144033
+            ]
+          },
+          "upDepthImbalance": {
+            "observations": 243,
+            "windows": 243,
+            "coverage": 1,
+            "accuracy": 0.49794238683127573,
+            "clusterBootstrap95": [
+              0.43621399176954734,
+              0.5596707818930041
+            ]
+          }
+        },
+        "clobBinanceAgreement3s": {
+          "observations": 206,
+          "windows": 206,
+          "coverage": 0.8477366255144033,
+          "accuracy": 0.9466019417475728,
+          "clusterBootstrap95": [
+            0.912621359223301,
+            0.9757281553398058
+          ]
+        }
+      }
+    },
+    "holdout": {
+      "allActions": {
+        "actions": 851,
+        "windows": 133,
+        "features": {
+          "clobMid3s": {
+            "observations": 827,
+            "windows": 133,
+            "coverage": 0.9717978848413631,
+            "accuracy": 0.9262394195888755,
+            "clusterBootstrap95": [
+              0.9054842473745625,
+              0.9466666666666667
+            ]
+          },
+          "clobMid5s": {
+            "observations": 832,
+            "windows": 133,
+            "coverage": 0.9776733254994124,
+            "accuracy": 0.9326923076923077,
+            "clusterBootstrap95": [
+              0.9117983963344788,
+              0.9518072289156626
+            ]
+          },
+          "binance3s": {
+            "observations": 782,
+            "windows": 133,
+            "coverage": 0.918918918918919,
+            "accuracy": 0.9386189258312021,
+            "clusterBootstrap95": [
+              0.9207792207792208,
+              0.9557291666666666
+            ]
+          },
+          "binance5s": {
+            "observations": 796,
+            "windows": 133,
+            "coverage": 0.9353701527614571,
+            "accuracy": 0.9346733668341709,
+            "clusterBootstrap95": [
+              0.9127906976744186,
+              0.9547218628719275
+            ]
+          },
+          "clobLevel": {
+            "observations": 851,
+            "windows": 133,
+            "coverage": 1,
+            "accuracy": 0.8343125734430082,
+            "clusterBootstrap95": [
+              0.7986798679867987,
+              0.8688725490196079
+            ]
+          },
+          "binanceWindowGap": {
+            "observations": 847,
+            "windows": 133,
+            "coverage": 0.9952996474735605,
+            "accuracy": 0.7792207792207793,
+            "clusterBootstrap95": [
+              0.7389162561576355,
+              0.8165249088699879
+            ]
+          },
+          "chainlink3s": {
+            "observations": 803,
+            "windows": 130,
+            "coverage": 0.9435957696827262,
+            "accuracy": 0.6052303860523038,
+            "clusterBootstrap95": [
+              0.5607798165137615,
+              0.6498599439775911
+            ]
+          },
+          "crossVenueDelta3s": {
+            "observations": 847,
+            "windows": 133,
+            "coverage": 0.9952996474735605,
+            "accuracy": 0.8819362455726092,
+            "clusterBootstrap95": [
+              0.8573141486810552,
+              0.9051094890510949
+            ]
+          },
+          "upDepthImbalance": {
+            "observations": 841,
+            "windows": 133,
+            "coverage": 0.9882491186839013,
+            "accuracy": 0.40309155766944116,
+            "clusterBootstrap95": [
+              0.3686176836861768,
+              0.4357405140758874
+            ]
+          }
+        },
+        "clobBinanceAgreement3s": {
+          "observations": 700,
+          "windows": 133,
+          "coverage": 0.8225616921269095,
+          "accuracy": 0.9742857142857143,
+          "clusterBootstrap95": [
+            0.9634502923976608,
+            0.984984984984985
+          ]
+        }
+      },
+      "firstActions": {
+        "actions": 133,
+        "windows": 133,
+        "features": {
+          "clobMid3s": {
+            "observations": 129,
+            "windows": 129,
+            "coverage": 0.9699248120300752,
+            "accuracy": 0.937984496124031,
+            "clusterBootstrap95": [
+              0.8992248062015504,
+              0.9767441860465116
+            ]
+          },
+          "clobMid5s": {
+            "observations": 129,
+            "windows": 129,
+            "coverage": 0.9699248120300752,
+            "accuracy": 0.937984496124031,
+            "clusterBootstrap95": [
+              0.8914728682170543,
+              0.9767441860465116
+            ]
+          },
+          "binance3s": {
+            "observations": 116,
+            "windows": 116,
+            "coverage": 0.8721804511278195,
+            "accuracy": 0.9655172413793104,
+            "clusterBootstrap95": [
+              0.9310344827586207,
+              0.9913793103448276
+            ]
+          },
+          "binance5s": {
+            "observations": 120,
+            "windows": 120,
+            "coverage": 0.9022556390977443,
+            "accuracy": 0.925,
+            "clusterBootstrap95": [
+              0.875,
+              0.9666666666666667
+            ]
+          },
+          "clobLevel": {
+            "observations": 133,
+            "windows": 133,
+            "coverage": 1,
+            "accuracy": 0.924812030075188,
+            "clusterBootstrap95": [
+              0.8796992481203008,
+              0.9699248120300752
+            ]
+          },
+          "binanceWindowGap": {
+            "observations": 130,
+            "windows": 130,
+            "coverage": 0.9774436090225563,
+            "accuracy": 0.8,
+            "clusterBootstrap95": [
+              0.7307692307692307,
+              0.8692307692307693
+            ]
+          },
+          "chainlink3s": {
+            "observations": 123,
+            "windows": 123,
+            "coverage": 0.924812030075188,
+            "accuracy": 0.6666666666666666,
+            "clusterBootstrap95": [
+              0.5853658536585366,
+              0.7479674796747967
+            ]
+          },
+          "crossVenueDelta3s": {
+            "observations": 130,
+            "windows": 130,
+            "coverage": 0.9774436090225563,
+            "accuracy": 0.8,
+            "clusterBootstrap95": [
+              0.7307692307692307,
+              0.8692307692307693
+            ]
+          },
+          "upDepthImbalance": {
+            "observations": 133,
+            "windows": 133,
+            "coverage": 1,
+            "accuracy": 0.42857142857142855,
+            "clusterBootstrap95": [
+              0.3458646616541353,
+              0.5112781954887218
+            ]
+          }
+        },
+        "clobBinanceAgreement3s": {
+          "observations": 107,
+          "windows": 107,
+          "coverage": 0.8045112781954887,
+          "accuracy": 0.9813084112149533,
+          "clusterBootstrap95": [
+            0.9532710280373832,
+            1
+          ]
+        }
+      }
+    },
+    "all": {
+      "allActions": {
+        "actions": 2483,
+        "windows": 376,
+        "features": {
+          "clobMid3s": {
+            "observations": 2402,
+            "windows": 376,
+            "coverage": 0.9673781715666533,
+            "accuracy": 0.9279766860949209,
+            "clusterBootstrap95": [
+              0.9170771756978654,
+              0.9394449116904963
+            ]
+          },
+          "clobMid5s": {
+            "observations": 2417,
+            "windows": 376,
+            "coverage": 0.9734192509061619,
+            "accuracy": 0.9155978485726107,
+            "clusterBootstrap95": [
+              0.901625677365569,
+              0.9297205757832345
+            ]
+          },
+          "binance3s": {
+            "observations": 2332,
+            "windows": 376,
+            "coverage": 0.9391864679822794,
+            "accuracy": 0.934819897084048,
+            "clusterBootstrap95": [
+              0.9242032730404823,
+              0.9453389830508474
+            ]
+          },
+          "binance5s": {
+            "observations": 2351,
+            "windows": 376,
+            "coverage": 0.9468385018123238,
+            "accuracy": 0.9055720969800085,
+            "clusterBootstrap95": [
+              0.8900432900432901,
+              0.9210637399746728
+            ]
+          },
+          "clobLevel": {
+            "observations": 2481,
+            "windows": 376,
+            "coverage": 0.9991945227547322,
+            "accuracy": 0.8077388149939541,
+            "clusterBootstrap95": [
+              0.7825396825396825,
+              0.8313725490196079
+            ]
+          },
+          "binanceWindowGap": {
+            "observations": 2475,
+            "windows": 376,
+            "coverage": 0.9967780910189287,
+            "accuracy": 0.7442424242424243,
+            "clusterBootstrap95": [
+              0.7175480769230769,
+              0.7704441677044417
+            ]
+          },
+          "chainlink3s": {
+            "observations": 2403,
+            "windows": 372,
+            "coverage": 0.9677809101892871,
+            "accuracy": 0.6279650436953808,
+            "clusterBootstrap95": [
+              0.6037584966013595,
+              0.6545611759619542
+            ]
+          },
+          "crossVenueDelta3s": {
+            "observations": 2479,
+            "windows": 376,
+            "coverage": 0.9983890455094644,
+            "accuracy": 0.872529245663574,
+            "clusterBootstrap95": [
+              0.8578352180936996,
+              0.8875305623471883
+            ]
+          },
+          "upDepthImbalance": {
+            "observations": 2449,
+            "windows": 376,
+            "coverage": 0.9863068868304471,
+            "accuracy": 0.43609636586361783,
+            "clusterBootstrap95": [
+              0.4145738987237546,
+              0.45810754481033766
+            ]
+          }
+        },
+        "clobBinanceAgreement3s": {
+          "observations": 2087,
+          "windows": 375,
+          "coverage": 0.8405155054369714,
+          "accuracy": 0.9688548155246766,
+          "clusterBootstrap95": [
+            0.9613483146067415,
+            0.9763627592860589
+          ]
+        }
+      },
+      "firstActions": {
+        "actions": 376,
+        "windows": 376,
+        "features": {
+          "clobMid3s": {
+            "observations": 371,
+            "windows": 371,
+            "coverage": 0.9867021276595744,
+            "accuracy": 0.9353099730458221,
+            "clusterBootstrap95": [
+              0.9083557951482479,
+              0.9595687331536388
+            ]
+          },
+          "clobMid5s": {
+            "observations": 368,
+            "windows": 368,
+            "coverage": 0.9787234042553191,
+            "accuracy": 0.9266304347826086,
+            "clusterBootstrap95": [
+              0.9021739130434783,
+              0.9538043478260869
+            ]
+          },
+          "binance3s": {
+            "observations": 339,
+            "windows": 339,
+            "coverage": 0.901595744680851,
+            "accuracy": 0.9203539823008849,
+            "clusterBootstrap95": [
+              0.8908554572271387,
+              0.9498525073746312
+            ]
+          },
+          "binance5s": {
+            "observations": 345,
+            "windows": 345,
+            "coverage": 0.9175531914893617,
+            "accuracy": 0.8869565217391304,
+            "clusterBootstrap95": [
+              0.855072463768116,
+              0.9188405797101449
+            ]
+          },
+          "clobLevel": {
+            "observations": 376,
+            "windows": 376,
+            "coverage": 1,
+            "accuracy": 0.8696808510638298,
+            "clusterBootstrap95": [
+              0.8351063829787234,
+              0.898936170212766
+            ]
+          },
+          "binanceWindowGap": {
+            "observations": 370,
+            "windows": 370,
+            "coverage": 0.9840425531914894,
+            "accuracy": 0.7702702702702703,
+            "clusterBootstrap95": [
+              0.727027027027027,
+              0.8135135135135135
+            ]
+          },
+          "chainlink3s": {
+            "observations": 361,
+            "windows": 361,
+            "coverage": 0.9601063829787234,
+            "accuracy": 0.7119113573407202,
+            "clusterBootstrap95": [
+              0.667590027700831,
+              0.7590027700831025
+            ]
+          },
+          "crossVenueDelta3s": {
+            "observations": 373,
+            "windows": 373,
+            "coverage": 0.9920212765957447,
+            "accuracy": 0.7962466487935657,
+            "clusterBootstrap95": [
+              0.7533512064343163,
+              0.8364611260053619
+            ]
+          },
+          "upDepthImbalance": {
+            "observations": 376,
+            "windows": 376,
+            "coverage": 1,
+            "accuracy": 0.4734042553191489,
+            "clusterBootstrap95": [
+              0.4228723404255319,
+              0.5212765957446809
+            ]
+          }
+        },
+        "clobBinanceAgreement3s": {
+          "observations": 313,
+          "windows": 313,
+          "coverage": 0.8324468085106383,
+          "accuracy": 0.9584664536741214,
+          "clusterBootstrap95": [
+            0.9361022364217252,
+            0.9776357827476039
+          ]
+        }
+      }
+    }
+  },
+  "holdoutLagSensitivity": {
+    "500": {
+      "clobMid3s": {
+        "observations": 811,
+        "windows": 133,
+        "coverage": 0.9529964747356052,
+        "accuracy": 0.8877928483353884,
+        "clusterBootstrap95": [
+          0.8635294117647059,
+          0.9095966620305981
+        ]
+      },
+      "binance3s": {
+        "observations": 774,
+        "windows": 133,
+        "coverage": 0.9095182138660399,
+        "accuracy": 0.9198966408268734,
+        "clusterBootstrap95": [
+          0.9007537688442211,
+          0.9386189258312021
+        ]
+      },
+      "clobBinanceAgreement3s": {
+        "observations": 674,
+        "windows": 133,
+        "coverage": 0.7920094007050529,
+        "accuracy": 0.9540059347181009,
+        "clusterBootstrap95": [
+          0.9394366197183098,
+          0.9683453237410072
+        ]
+      }
+    },
+    "1000": {
+      "clobMid3s": {
+        "observations": 827,
+        "windows": 133,
+        "coverage": 0.9717978848413631,
+        "accuracy": 0.9262394195888755,
+        "clusterBootstrap95": [
+          0.9047013977128335,
+          0.9476309226932669
+        ]
+      },
+      "binance3s": {
+        "observations": 782,
+        "windows": 133,
+        "coverage": 0.918918918918919,
+        "accuracy": 0.9386189258312021,
+        "clusterBootstrap95": [
+          0.9214463840399002,
+          0.9546666666666667
+        ]
+      },
+      "clobBinanceAgreement3s": {
+        "observations": 700,
+        "windows": 133,
+        "coverage": 0.8225616921269095,
+        "accuracy": 0.9742857142857143,
+        "clusterBootstrap95": [
+          0.9629080118694362,
+          0.9852724594992637
+        ]
+      }
+    },
+    "1500": {
+      "clobMid3s": {
+        "observations": 817,
+        "windows": 133,
+        "coverage": 0.9600470035252644,
+        "accuracy": 0.9277845777233782,
+        "clusterBootstrap95": [
+          0.9054916985951469,
+          0.9485981308411215
+        ]
+      },
+      "binance3s": {
+        "observations": 780,
+        "windows": 133,
+        "coverage": 0.9165687426556992,
+        "accuracy": 0.9358974358974359,
+        "clusterBootstrap95": [
+          0.9176029962546817,
+          0.953232462173315
+        ]
+      },
+      "clobBinanceAgreement3s": {
+        "observations": 692,
+        "windows": 133,
+        "coverage": 0.8131609870740305,
+        "accuracy": 0.9739884393063584,
+        "clusterBootstrap95": [
+          0.9611111111111111,
+          0.9852507374631269
+        ]
+      }
+    }
+  }
+}

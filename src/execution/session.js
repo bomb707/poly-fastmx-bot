@@ -4,7 +4,7 @@
 import { config } from "../config/config.js";
 import { fetchWindowHistory } from "../sources/history.js";
 import { simulateFills } from "../../engine/simrun.js";
-import { fillFee, isTakerFill, isFeeFill } from "../../engine/strategy.js";
+import { fillFee, isTakerFill, isFeeFill } from "../../engine/fees.js";
 import { apiHealth, resetApiHealth } from "../util/util.js";
 import { verbose, verboseOn } from "../logging/verbose.js";
 import { writeBacktestManifest } from "../logging/sessionLog.js";

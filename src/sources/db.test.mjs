@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fillDocId, resolvePendingSessionDoc } from "./db.js";
+import { collapseSessionRows, fillDocId, resolvePendingSessionDoc } from "./db.js";
 
 test("modeled fill persistence identity is stable but does not merge later fills", () => {
   const fill = { windowStart: 100, oid: 2, leg: "entry", side: "Up", tInto: 12.52 };
@@ -33,4 +33,15 @@ test("restart recovery settles a persisted simulation row using its booked fees"
   assert.equal(lost.sim.pnl, -3.8339);
   assert.equal(lost.netMatch, null);
   assert.equal(lost.pnlErr, null);
+});
+
+test("local session ledger keeps one resolved row per window", () => {
+  const rows = collapseSessionRows([
+    { windowStart: 100, status: "pending", ts: 1, sim: { pnl: null, nFills: 2 } },
+    { windowStart: 100, status: "resolved", ts: 2, sim: { pnl: 3.5, nFills: 2 } },
+    { windowStart: 100, status: "pending", ts: 3, sim: { pnl: null, nFills: 0 } },
+    { windowStart: 200, status: "resolved", ts: 4, sim: { pnl: -1, nFills: 1 } },
+  ]);
+  assert.deepEqual(rows.map((row) => [row.windowStart, row.status, row.sim.pnl]),
+    [[100, "resolved", 3.5], [200, "resolved", -1]]);
 });

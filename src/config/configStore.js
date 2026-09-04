@@ -22,9 +22,9 @@ const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigSessStopInput",
   "sigBinanceGapOn", "sigBinanceGapLookbackInput", "sigBinanceGapMinInput",
   "sigBinanceTrendOn", "sigBinanceTrendLookbackSecInput", "sigBinanceTrendMinInput",
   "sigBinanceCountertrendLookbackInput", "sigBinanceCountertrendMinInput", "sigBinanceGapAgreeOn",
-  "sigHedgeOn", "sigHedgeScoreInput", "sigReversalOn", "sigReversalScoreInput", "sigTargetSizeOn",
+  "sigHedgeOn", "sigReversalOn", "sigReversalScoreInput",
   "sigStartInput", "sigStopInput", "sigBaseOrderInput", "sigFirstEntryInput", "sigTopupCooldownInput",
-  "sigMaxActionsInput", "sigReleaseCooldownInput", "verboseInput"]);
+  "sigMaxActionsInput", "sigMaxOppositeActionsInput", "sigReleaseCooldownInput", "verboseInput"]);
 const SHADOW_KEYS = new Set(Object.keys(STRAT));
 
 function sanitizeStore(value) {

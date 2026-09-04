@@ -1,7 +1,0 @@
-[
-  { "name": "p88_e10_t15_hi0", "signalMode": "twoSided", "pairQuoteCap": 0.88, "pairCostCap": 0.88, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 130, "takerLatencyMs": 520, "unpairedTimeoutS": 15, "hedgeImproveTicks": 0, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p88_e10_t15_hi1", "signalMode": "twoSided", "pairQuoteCap": 0.88, "pairCostCap": 0.88, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 130, "takerLatencyMs": 520, "unpairedTimeoutS": 15, "hedgeImproveTicks": 1, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p88_e10_t15_hi2", "signalMode": "twoSided", "pairQuoteCap": 0.88, "pairCostCap": 0.88, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 130, "takerLatencyMs": 520, "unpairedTimeoutS": 15, "hedgeImproveTicks": 2, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p88_e10_t15_hi3", "signalMode": "twoSided", "pairQuoteCap": 0.88, "pairCostCap": 0.88, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 130, "takerLatencyMs": 520, "unpairedTimeoutS": 15, "hedgeImproveTicks": 3, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p88_e10_t15_hi_safe", "signalMode": "twoSided", "pairQuoteCap": 0.88, "pairCostCap": 0.88, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 130, "takerLatencyMs": 520, "unpairedTimeoutS": 15, "hedgeImproveTicks": -1, "minTimeS": 5, "maxTimeS": 255 }
-]
