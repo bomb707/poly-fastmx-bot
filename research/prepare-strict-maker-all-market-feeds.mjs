@@ -17,25 +17,18 @@ if (!markets.length) throw new Error("manifest contains no markets");
 
 const existing = {
   v2L2: [
-    "data/wallet-3048-v2-native-aug16/feeds/v2-l2", "data/passive-maker-forward-v15/feeds/v2-l2",
-    "data/wallet-3048-r5/feeds/v2-l2", "data/wallet-3048-r6/feeds/v2-l2", "data/wallet-3048-r7/feeds/v2-l2",
+    "data/passive-maker-forward-v15/feeds/v2-l2",
     "data/lockstep-v2-orderbooks", path.relative(root, path.join(outRoot, "v2-l2")),
   ],
   v4L2: [
-    "data/wallet-3048/feeds/v4-post-twap-full-l2", "data/wallet-3048/feeds/v4-current-policy-l2",
-    "data/wallet-3048/feeds/v4-e8-l2", "data/wallet-3048/feeds/v4-r2-l2", "data/wallet-3048-r3/feeds/v4-l2",
-    "data/wallet-3048/feeds/v4-l2", "data/wallet-3048-r4/feeds/v4-l2", "data/passive-maker-forward-v15/feeds/v4-l2",
-    "data/wallet-3048-r5/feeds/v4-l2", "data/wallet-3048-r6/feeds/v4-l2", "data/wallet-3048-r7/feeds/v4-l2",
+    "data/passive-maker-forward-v15/feeds/v4-l2",
     "data/lockstep-v4-top", path.relative(root, path.join(outRoot, "v4-l2")),
   ],
   controls: [
-    "data/wallet-3048/feeds/v2", "data/wallet-3048-r3/feeds/v2", "data/wallet-3048-r4/feeds/v2",
-    "data/wallet-3048-r5/feeds/v2", "data/passive-maker-forward-v15/feeds/v2", path.relative(root, path.join(outRoot, "v2")),
+    "data/passive-maker-forward-v15/feeds/v2", path.relative(root, path.join(outRoot, "v2")),
   ],
   trades: [
-    "data/wallet-3048/feeds/market-trades", "data/wallet-3048-r3/feeds/market-trades",
-    "data/wallet-3048-r4/feeds/market-trades", "data/wallet-3048-r5/feeds/market-trades",
-    "data/passive-maker-forward-v15/feeds/market-trades", "data/wallet-3048-r6/feeds/market-trades",
+    "data/passive-maker-forward-v15/feeds/market-trades",
     path.relative(root, path.join(outRoot, "market-trades")),
   ],
 };
@@ -68,12 +61,6 @@ function run(script, args, env = {}) {
 }
 
 const jobs = [];
-if (missing.v2L2.length) jobs.push(run("research/wallet-3048/collect-v2-orderbooks.mjs", [
-  writeMini("missing-v2-l2", missing.v2L2), path.join(outRoot, "v2-l2"),
-], { W3048_V2_L2_CONCURRENCY: "3" }));
-if (missing.controls.length) jobs.push(run("research/wallet-3048/collect-v2-controls.mjs", [
-  writeMini("missing-controls", missing.controls), path.join(outRoot, "v2"),
-]));
 if (missing.trades.length) jobs.push(run("research/collect-market-taker-trades.mjs", [
   writeMini("missing-trades", missing.trades), path.join(outRoot, "market-trades"),
 ]));

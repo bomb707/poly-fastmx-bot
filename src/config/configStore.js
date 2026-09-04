@@ -10,7 +10,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STRAT } from "../../engine/strategies/helpme.js";
-import { STRAT as WALLET3048_STRAT } from "../../engine/strategies/wallet3048.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FILE = process.env.RUNTIME_CONFIG_FILE || path.resolve(HERE, "..", "..", "data", "runtime-config.json");
@@ -24,7 +23,7 @@ const UI_KEYS = new Set(["btVersionInput", "strategySelect", "sigSessStopInput",
   "sigBinanceCountertrendLookbackInput", "sigBinanceCountertrendMinInput", "sigBinanceGapAgreeOn",
   "sigHedgeOn", "sigReversalOn",
   "sigStartInput", "sigStopInput", "sigBaseOrderInput", "sigReleaseCooldownInput", "verboseInput"]);
-const SHADOW_KEYS = new Set([...Object.keys(STRAT), ...Object.keys(WALLET3048_STRAT)]);
+const SHADOW_KEYS = new Set(Object.keys(STRAT));
 
 function sanitizeStore(value) {
   const src = value && typeof value === "object" ? value : {};
@@ -32,6 +31,7 @@ function sanitizeStore(value) {
   if (src.shadowParams && typeof src.shadowParams === "object") {
     next.shadowParams = Object.fromEntries(Object.entries(src.shadowParams)
       .filter(([key]) => SHADOW_KEYS.has(key)));
+    next.shadowParams.STRATEGY = STRAT.STRATEGY;
   }
   if (["v2", "v3"].includes(src.backtestApiVersion)) next.backtestApiVersion = src.backtestApiVersion;
   if (Number.isFinite(+src.sessionStartSec)) next.sessionStartSec = +src.sessionStartSec;
@@ -39,6 +39,7 @@ function sanitizeStore(value) {
   if (typeof src.verbose === "boolean") next.verbose = src.verbose;
   if (src.ui && typeof src.ui === "object") {
     next.ui = Object.fromEntries(Object.entries(src.ui).filter(([key]) => UI_KEYS.has(key)));
+    if ("strategySelect" in next.ui) next.ui.strategySelect = STRAT.STRATEGY;
   }
   return next;
 }

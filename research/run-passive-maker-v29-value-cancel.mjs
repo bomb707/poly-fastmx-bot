@@ -14,43 +14,19 @@ if (!["v2", "v4", "both"].includes(sourceArg)) throw new Error("source must be v
 const relative = (...parts) => parts.map((part) => path.join(ROOT, part));
 const join = (parts) => parts.join(path.delimiter);
 const v2L2 = relative(
-  "data/wallet-3048-v2-native-aug16/feeds/v2-l2",
   "data/passive-maker-forward-v15/feeds/v2-l2",
-  "data/wallet-3048-r5/feeds/v2-l2",
-  "data/wallet-3048-r6/feeds/v2-l2",
-  "data/wallet-3048-r7/feeds/v2-l2",
   "data/lockstep-v2-orderbooks",
 );
 const v4L2 = relative(
-  "data/wallet-3048/feeds/v4-post-twap-full-l2",
-  "data/wallet-3048/feeds/v4-current-policy-l2",
-  "data/wallet-3048/feeds/v4-e8-l2",
-  "data/wallet-3048/feeds/v4-r2-l2",
-  "data/wallet-3048-r3/feeds/v4-l2",
-  "data/wallet-3048/feeds/v4-l2",
-  "data/wallet-3048-r4/feeds/v4-l2",
   "data/passive-maker-forward-v15/feeds/v4-l2",
-  "data/wallet-3048-r5/feeds/v4-l2",
-  "data/wallet-3048-r6/feeds/v4-l2",
-  "data/wallet-3048-r7/feeds/v4-l2",
   "data/lockstep-v4-top",
 );
 const v2Controls = relative(
-  "data/wallet-3048/feeds/v2",
-  "data/wallet-3048-r3/feeds/v2",
-  "data/wallet-3048-r4/feeds/v2",
-  "data/wallet-3048-r5/feeds/v2",
   "data/passive-maker-forward-v15/feeds/v2",
 );
-// Preserve frozen archive precedence: the forward-v15 shard predates and
-// differs from the later R6 re-collection for four historical windows.
+// Use the frozen forward-v15 print archive for reproducible public-trade fills.
 const trades = relative(
-  "data/wallet-3048/feeds/market-trades",
-  "data/wallet-3048-r3/feeds/market-trades",
-  "data/wallet-3048-r4/feeds/market-trades",
-  "data/wallet-3048-r5/feeds/market-trades",
   "data/passive-maker-forward-v15/feeds/market-trades",
-  "data/wallet-3048-r6/feeds/market-trades",
 );
 const replay = path.join(ROOT, "research/passive-maker-walkforward-v23-persistence.mjs");
 const configSuffix = experiment === "v33-market-implied" && phase === "full"

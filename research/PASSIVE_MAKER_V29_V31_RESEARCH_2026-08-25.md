@@ -123,7 +123,7 @@ the 30-day, 100-active-window, and fixed-fold gates remain incomplete.
 The PM2 paper bot is online in `EXECUTION_MODE=simulation`. A direct MongoDB
 check of the latest ten BTC five-minute windows through
 `btc-updown-5m-1787689800` shows exactly one five-share
-`w3048-participation-floor` fill per window at approximately `t+30.52s`.
+`participation-floor` fill per window at approximately `t+30.52s`.
 This proves bounded participation, not profitability; the session breaker can
 and should halt future participation after its configured loss limit.
 

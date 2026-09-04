@@ -151,6 +151,6 @@ A pre-existing timeout neighborhood was then audited at the calibrated 7.5% and 
 
 At 10% credit, measured maker latency, and 520ms taker latency, timeout-10 has historical PnL `+$104.36`, profit factor `2.36`, maximum drawdown `$9.33`, window lower-95% `+$59.77`, day lower-95% `+$5.33`, and 9/11 profitable UTC dates. All 45 chronological stress cells pass, all high-latency pause cells remain inactive, and its own stable credit floor is also 7.5%.
 
-The challenger configuration and code manifest are `research/passive-maker-pair-selected-v12.json` and `research/passive-maker-forward-v12-manifest.json`. Its untouched cohort starts at `2026-08-24T07:25:00Z` in PM2 process `poly-lockstep-maker-research-v12`, writing `data/research/passive-maker-forward-v12-state.json`. It uses the same three forward date folds and all the same gates as v11. Both processes are research-only, contain no CLOB order client, and run with `EXECUTION_MODE=simulation`.
+The challenger configuration is `research/passive-maker-pair-selected-v12.json`. Its untouched cohort starts at `2026-08-24T07:25:00Z` in PM2 process `poly-lockstep-maker-research-v12`, writing `data/research/passive-maker-forward-v12-state.json`. It uses the same three forward date folds and all the same gates as v11. Both processes are research-only, contain no CLOB order client, and run with `EXECUTION_MODE=simulation`.
 
 Reproduce its assertions with `npm run research:maker:v12:validate`. Neither candidate can be called stable until one complete frozen 30-day cohort passes every gate.

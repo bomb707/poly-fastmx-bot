@@ -26,7 +26,7 @@ module.exports = {
       MANUAL_BUY_MODE: "0",
       ASSET: "btc",
       INTERVAL: "5m",
-      TRACK_WALLET: "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+      TRACK_WALLET: "",
       UI_PORT: "4520",
       UI_SAMPLE_MS: "120",
       DATA_DIR: "./data/fastmx-live",

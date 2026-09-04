@@ -17,27 +17,22 @@ const exactDir = path.join(root, "data/research/strict-maker-flow-transactions")
 const outputRoot = path.join(root, "data/research");
 const join = (rows) => rows.map((row) => path.resolve(root, row)).join(path.delimiter);
 const v2L2 = [
-  "data/research/strict-maker-all-market-feeds/v2-l2", "data/wallet-3048-v2-native-aug16/feeds/v2-l2",
-  "data/passive-maker-forward-v15/feeds/v2-l2", "data/wallet-3048-r5/feeds/v2-l2", "data/wallet-3048-r6/feeds/v2-l2",
-  "data/wallet-3048-r7/feeds/v2-l2", "data/lockstep-v2-orderbooks",
+  "data/research/strict-maker-all-market-feeds/v2-l2",
+  "data/passive-maker-forward-v15/feeds/v2-l2",
+  "data/lockstep-v2-orderbooks",
 ];
 const v4L2 = [
-  "data/research/strict-maker-all-market-feeds/v4-l2", "data/wallet-3048/feeds/v4-post-twap-full-l2",
-  "data/wallet-3048/feeds/v4-current-policy-l2", "data/wallet-3048/feeds/v4-e8-l2",
-  "data/wallet-3048/feeds/v4-r2-l2", "data/wallet-3048-r3/feeds/v4-l2", "data/wallet-3048/feeds/v4-l2",
-  "data/wallet-3048-r4/feeds/v4-l2", "data/passive-maker-forward-v15/feeds/v4-l2",
-  "data/wallet-3048-r5/feeds/v4-l2", "data/wallet-3048-r6/feeds/v4-l2", "data/wallet-3048-r7/feeds/v4-l2",
+  "data/research/strict-maker-all-market-feeds/v4-l2",
+  "data/passive-maker-forward-v15/feeds/v4-l2",
   "data/lockstep-v4-top",
 ];
 const controls = [
-  "data/research/strict-maker-all-market-feeds/v2", "data/wallet-3048/feeds/v2", "data/wallet-3048-r3/feeds/v2",
-  "data/wallet-3048-r4/feeds/v2", "data/wallet-3048-r5/feeds/v2", "data/passive-maker-forward-v15/feeds/v2",
+  "data/research/strict-maker-all-market-feeds/v2",
+  "data/passive-maker-forward-v15/feeds/v2",
 ];
 const trades = [
-  "data/research/strict-maker-all-market-feeds/market-trades", "data/wallet-3048/feeds/market-trades",
-  "data/wallet-3048-r3/feeds/market-trades", "data/wallet-3048-r4/feeds/market-trades",
-  "data/wallet-3048-r5/feeds/market-trades", "data/passive-maker-forward-v15/feeds/market-trades",
-  "data/wallet-3048-r6/feeds/market-trades",
+  "data/research/strict-maker-all-market-feeds/market-trades",
+  "data/passive-maker-forward-v15/feeds/market-trades",
 ];
 
 function child(script, args, env = {}, accepted = new Set([0])) {

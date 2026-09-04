@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MATCH_ORDERS_IFACE } from "./wallet-3048/signed-orders.mjs";
+import { MATCH_ORDERS_IFACE } from "./signed-orders.mjs";
 import {
   decodeMakerLegsFromTransaction,
   economicBuyFlow,

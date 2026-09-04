@@ -9,7 +9,6 @@
 //   2. Import it below and call register(<mod>).
 //   3. Add its NAME/LABEL to the UI strategy dropdown (public/index.html) if you want to pick it from the dashboard.
 import * as helpme from "./helpme.js";
-import * as wallet3048 from "./wallet3048.js";
 
 const REG = Object.create(null);
 export function register(mod) {
@@ -17,7 +16,6 @@ export function register(mod) {
   REG[mod.NAME] = mod;
 }
 register(helpme);
-register(wallet3048);
 
 export const DEFAULT_STRATEGY = "helpme";
 

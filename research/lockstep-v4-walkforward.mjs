@@ -35,15 +35,10 @@ const TO_MS = Date.parse(process.argv[3] || "2026-08-25T00:00:00Z");
 if (!Number.isFinite(FROM_MS) || !Number.isFinite(TO_MS) || TO_MS <= FROM_MS) throw new Error("invalid from/to range");
 
 const CACHE_DIRS = String(process.env.LOCKSTEP_V4_DIRS || [
-  path.join(ROOT, "data/wallet-3048/feeds/v4-top"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-r2-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-e8-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-l2"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/v4-l2"),
+  path.join(ROOT, "data/lockstep-v4-top"),
 ].join(path.delimiter)).split(path.delimiter).filter(Boolean);
 const V2_DIRS = String(process.env.LOCKSTEP_V2_DIRS || [
-  path.join(ROOT, "data/wallet-3048/feeds/v2"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/v2"),
+  path.join(ROOT, "data/lockstep-v2-top"),
 ].join(path.delimiter)).split(path.delimiter).filter(Boolean);
 
 const WINDOW_MS = 300_000;

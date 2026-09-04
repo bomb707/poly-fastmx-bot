@@ -148,8 +148,8 @@ export function simulateFills(d, params) {
           // only while this rung is at or better than the public best bid.
           const cumulative = makerTouchFill({ askNow: p.rec.limitPx, limit: p.rec.limitPx,
             filled: p.touchFilled, target: p.touchTarget, dtMs,
-            touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
-            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
+            touchMs: Number(p.rec.touchMs || 1000),
+            fillPct: Number(p.rec.touchFillPct || 10) });
           const delta = Math.max(0, cumulative - p.touchFilled);
           p.touchFilled = cumulative;
           if (delta > 1e-9) match = { shares: Math.min(delta, p.remaining),
@@ -200,7 +200,7 @@ export function simulateFills(d, params) {
         p.makerShares = 0;
         p.makerCost = 0;
         p.lastT = p.dueT;
-        p.expiresT = p.dueT + Math.max(0, Number(f.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0)) / 1000;
+        p.expiresT = p.dueT + Math.max(0, Number(f.restTimeoutMs || 0)) / 1000;
         keep.push(p);
       }
     }

@@ -756,12 +756,8 @@
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="STRATEGY — which trading strategy the bot runs (backtest + live). Selectable while the bot is STOPPED; the config below belongs to the selected strategy. Add more in engine/strategies/.">strategy</span>
-        <label class="cfgsel" title="Select the strategy used by live simulation, backview, and backtest."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option><option value="wallet3048">Target wallet 3048</option></select></label>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">FastMX uses dual momentum. Target wallet 3048 uses the report's Binance-led cross-and-rest, FIFO-pair, and bounded-inventory reconstruction.</span>
-      </div>
-      <div class="scfg-section" id="walletStrategyInfo" style="display:none">
-        <span class="scfg-grp">target wallet policy</span>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">T+4–&lt;270s · 2.5s catch-up plus low-price value entry · standard 50-share orders · passive 150-share complement reservoirs · payout-floor/FIFO risk control · broad directional overlay disabled pending validation.</span>
+        <label class="cfgsel" title="Select the strategy used by live simulation, backview, and backtest."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option></select></label>
+        <span style="font-size:10px;color:var(--txt2);line-height:1.45">FastMX uses dual momentum with the Binance trend regime.</span>
       </div>
       <div class="scfg-section helpme-only">
         <span class="scfg-grp" title="MOMENTUM — CLOB and Binance are direction sources; at least one must remain enabled. Binance trend is the poly-mom regime filter and requires Binance momentum.">momentum</span>
@@ -1283,8 +1279,8 @@
 // server (POST /api/set-market). These globals mirror the current selection so slugs,
 // the countdown window length (WIN), and the brand all follow the live market.
 let MARKET_PREFIX="btc-updown-5m";   // "<asset>-updown-<interval>" — drives every slug
-const FIXED_WALLET="0x75cc3b63a2f2423085e10706c78b494017b93ce1";   // public target used for reconstruction
-let TRACK_WALLET=FIXED_WALLET;       // the wallet being tracked (fixed)
+const FIXED_WALLET="";               // optional operator-provided tracker wallet
+let TRACK_WALLET=FIXED_WALLET;
 // Load the EXACT strategy/sim modules the live shadow uses (same decide()/decideLadder + fillsim).
 // Dynamic import keeps this a classic script so inline handlers (dismissPop) still work.
 let simulateFills=null, positionFromFills=null, FEE_PARAMS=null;
@@ -1382,13 +1378,7 @@ const realLatByOid={};   // LIVE real fill latency (ms) by shadow order oid — 
 function shadowParams(){
   const nv=(id,def)=>{ const el=document.getElementById(id); const v=el?parseFloat(el.value):NaN; return Number.isFinite(v)?v:def; };   // preserves a legit 0 (unlike `||def`)
   const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-  const selectedStrategy=document.getElementById("strategySelect")?.value==="wallet3048"?"wallet3048":"helpme";
-  if(selectedStrategy==="wallet3048") return {
-    STRATEGY:"wallet3048",
-    WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
-    LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),
-    MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
-  };
+  const selectedStrategy="helpme";
   const hStart=clamp(nv("sigStartInput",0),0,300);
   const hStop=clamp(Math.max(hStart,nv("sigStopInput",285)),0,300);
   const liveOrderType=document.getElementById("sigLiveOrderTypeInput")?.value==="FAK"?"FAK":"GTC";
@@ -1469,16 +1459,6 @@ function roundSection(){ const r=liveRound; if(!r) return '';
 // FastMX inventory leg role → property-menu label (shared by the single-fill AND grouped popups). Returns
 // null for non-entry/hedge fills so the caller can fall back.
 function legLabel(leg, reason){
-  if(reason==='w3048-passive-reservoir') return `<span style="color:#ffcc66;font-weight:700">150 passive reservoir</span> <span class="legs">· full-fill-safe complement rung</span>`;
-  if(reason==='w3048-inventory-emergency') return `<span style="color:#ff9f43;font-weight:700">150 emergency rebalance</span> <span class="legs">· lower lean + improve worst case</span>`;
-  if(reason==='w3048-large-pair-completion') return `<span style="color:#19e3a0;font-weight:700">150 FIFO pair</span> <span class="legs">· profitable complete-set conversion</span>`;
-  if(reason==='w3048-strong-catchup') return `<span style="color:#7fd0ff;font-weight:700">150 strong catch-up</span> <span class="legs">· 2.5s Binance/Poly divergence</span>`;
-  if(reason==='w3048-strong-overlay') return `<span style="color:#7fd0ff;font-weight:700">150 strong overlay</span> <span class="legs">· experimental directional residual</span>`;
-  if(reason==='w3048-initial-catchup') return `<span style="color:#7fd0ff;font-weight:700">50 initial catch-up</span> <span class="legs">· lagging outcome entry</span>`;
-  if(reason==='w3048-initial-value') return `<span style="color:#7fd0ff;font-weight:700">50 initial value</span> <span class="legs">· low-priced fee-adjusted edge</span>`;
-  if(reason==='w3048-pair-completion') return `<span style="color:#19e3a0;font-weight:700">50 FIFO pair</span> <span class="legs">· profitable complete-set conversion</span>`;
-  if(reason==='w3048-loss-cap-repair') return `<span style="color:#ff9f43;font-weight:700">50 loss repair</span> <span class="legs">· risk-adjusted complement</span>`;
-  if(reason==='w3048-directional-reinforcement') return `<span style="color:#7fd0ff;font-weight:700">50 reinforcement</span> <span class="legs">· renewed lagging-outcome edge</span>`;
   if(leg==='hedge'){
     // hedge outcome: STOP = the leg FAILED (stop-out, loss); PULL/CEILING = the leg SUCCEEDED (locked profit)
     const st = reason==='stop'    ? {t:'FAIL',    c:'#ff5d7a', d:'via STOP · leg went wrong (adverse)'}
@@ -1659,7 +1639,6 @@ function popHtml(d,pinned){
   const na = ld ? '…' : 'n/a';                          // fallback (never a bare dash)
   const feeType = _isBot ? (oi ? (oi.fee>0.0005?'taker':'maker') : na) : (_mk?'maker':'taker');   // shadow: maker hedge = maker, else marketable taker
   // Entry adds directional inventory; hedge/repair buys the underweight side.
-  // wallet3048 records FIFO pair economics but can repair above a $1 pair cost.
   const legHtml = legLabel(d.leg, d.reason) || (d.leg||d.kind||na);
   const wSig=d&&d.signal&&d.signal.sizeMode?d.signal:null;
   // ORDER section — real on-chain order for the tracker; simulated for the shadow (no chain order).
@@ -3432,13 +3411,6 @@ function setSessFrom(v){
   trendToggle?.addEventListener("change",()=>{
     if(trendToggle.checked&&binanceToggle) binanceToggle.checked=true;
   });
-  const syncStrategySections=()=>{
-    const wallet=document.getElementById("strategySelect")?.value==="wallet3048";
-    document.querySelectorAll(".helpme-only").forEach(el=>{el.style.display=wallet?"none":"";});
-    const info=document.getElementById("walletStrategyInfo"); if(info)info.style.display=wallet?"":"none";
-  };
-  window.syncStrategySections=syncStrategySections;
-  syncStrategySections();
   const pushLive=()=>{ try{ return fetch("/api/shadow-params?p="+encodeURIComponent(JSON.stringify(shadowParams()))).catch(()=>null); }catch{ return Promise.resolve(null); } };
   function commitConfig(opts){
     const ss=document.getElementById("sigSessStopInput");
@@ -3502,7 +3474,7 @@ function setSessFrom(v){
   // AUTO-APPLY: changing the dropdown (only enabled while stopped) switches + reloads the market immediately — no Track click.
   if(marketSel) marketSel.addEventListener("change",async()=>{ if(marketSel.disabled) return; marketSel.disabled=true; if(trackBtn) trackBtn.disabled=true;
     try{ await trackMarket(); }catch{} finally{ marketSel.disabled=false; if(trackBtn) trackBtn.disabled=false; } });
-  if(strSel) strSel.addEventListener("change",()=>{ window.syncStrategySections?.(); if(!strSel.disabled) commitConfig(); });
+  if(strSel) strSel.addEventListener("change",()=>{ if(!strSel.disabled) commitConfig(); });
   async function startBot(){
     if((typeof window.primaryLocked==="function") && !window.primaryLocked()){ return; }   // must Apply primary config first
     await commitConfig();                             // persist the selected live transport before trading can start
@@ -3736,7 +3708,6 @@ refreshExecBadge();
       for(const [id,value] of Object.entries(migrated)){const el=document.getElementById(id);if(!el)continue;
         if(el.type==="checkbox")el.checked=!!value;else el.value=String(value);}
     }
-    try{ window.syncStrategySections&&window.syncStrategySections(); }catch{}
     document.getElementById("btVersionInput")?.dispatchEvent(new Event("change"));
     try{ window.applyBacktestVersion&&window.applyBacktestVersion(); }catch{}
     try{ window.commitConfig&&window.commitConfig(); }catch{}
@@ -3779,7 +3750,7 @@ function applyMarket(m){
   if(m.wallet && !/^0x0+$/.test(m.wallet)) renderWalletField();   // honor the show/hide mask
   goLiveBoth(); setMarket(MARKET_PREFIX+"-"+liveWindowStart());   // reset view to the new market
 }
-// Set/track the selected market (target wallet is fixed by the server) → returns the resolved market.
+// Set/track the selected market and optional operator wallet → returns the resolved market.
 // Called by the Track button (only while stopped) AND by Start (starting the bot also tracks).
 async function trackMarket(){
   const sel=document.getElementById("marketSelect"), st=document.getElementById("trackStatus");

@@ -142,8 +142,6 @@ async function listMarkets() {
 
 const V2_SOURCE_DIRS = [
   V2_CACHE,
-  path.join(ROOT, "data/wallet-3048-v2-native-aug16/feeds/v2-l2"),
-  path.join(ROOT, "data/wallet-3048-r5/feeds/v2-l2"),
   path.join(ROOT, "data/passive-maker-forward-v15/feeds/v2-l2"),
   path.join(ROOT, "data/passive-maker-forward-v14/feeds/v2-l2"),
   path.join(ROOT, "data/passive-maker-forward-v13b/feeds/v2-l2"),

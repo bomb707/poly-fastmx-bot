@@ -231,7 +231,7 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
         if (!ASSETS.includes(asset) || !INTERVALS[interval]) {
           res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "invalid asset/interval" })); return;
         }
-        if (!/^0x[0-9a-f]{40}$/.test(wallet)) {
+        if (wallet && !/^0x[0-9a-f]{40}$/.test(wallet)) {
           res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "invalid wallet address" })); return;
         }
         Promise.resolve(setMarket && setMarket({ asset, interval, wallet }))

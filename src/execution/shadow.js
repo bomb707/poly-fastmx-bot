@@ -368,8 +368,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
           } else if (arrivalBook?.bestBid != null && r.limitPx >= arrivalBook.bestBid - 1e-9) {
             const cumulative = makerTouchFill({ askNow: r.limitPx, limit: r.limitPx, filled: p.touchFilled,
               target: p.touchTarget, dtMs: Math.max(0, nowMs - p.lastMs),
-              touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
-              fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
+              touchMs: Number(r.touchMs || 1000),
+              fillPct: Number(r.touchFillPct || 10) });
             const delta = Math.max(0, cumulative - p.touchFilled);
             p.touchFilled = cumulative;
             if (delta > 1e-9) fill = { shares: Math.min(delta, p.remaining),
@@ -441,7 +441,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
             p.makerShares = 0;
             p.makerCost = 0;
             p.lastMs = p.dueMs;
-            p.expiresMs = p.dueMs + Math.max(0, Number(r.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0));
+            p.expiresMs = p.dueMs + Math.max(0, Number(r.restTimeoutMs || 0));
             keep.push(p);
           }
         } else { if (up.bestAsk != null) p.upA = up.bestAsk; if (down.bestAsk != null) p.dnA = down.bestAsk;
@@ -551,11 +551,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       w.helpme.cells?.clear?.();
       w.helpme.execSide?.clear?.();
     }
-    if (w.wallet3048) {
-      w.wallet3048.history = [];
-      w.wallet3048.bookTrace = { Up: [], Down: [] };
-      w.wallet3048.pending?.clear?.();
-    }
     const ab = {
       slug, windowStart: w.windowStart, winSide, status: "resolved", ts: Math.floor(Date.now() / 1000),
       sim: { pnl: r2(pnl), winSh: r2(winSh), upShares: r2(w.upShares), downShares: r2(w.downShares),
@@ -627,14 +622,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const requested = getStrategy(obj.STRATEGY || curStrat.NAME || DEFAULT_STRATEGY);
     const changed = requested.NAME !== curStrat.NAME;
     const allowed = new Set(Object.keys(requested.STRAT));
-    // Persisted snapshots from an older wallet reconstruction contain every
-    // then-default W3048_* value. Do not let those stale values silently pin a
-    // newly versioned specification. Generic operator controls remain valid;
-    // a same-version explicit strategy snapshot is still honored.
-    const walletSpecMismatch = requested.NAME === "wallet3048"
-      && Number(obj.W3048_SPEC_VERSION) !== Number(requested.STRAT.W3048_SPEC_VERSION);
-    const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)
-      && !(walletSpecMismatch && (key.startsWith("W3048_") || key === "LIMIT"))));
+    const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)));
     const nextLiveParams = { ...(changed ? {} : liveParams), ...clean, STRATEGY: requested.NAME };
     const nextStrat = requested;
     const nextMerged = { ...nextStrat.STRAT, ...nextLiveParams,

@@ -1,4 +1,4 @@
-import { MATCH_ORDERS_IFACE } from "./wallet-3048/signed-orders.mjs";
+import { MATCH_ORDERS_IFACE } from "./signed-orders.mjs";
 
 const lower = (value) => String(value || "").toLowerCase();
 const finitePositive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;

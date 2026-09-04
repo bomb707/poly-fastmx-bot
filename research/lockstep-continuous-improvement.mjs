@@ -92,7 +92,7 @@ async function cycle() {
     LOCKSTEP_SIZE: "50",
     LOCKSTEP_ROBUST_ONLY: "1",
     LOCKSTEP_V4_DIRS: path.join(ROOT, "data/lockstep-v4-top"),
-    LOCKSTEP_V2_DIRS: [path.join(ROOT, "data/lockstep-v2-top"), path.join(ROOT, "data/wallet-3048/feeds/v2")].join(path.delimiter),
+    LOCKSTEP_V2_DIRS: path.join(ROOT, "data/lockstep-v2-top"),
   });
 
   const pairedDir = path.join(ROOT, "data/research", `lockstep-v2-v4-${rangeTag(toMs)}`);

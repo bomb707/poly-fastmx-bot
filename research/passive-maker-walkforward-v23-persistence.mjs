@@ -51,11 +51,6 @@ const SLUG_ALLOWLIST = (() => {
 
 const splitList = (name, fallback) => String(process.env[name] || fallback).split(path.delimiter).filter(Boolean);
 const L2_DIRS = splitList("MAKER_L2_DIRS", [
-  path.join(ROOT, "data/wallet-3048/feeds/v4-post-twap-full-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-e8-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-r2-l2"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/v4-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-l2"),
   // Compact v4 retains both outcome ask ladders. Binary complementarity makes
   // each opposite ask the exact bid ladder for the other outcome, which is
   // enough to reconstruct best-bid queue ahead for the passive replay.
@@ -65,13 +60,10 @@ const L2_DIRS = splitList("MAKER_L2_DIRS", [
 // maker decisions. An absent or stale confirmation snapshot is fail-closed.
 const CONFIRM_L2_DIRS = splitList("MAKER_CONFIRM_L2_DIRS", "");
 const V2_DIRS = splitList("MAKER_V2_DIRS", [
-  path.join(ROOT, "data/wallet-3048/feeds/v2"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/v2"),
+  path.join(ROOT, "data/passive-maker-forward-v15/feeds/v2"),
 ].join(path.delimiter));
 const TRADE_DIRS = splitList("MAKER_TRADE_DIRS", [
-  path.join(ROOT, "data/wallet-3048/feeds/market-trades"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/market-trades"),
-  path.join(ROOT, "data/wallet-3048-r4/feeds/market-trades"),
+  path.join(ROOT, "data/passive-maker-forward-v15/feeds/market-trades"),
 ].join(path.delimiter));
 const STRICT_CAUSAL_FILLS = process.env.MAKER_STRICT_CAUSAL_FILLS === "1";
 const REQUIRE_FULL_COVERAGE = process.env.MAKER_REQUIRE_FULL_COVERAGE === "1";

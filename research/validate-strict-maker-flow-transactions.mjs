@@ -11,12 +11,7 @@ const exactDir = path.resolve(process.argv[3] || path.join(root, "data/research/
 const output = path.resolve(process.argv[4] || path.join(root, "data/research/strict-maker-flow-validation.json"));
 const tradeDirs = String(process.env.MAKER_TRADE_DIRS || [
   "data/research/strict-maker-all-market-feeds/market-trades",
-  "data/wallet-3048/feeds/market-trades",
-  "data/wallet-3048-r3/feeds/market-trades",
-  "data/wallet-3048-r4/feeds/market-trades",
-  "data/wallet-3048-r5/feeds/market-trades",
   "data/passive-maker-forward-v15/feeds/market-trades",
-  "data/wallet-3048-r6/feeds/market-trades",
 ].map((entry) => path.join(root, entry)).join(path.delimiter)).split(path.delimiter).filter(Boolean);
 const readGzip = (file) => JSON.parse(zlib.gunzipSync(fs.readFileSync(file)));
 const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));

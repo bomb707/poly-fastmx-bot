@@ -7,11 +7,8 @@ import zlib from "node:zlib";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUTPUT = path.resolve(process.argv[2] || path.join(ROOT, "data/research/v4-complement-mirroring-audit.json"));
 const DIRS = [
-  "data/wallet-3048/feeds/v4-e8-l2",
-  "data/wallet-3048/feeds/v4-r2-l2",
-  "data/wallet-3048-r3/feeds/v4-l2",
-  "data/wallet-3048/feeds/v4-l2",
-  "data/wallet-3048-r4/feeds/v4-l2",
+  "data/lockstep-v4-top",
+  "data/passive-maker-forward-v15/feeds/v4-l2",
 ].map((dir) => path.join(ROOT, dir));
 
 const files = new Map();

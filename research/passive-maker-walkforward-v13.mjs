@@ -24,24 +24,16 @@ if (!Number.isFinite(FROM_MS) || !Number.isFinite(TO_MS) || TO_MS <= FROM_MS) th
 
 const splitList = (name, fallback) => String(process.env[name] || fallback).split(path.delimiter).filter(Boolean);
 const L2_DIRS = splitList("MAKER_L2_DIRS", [
-  path.join(ROOT, "data/wallet-3048/feeds/v4-post-twap-full-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-e8-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-r2-l2"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/v4-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-l2"),
   // Compact v4 retains both outcome ask ladders. Binary complementarity makes
   // each opposite ask the exact bid ladder for the other outcome, which is
   // enough to reconstruct best-bid queue ahead for the passive replay.
   path.join(ROOT, "data/lockstep-v4-top"),
 ].join(path.delimiter));
 const V2_DIRS = splitList("MAKER_V2_DIRS", [
-  path.join(ROOT, "data/wallet-3048/feeds/v2"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/v2"),
+  path.join(ROOT, "data/passive-maker-forward-v15/feeds/v2"),
 ].join(path.delimiter));
 const TRADE_DIRS = splitList("MAKER_TRADE_DIRS", [
-  path.join(ROOT, "data/wallet-3048/feeds/market-trades"),
-  path.join(ROOT, "data/wallet-3048-r3/feeds/market-trades"),
-  path.join(ROOT, "data/wallet-3048-r4/feeds/market-trades"),
+  path.join(ROOT, "data/passive-maker-forward-v15/feeds/market-trades"),
 ].join(path.delimiter));
 const round = (value, digits = 6) => Number.isFinite(value) ? +value.toFixed(digits) : null;
 const slugStart = (slug) => Number(String(slug).split("-").at(-1)) * 1000;

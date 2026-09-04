@@ -116,7 +116,6 @@ PM2 process `poly-lockstep-maker-research-v14` records a separately frozen cohor
 - `data/research/passive-maker-maker130-q088-t3-candidate.json`
 - `data/research/passive-maker-maker130-candidate-500-5-full-depth-corrected.json`
 - `research/passive-maker-walkforward-v13.mjs`
-- `research/passive-maker-forward-v13b-manifest.json`
 - `data/research/passive-maker-forward-v13b-state.json`
 - `data/research/passive-maker-balanced-inventory-pair-cap-maker130.json`
 - `data/research/passive-maker-balanced-inventory-pair-cap-maker200.json`
@@ -124,5 +123,4 @@ PM2 process `poly-lockstep-maker-research-v14` records a separately frozen cohor
 - `data/research/passive-maker-balanced-tight-queue-grid.json`
 - `research/passive-maker-maker130-selected-v14.json`
 - `research/passive-maker-walkforward-v14.mjs`
-- `research/passive-maker-forward-v14-manifest.json`
 - `data/research/passive-maker-v14-validation.json`

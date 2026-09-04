@@ -10,11 +10,9 @@ const output = path.join(ROOT, "data/research/passive-maker-maker130-credit-floo
 const join = (...parts) => parts.map((part) => path.join(ROOT, part)).join(path.delimiter);
 const env = {
   ...process.env,
-  MAKER_L2_DIRS: join("data/wallet-3048/feeds/v4-e8-l2", "data/wallet-3048/feeds/v4-r2-l2",
-    "data/wallet-3048-r3/feeds/v4-l2", "data/wallet-3048-r4/feeds/v4-l2", "data/wallet-3048/feeds/v4-l2"),
-  MAKER_V2_DIRS: join("data/wallet-3048/feeds/v2", "data/wallet-3048-r3/feeds/v2", "data/wallet-3048-r4/feeds/v2"),
-  MAKER_TRADE_DIRS: join("data/wallet-3048/feeds/market-trades", "data/wallet-3048-r3/feeds/market-trades",
-    "data/wallet-3048-r4/feeds/market-trades"),
+  MAKER_L2_DIRS: join("data/lockstep-v4-top", "data/passive-maker-forward-v15/feeds/v4-l2"),
+  MAKER_V2_DIRS: join("data/passive-maker-forward-v15/feeds/v2"),
+  MAKER_TRADE_DIRS: join("data/passive-maker-forward-v15/feeds/market-trades"),
   MAKER_FILL_SOURCE: "trades",
   MAKER_POST_ONLY: "1",
   MAKER_POLICIES_FILE: path.join(ROOT, "research/passive-maker-maker130-baseline.json"),

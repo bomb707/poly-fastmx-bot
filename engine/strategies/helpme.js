@@ -57,17 +57,14 @@ export const STRAT = {
   H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 60,
   H_BINANCE_COUNTERTREND_MIN_PCT: 0.075,
   H_BINANCE_GAP_AGREE_ON: false,
-  // Backtest default OFF: the paired Aug 16-25 replay found partial hedging
-  // degraded both fit and holdout PnL. The UI keeps it independently opt-in.
+  // Conservative default: inventory intervention remains operator opt-in.
   H_HEDGE_ON: false,
   // Share-denominated hedges preserve this old-side lead even when execution
   // receives price improvement.
   H_HEDGE_RETAIN_SH: 1,
-  // Backtest default OFF: reversal improved holdout but failed the fit segment,
-  // so it is not promoted as a stable runtime default.
+  // Conservative default: reversal remains operator opt-in.
   H_REVERSAL_ON: false,
-  // Target extraction: median post-cross residual=10.44sh and p90 old
-  // imbalance among crosses=25.35sh.
+  // Bounded residual and imbalance defaults for optional reversal handling.
   H_REVERSAL_RESIDUAL_SH: 10,
   H_REVERSAL_MAX_IMBALANCE_SH: 25,
   H_MIN_ASK: 0.05,

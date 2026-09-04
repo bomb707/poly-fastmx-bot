@@ -1,7 +1,6 @@
 # FastMX
 
-Simulation-only BTC five-minute strategy reconstruction for target wallet
-`0x75cc3b63a2f2423085e10706c78b494017b93ce1`.
+Simulation-only BTC five-minute momentum strategy and execution dashboard.
 
 - Dashboard: `https://dev-fastmx.polywinbot.com` or `http://localhost:4520`
 - PM2 process: `poly-fastmx-simulation`
@@ -16,10 +15,10 @@ the `poly-mom-bot` Binance trend regime:
 
 1. `H_CLOB_MID_VELOCITY_ON` controls the CLOB family. Its primary velocity is
    `upMid(now) - upMid(at-or-before now - lookback)`, where `upMid = (best bid + best ask) / 2`.
-   `H_MID_VELOCITY_LOOKBACK_MS` is required and defaults to `3000`; the fitted absolute threshold is `0.02`.
+   `H_MID_VELOCITY_LOOKBACK_MS` is required and defaults to `3000`; the configured absolute threshold is `0.02`.
 2. `H_BINANCE_GAP_MOMENTUM_ON` controls the Binance family. It uses the dev-tool raw-dollar gap velocity:
    `(priceNow - open) - (pricePrior - open) = priceNow - pricePrior`. Its lookback defaults to `3000` ms and its
-   fitted absolute threshold is `$5`.
+   configured absolute threshold is `$5`.
 3. `H_BINANCE_TREND_ON` controls the Binance momentum regime copied from `poly-mom-bot`. Trend is
    `100 × (current Binance spot - Binance spot N seconds earlier) / prior spot`. The reference
    defaults are `30` seconds and `0.05%` for a strong trend. Range and trend-following Binance signals pass
@@ -34,8 +33,7 @@ the `poly-mom-bot` Binance trend regime:
    `H_HEDGE_ON` and `H_REVERSAL_ON` independently control opposing signals. A partial hedge is exact-share sized
    so the old inventory leader retains at least one share of lead. A reversal requires CLOB, Binance fast momentum,
    a strong aligned Binance trend, and Binance spot versus window-open to agree; it crosses only an old imbalance
-   of at most 25 shares and targets a ten-share new-side residual. Both controls default off after failing the
-   stability requirement in paired train/holdout replay.
+   of at most 25 shares and targets a ten-share new-side residual. Both controls default off conservatively.
 7. The selected side must have a current ask and enough visible depth under the one-cent marketable cap. There is
    no persistence timer. Cooldown is the only release throttle and defaults to `1000` ms.
 8. Chainlink, ask differentials, imbalance, microprice, and weighted scores do not participate in direction.
@@ -51,20 +49,7 @@ The Order Release panel also exposes a **live order type** selector. `GTC + canc
 default for real automatic execution; `FAK` is available for atomic immediate-or-cancel behavior. The selection is
 durable and live-only, so it does not silently alter recorded:false or backtest accounting.
 
-The exact trailing-day fit covers 2026-08-26 11:25 UTC through 2026-08-27 11:25 UTC. That historical study used
-the now-retired hard three-direction agreement rule; with the required three-second CLOB lookback it matched
-`98.48%` of eligible target directions on the untouched final 12 hours and `98.55%` over the full day, at `27.40%`
-and `30.11%` target-action coverage respectively. Those figures must not be attributed to the replacement
-poly-mom trend regime without a fresh replay.
-Full formulas, splits, Wilson intervals, and candidate rankings are in
-`research/wallet-75cc/results/three-signal-last24h-2026-08-27.md`.
-Direction precision is not release parity or profitability. The final 2,875-window risk audit found the safe
-retired guarded policy still lost `$162.04` after fees (`-2.46%` modeled ROI; `$260.97` max drawdown; four of ten days
-positive). That result does not validate the new entry-every-signal action rule or prove an edge.
-The current paired inventory replay is in
-`research/wallet-75cc/results/fastmx-inventory-mode-backtest-2026-08-27.md`: partial hedging worsened fit and
-holdout, while reversal improved holdout but worsened fit and the combined period. Neither control was promoted.
-FastMX therefore remains an instrumented forward simulation, not a profitability or exact-clone claim. Only `helpme` is registered internally at runtime;
+FastMX remains an instrumented forward simulation, not a profitability claim. Only `helpme` is registered internally at runtime;
 copied experimental strategies are not selectable by this app.
 
 ## Feeds
@@ -97,6 +82,5 @@ its feeds. No real orders are submitted.
 
 ## Important limitation
 
-This is a reconstruction from observable behavior, not the wallet owner's private source code. Live simulation
-and forward validation can falsify the inferred policy, but cannot establish literal 100% certainty about hidden
-logic. Keep profitability claims tied to out-of-sample and live-simulation evidence.
+Live simulation and forward validation can falsify the configured policy, but cannot establish future profitability.
+Keep profitability claims tied to out-of-sample and live-simulation evidence.

@@ -6,12 +6,12 @@ _Updated: 2026-08-27 UTC_
 - Dashboard: `https://dev-fastmx.polywinbot.com`
 - Local port: `4520`
 - Execution: hard-locked simulation; no real orders
-- Target wallet: `0x75cc3b63a2f2423085e10706c78b494017b93ce1`
+- Tracked wallet: unset by default; optionally supplied by the operator
 - Active strategy: only `helpme`, in `engine/strategies/helpme.js`
 
 The active policy exposes two direction-source toggles and the `poly-mom-bot` Binance trend-regime toggle. CLOB midpoint velocity uses
 `mid(now) - mid(at-or-before now - lookback)`, with `mid = (best bid + best ask) / 2`, a required configurable
-lookback fixed at the required `3000` ms default and a fitted absolute threshold of `0.02`. Binance gap momentum uses the dev-tool raw-dollar formula
+lookback fixed at the required `3000` ms default and a configured absolute threshold of `0.02`. Binance gap momentum uses the dev-tool raw-dollar formula
 `(priceNow-open)-(pricePrior-open) = priceNow-pricePrior`, with a three-second lookback and
 `$5` minimum. Binance trend uses the `poly-mom-bot` formula
 `100 × (current Binance spot - Binance spot 30 seconds earlier) / prior spot`. At `0.05%` or stronger,
@@ -25,8 +25,7 @@ Every distinct qualified signal aligned with flat/current inventory creates a se
 opposite-signal controls are available: partial hedge retains at least a one-share old-side lead, while reversal
 requires CLOB + Binance fast momentum + strong trailing trend + window-gap confirmation, crosses only an old
 imbalance up to 25 shares, and targets a ten-share new-side residual. Inventory orders are exact-share sized and
-force live GTC plus immediate remainder cancellation. Both controls default off because partial hedging degraded
-fit and holdout, while reversal improved holdout but failed fit. Executable-duration, cap-cell, order-count, and
+force live GTC plus immediate remainder cancellation. Both controls default off conservatively. Executable-duration, cap-cell, order-count, and
 per-window inventory-loss branches remain removed. Cooldown remains the sole release throttle at `1000` ms.
 The external session circuit breaker remains at `-$25`.
 Chainlink, ask differentials, imbalance, microprice, and weighted scores are not direction gates.
@@ -59,22 +58,4 @@ The CLOB feed follows Polymarket's documented market-channel protocol: full `boo
 as step functions. Obsolete experimental overlays, controls, training endpoints, and artifacts have been
 removed.
 
-The exact 2,875-window audit of the retired guarded policy is in
-`research/wallet-75cc/results/fastmx-execution-final-screen-2026-08-27.json`; it lost `$162.04` after modeled fees.
-That result does not validate the new entry-every-signal rule or establish profitability. The process therefore
-remains simulation-only.
-
-The paired current-engine hedge/reversal replay is in
-`research/wallet-75cc/results/fastmx-inventory-mode-backtest-2026-08-27.md`. On the untouched holdout, partial
-hedging changed PnL by `-$599.41` versus entry/top-up-only; reversal changed it by `+$349.28`, but reversal lost
-`-$1,389.19` versus entry/top-up-only on fit. Both together lost `-$1,136.67` on holdout. The realized hedge
-crossing audit recorded zero violations. These results reject automatic promotion and do not establish profit.
-
-The exact trailing-day retired hard-three-direction audit spans 2026-08-26 11:25 UTC through 2026-08-27 11:25 UTC: 2,210 BTC buys,
-1,604 non-simultaneous choices, and 287 complete causal 50 ms feeds. The selected configuration was ranked only on
-the first 12 hours. With the required three-second CLOB lookback it matched `98.48%` of eligible target directions
-on the untouched final 12 hours at `27.40%` coverage, and `98.55%` over the full day at `30.11%` coverage. Full
-splits and Wilson intervals are in `research/wallet-75cc/results/three-signal-last24h-2026-08-27.md`. Those match
-figures do not describe the replacement poly-mom trend regime and require a fresh replay before comparison. This is
-selective direction agreement at target action times, not 98% market participation, exact release-time cloning, or
-proof of profit. The private release state remains unidentified, so frozen forward monitoring is still required.
+The process remains simulation-only. Any profitability or stability claim requires fresh out-of-sample and forward evidence.

@@ -50,7 +50,7 @@ export function signedOrderHash(order, verifyingContract, version = "2") {
 }
 
 /**
- * Decode only the target wallet's signed orders from a settlement transaction.
+ * Decode only the requested wallet's signed orders from a settlement transaction.
  *
  * The signed `timestamp` is deliberately named signedTimestampMs below. It is an
  * order-construction field and is NOT treated as submit/fire time. Fire time is

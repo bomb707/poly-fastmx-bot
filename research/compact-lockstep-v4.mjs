@@ -9,10 +9,7 @@ const FROM_MS = Date.parse(process.argv[2] || "2026-08-14T00:00:00Z");
 const TO_MS = Date.parse(process.argv[3] || "2026-08-25T00:00:00Z");
 const OUT = path.resolve(process.env.LOCKSTEP_V4_CACHE || path.join(ROOT, "data/lockstep-v4-top"));
 const SOURCES = String(process.env.LOCKSTEP_V4_SOURCE_DIRS || [
-  path.join(ROOT, "data/wallet-3048/feeds/v4-top"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-r2-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-e8-l2"),
-  path.join(ROOT, "data/wallet-3048/feeds/v4-l2"),
+  path.join(ROOT, "data/passive-maker-forward-v15/feeds/v4-l2"),
 ].join(path.delimiter)).split(path.delimiter).filter(Boolean);
 if (!Number.isFinite(FROM_MS) || !Number.isFinite(TO_MS) || TO_MS <= FROM_MS) throw new Error("invalid from/to range");
 fs.mkdirSync(OUT, { recursive: true });
