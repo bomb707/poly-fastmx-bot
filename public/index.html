@@ -757,10 +757,14 @@
       <div class="scfg-section">
         <span class="scfg-grp" title="STRATEGY — which trading strategy the bot runs (backtest + live). Selectable while the bot is STOPPED; the config below belongs to the selected strategy. Add more in engine/strategies/.">strategy</span>
         <label class="cfgsel" title="The simulation-only FastMX momentum strategy."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option></select></label>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">CLOB/Binance velocity selects direction; opposing signals can trim risk or reverse only with strong confirmation</span>
+        <span style="font-size:10px;color:var(--txt2);line-height:1.45">5s CLOB/Binance score selects direction; a hysteresis latch controls entries, top-ups, hedges, and strong reversals</span>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="MOMENTUM — CLOB and Binance are direction sources; at least one must remain enabled. Binance trend is the poly-mom regime filter and requires Binance momentum.">momentum</span>
+        <label class="cfgtgl" title="TARGET DIRECTION POLICY — use the target-derived weighted CLOB level, 5-second CLOB impulse, and 5-second Binance impulse score with an abstention band and causal release latch."><input type="checkbox" id="sigTargetDirectionOn" checked><span class="tgl-track"></span><span class="tgl-lbl">target direction</span></label>
+        <label class="cfgnum" title="TARGET LOOKBACK — causal lookback shared by the target-derived CLOB and Binance impulse components.">target lookback ms<input id="sigDirectionLookbackInput" type="number" min="1000" max="30000" step="500" value="5000" required></label>
+        <label class="cfgnum" title="ENTER SCORE — minimum absolute normalized direction score needed to arm an action.">enter score<input id="sigDirectionEnterInput" type="number" min="0" max="1" step="0.05" value="0.35"></label>
+        <label class="cfgnum" title="EXIT SCORE — lower hysteresis boundary. A fired impulse re-arms only after confidence falls to this level or direction changes.">exit score<input id="sigDirectionExitInput" type="number" min="0" max="1" step="0.05" value="0.15"></label>
         <label class="cfgtgl" title="Use Up-token CLOB midpoint velocity as a signal. At least one momentum toggle must stay on."><input type="checkbox" id="sigClobMidOn" checked><span class="tgl-track"></span><span class="tgl-lbl">CLOB mid</span></label>
         <label class="cfgnum" title="CLOB MIDPOINT LOOKBACK — required causal lookback for midpoint velocity; default 3000 ms.">CLOB lookback ms<input id="sigMidVelocityLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
         <label class="cfgnum" title="MID VELOCITY MIN — minimum absolute 3-second midpoint change required to select Up (positive) or Down (negative).">mid velocity $<input id="sigMidVelocityMinInput" type="number" min="0" max="1" step="0.005" value="0.02"></label>
@@ -781,10 +785,16 @@
         <label class="cfgsel" title="LIVE ORDER TYPE — GTC crosses immediately, then the bot cancels any unfilled remainder; FAK fills available liquidity and atomically cancels the rest. This affects real-live automatic orders only; simulation/backtest remains fixed-USD FAK.">live order type
           <select id="sigLiveOrderTypeInput" class="momsel"><option value="GTC">GTC + cancel remainder</option><option value="FAK">FAK</option></select>
         </label>
-        <label class="cfgnum" title="BASE ORDER — minimum shares signed at the limit cap. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
-        <label class="cfgnum" title="COOLDOWN — minimum time between entry releases in the same five-minute market. This is the only release throttle.">cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="1000"></label>
+        <label class="cfgnum" title="BASE ORDER — fixed minimum shares, or the normalization anchor when target sizing is enabled. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
+        <label class="cfgtgl" title="TARGET SIZE CURVE (EXPERIMENTAL) — reshape base shares using the target wallet's decoded signed cap-to-size menu. It remained profitable but reduced held-out PnL versus fixed seven, so it stays off by default."><input type="checkbox" id="sigTargetSizeOn"><span class="tgl-track"></span><span class="tgl-lbl">target sizing</span></label>
+        <label class="cfgnum" title="FIRST ENTRY — do not release the first action before this time. The target's first-action distribution supports 15 seconds.">first entry s<input id="sigFirstEntryInput" type="number" min="0" max="120" step="1" value="15"></label>
+        <label class="cfgnum" title="TOP-UP COOLDOWN — minimum spacing between same-side additions; a new impulse or material score/price step is still required.">top-up cooldown ms<input id="sigTopupCooldownInput" type="number" min="0" max="60000" step="500" value="8000"></label>
+        <label class="cfgnum" title="ACTION CAP — maximum releases in one five-minute market across all roles.">max actions<input id="sigMaxActionsInput" type="number" min="1" max="50" step="1" value="7"></label>
+        <label class="cfgnum" title="GLOBAL COOLDOWN — minimum spacing between any two releases after role-specific gates pass.">global cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="2000"></label>
         <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal immediately reduces the old-side lead when doing so does not worsen projected worst-case loss."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
+        <label class="cfgnum" title="HEDGE SCORE — minimum target-direction confidence for a partial hedge; hedge pair economics and risk must also pass.">hedge score<input id="sigHedgeScoreInput" type="number" min="0" max="1" step="0.05" value="0.60"></label>
         <label class="cfgtgl" title="REVERSAL — after persistent CLOB, Binance, trailing-trend, and window-gap confirmation, cross inventory only when pair economics and projected worst-case loss pass."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
+        <label class="cfgnum" title="REVERSAL SCORE — minimum target-direction confidence before inventory may be crossed into a new four-share residual.">reversal score<input id="sigReversalScoreInput" type="number" min="0" max="1" step="0.05" value="0.95"></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="RISK — session-level emergency circuit breaker.">risk</span>
@@ -1380,6 +1390,8 @@ function shadowParams(){
   const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
   const hStart=clamp(nv("sigStartInput",0),0,300);
   const hStop=clamp(Math.max(hStart,nv("sigStopInput",285)),0,300);
+  const directionEnter=clamp(nv("sigDirectionEnterInput",0.35),0.01,1);
+  const directionExit=clamp(nv("sigDirectionExitInput",0.15),0,Math.max(0,directionEnter-0.01));
   const liveOrderType=document.getElementById("sigLiveOrderTypeInput")?.value==="FAK"?"FAK":"GTC";
   const clobToggle=document.getElementById("sigClobMidOn"), binanceToggle=document.getElementById("sigBinanceGapOn"), trendToggle=document.getElementById("sigBinanceTrendOn");
   let clobMidOn=clobToggle?.checked!==false, binanceGapOn=binanceToggle?.checked!==false, binanceTrendOn=trendToggle?.checked!==false;
@@ -1407,13 +1419,38 @@ function shadowParams(){
     H_BINANCE_COUNTERTREND_LOOKBACK_SEC:Math.round(clamp(nv("sigBinanceCountertrendLookbackInput",60),1,60)),
     H_BINANCE_COUNTERTREND_MIN_PCT:clamp(nv("sigBinanceCountertrendMinInput",0.075),0.001,10),
     H_BINANCE_GAP_AGREE_ON:document.getElementById("sigBinanceGapAgreeOn")?.checked===true,
+    H_TARGET_DIRECTION_ON:document.getElementById("sigTargetDirectionOn")?.checked!==false,
+    H_DIRECTION_LOOKBACK_MS:Math.round(clamp(nv("sigDirectionLookbackInput",5000),1000,30000)),
+    H_DIRECTION_LEVEL_SCALE:0.05,
+    H_DIRECTION_CLOB_SCALE:0.05,
+    H_DIRECTION_BINANCE_SCALE:10,
+    H_DIRECTION_LEVEL_WEIGHT:0.2,
+    H_DIRECTION_CLOB_WEIGHT:0.3,
+    H_DIRECTION_BINANCE_WEIGHT:0.5,
+    H_DIRECTION_ENTER_SCORE:directionEnter,
+    H_DIRECTION_EXIT_SCORE:directionExit,
+    H_SIGNAL_HYSTERESIS_ON:true,
+    H_FIRST_ENTRY_EARLIEST_S:clamp(nv("sigFirstEntryInput",15),0,120),
+    H_FIRST_ENTRY_CONFIRM_MS:360,
+    H_TOPUP_CONFIRM_MS:360,
+    H_TOPUP_COOLDOWN_MS:Math.round(clamp(nv("sigTopupCooldownInput",8000),0,60000)),
+    H_TOPUP_SCORE_STEP:0.2,
+    H_TOPUP_PRICE_STEP:0.05,
+    H_HEDGE_CONFIRM_MS:600,
+    H_HEDGE_COOLDOWN_MS:6000,
+    H_HEDGE_SCORE_MIN:clamp(nv("sigHedgeScoreInput",0.60),0,1),
+    H_HEDGE_MIN_PAIR_EDGE:-0.03,
+    H_HEDGE_RETAIN_MAX_SH:8,
+    H_REVERSAL_SCORE_MIN:clamp(nv("sigReversalScoreInput",0.95),0,1),
+    H_REVERSAL_COOLDOWN_MS:3000,
+    H_MAX_ACTIONS_PER_WINDOW:Math.round(clamp(nv("sigMaxActionsInput",7),1,50)),
     H_HEDGE_ON:document.getElementById("sigHedgeOn")?.checked===true,
     H_HEDGE_RETAIN_SH:1,
     H_REVERSAL_ON:document.getElementById("sigReversalOn")?.checked===true,
-    H_REVERSAL_RESIDUAL_SH:10,
+    H_REVERSAL_RESIDUAL_SH:4,
     H_REVERSAL_CONFIRM_MS:1000,
     H_OPPOSITE_CANDIDATE_RESET_MS:3000,
-    H_REVERSAL_MIN_PAIR_EDGE:-0.03,
+    H_REVERSAL_MIN_PAIR_EDGE:-0.1,
     H_REVERSAL_MAX_WORST_LOSS_USD:10,
     H_REVERSAL_MAX_ORDER_SH:50,
     H_MIN_ASK:0.05, H_MAX_ASK:0.98,
@@ -1421,7 +1458,12 @@ function shadowParams(){
     H_LIVE_ORDER_TYPE:liveOrderType,
     H_BASE_ORDER_SH:clamp(nv("sigBaseOrderInput",7),1,100),
     H_MIN_ORDER_SH:4,
-    H_COOLDOWN_MS:Math.round(clamp(nv("sigReleaseCooldownInput",1000),0,30000)),
+    H_TARGET_SIZE_ON:document.getElementById("sigTargetSizeOn")?.checked===true,
+    H_TARGET_SIZE_SCALE:1,
+    H_TARGET_SIZE_MAX_SH:50,
+    H_TARGET_TOPUP_MIN_SCALE:0.65,
+    H_TARGET_REVERSAL_SIZE_ON:false,
+    H_COOLDOWN_MS:Math.round(clamp(nv("sigReleaseCooldownInput",2000),0,30000)),
     MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
   };
 }
@@ -3444,12 +3486,22 @@ function setSessFrom(v){
       sigBinanceCountertrendLookbackInput:P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC,
       sigBinanceCountertrendMinInput:P.H_BINANCE_COUNTERTREND_MIN_PCT,
       sigBinanceGapAgreeOn:P.H_BINANCE_GAP_AGREE_ON,
+      sigTargetDirectionOn:P.H_TARGET_DIRECTION_ON,
+      sigDirectionLookbackInput:P.H_DIRECTION_LOOKBACK_MS,
+      sigDirectionEnterInput:P.H_DIRECTION_ENTER_SCORE,
+      sigDirectionExitInput:P.H_DIRECTION_EXIT_SCORE,
       sigHedgeOn:P.H_HEDGE_ON,
+      sigHedgeScoreInput:P.H_HEDGE_SCORE_MIN,
       sigReversalOn:P.H_REVERSAL_ON,
+      sigReversalScoreInput:P.H_REVERSAL_SCORE_MIN,
       sigStartInput:P.H_START_S,
       sigStopInput:P.H_STOP_S,
       sigLiveOrderTypeInput:P.H_LIVE_ORDER_TYPE,
       sigBaseOrderInput:P.H_BASE_ORDER_SH,
+      sigTargetSizeOn:P.H_TARGET_SIZE_ON,
+      sigFirstEntryInput:P.H_FIRST_ENTRY_EARLIEST_S,
+      sigTopupCooldownInput:P.H_TOPUP_COOLDOWN_MS,
+      sigMaxActionsInput:P.H_MAX_ACTIONS_PER_WINDOW,
       sigReleaseCooldownInput:P.H_COOLDOWN_MS,
     };
     for(const [id,value] of Object.entries(normalized)){ const el=document.getElementById(id); if(!el)continue;
@@ -3524,13 +3576,23 @@ function setSessFrom(v){
     V("sigBinanceCountertrendLookbackInput",60);
     V("sigBinanceCountertrendMinInput",0.075);
     C("sigBinanceGapAgreeOn",false);
+    C("sigTargetDirectionOn",true);
+    V("sigDirectionLookbackInput",5000);
+    V("sigDirectionEnterInput",0.35);
+    V("sigDirectionExitInput",0.15);
     C("sigHedgeOn",true);
+    V("sigHedgeScoreInput",0.60);
     C("sigReversalOn",true);
+    V("sigReversalScoreInput",0.95);
     V("sigStartInput",0);
     V("sigStopInput",285);
     V("sigLiveOrderTypeInput","GTC");
     V("sigBaseOrderInput",7);
-    V("sigReleaseCooldownInput",1000);
+    C("sigTargetSizeOn",false);
+    V("sigFirstEntryInput",15);
+    V("sigTopupCooldownInput",8000);
+    V("sigMaxActionsInput",7);
+    V("sigReleaseCooldownInput",2000);
     const verbose=document.getElementById("verboseInput"); if(verbose) verbose.checked=false;
     document.getElementById("verboseInput")?.dispatchEvent(new Event("change"));
     commitConfig();
@@ -3683,12 +3745,14 @@ refreshExecBadge();
 { // ── DURABLE CONFIG round-trip — every Apply saves the sidebar's control values server-side (data/runtime-config.json);
   //   on load we restore them so the dashboard reflects the persisted config (server file = source of truth). ──
   const CFG_IDS=["btVersionInput","strategySelect","sigSessStopInput","sigLatencyInput","sigLiveOrderTypeInput",
+    "sigTargetDirectionOn","sigDirectionLookbackInput","sigDirectionEnterInput","sigDirectionExitInput",
     "sigClobMidOn","sigMidVelocityLookbackInput","sigMidVelocityMinInput",
     "sigBinanceGapOn","sigBinanceGapLookbackInput","sigBinanceGapMinInput",
     "sigBinanceTrendOn","sigBinanceTrendLookbackSecInput","sigBinanceTrendMinInput",
     "sigBinanceCountertrendLookbackInput","sigBinanceCountertrendMinInput","sigBinanceGapAgreeOn",
-    "sigHedgeOn","sigReversalOn",
-    "sigStartInput","sigStopInput","sigBaseOrderInput","sigReleaseCooldownInput","verboseInput"];
+    "sigHedgeOn","sigHedgeScoreInput","sigReversalOn","sigReversalScoreInput","sigTargetSizeOn",
+    "sigStartInput","sigStopInput","sigBaseOrderInput","sigFirstEntryInput","sigTopupCooldownInput",
+    "sigMaxActionsInput","sigReleaseCooldownInput","verboseInput"];
   const gather=()=>{ const o={}; for(const id of CFG_IDS){ const el=document.getElementById(id); if(!el) continue; o[id]=(el.type==="checkbox")?!!el.checked:el.value; } return o; };
   window.persistUiConfig=()=>{ try{ fetch("/api/ui-config?ui="+encodeURIComponent(JSON.stringify(gather()))).catch(()=>{}); }catch{} };
   (async()=>{   // restore on load — apply saved values then commit so they flow into the live holders
@@ -4100,19 +4164,19 @@ function sessCfgSummary(r){
 }
 // FastMX parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
-  return `<span style="color:#cdb8ff">shadow · fastmx · aligned signal → ${P.H_BASE_ORDER_SH??7}sh entry @ ≤${P.H_MAX_ASK??0.98}`
-    +` · CLOB mid ${P.H_CLOB_MID_VELOCITY_ON!==false?"ON":"OFF"} ${((P.H_MID_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(1)}s ≥${P.H_MID_VELOCITY_MIN??0.02}`
-    +` · Binance gap ${P.H_BINANCE_GAP_MOMENTUM_ON!==false?"ON":"OFF"} ${((P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(1)}s ≥$${P.H_BINANCE_GAP_VELOCITY_MIN??5}`
+  return `<span style="color:#cdb8ff">shadow · fastmx · target score ${P.H_TARGET_DIRECTION_ON!==false?"ON":"OFF"} ${((P.H_DIRECTION_LOOKBACK_MS??5000)/1000).toFixed(1)}s enter≥${P.H_DIRECTION_ENTER_SCORE??0.35}/exit≤${P.H_DIRECTION_EXIT_SCORE??0.15}`
+    +` · weights level/CLOB/Binance ${(P.H_DIRECTION_LEVEL_WEIGHT??0.2)}/${(P.H_DIRECTION_CLOB_WEIGHT??0.3)}/${(P.H_DIRECTION_BINANCE_WEIGHT??0.5)}`
+    +` · ${P.H_BASE_ORDER_SH??7}sh ${P.H_TARGET_SIZE_ON===true?"target-shaped":"fixed"} entry @ ≤${P.H_MAX_ASK??0.98}`
     +` · Binance trend regime ${P.H_BINANCE_TREND_ON!==false?"ON":"OFF"} ${P.H_BINANCE_TREND_LOOKBACK_SEC??30}s ≥${P.H_BINANCE_TREND_MIN_PCT??0.05}%`
     +` · countertrend ${P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC??60}s ≥${P.H_BINANCE_COUNTERTREND_MIN_PCT??0.075}%`
-    +` · enabled fast signals agree`
     +` · Binance window-gap agree ${P.H_BINANCE_GAP_AGREE_ON===true?"ON":"OFF"}`
-    +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"}`
-    +` · strong reversal ${P.H_REVERSAL_ON===true?"ON":"OFF"}`
-    +` ${P.H_REVERSAL_CONFIRM_MS??1000}ms · pair edge ≥${P.H_REVERSAL_MIN_PAIR_EDGE??-0.03}`
+    +` · first≥t+${P.H_FIRST_ENTRY_EARLIEST_S??15}s · top-up gap ${P.H_TOPUP_COOLDOWN_MS??8000}ms · max ${P.H_MAX_ACTIONS_PER_WINDOW??7}`
+    +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"} score≥${P.H_HEDGE_SCORE_MIN??0.6} edge≥${P.H_HEDGE_MIN_PAIR_EDGE??-0.03}`
+    +` · strong reversal ${P.H_REVERSAL_ON===true?"ON":"OFF"} score≥${P.H_REVERSAL_SCORE_MIN??0.95}`
+    +` ${P.H_REVERSAL_CONFIRM_MS??1000}ms · pair edge ≥${P.H_REVERSAL_MIN_PAIR_EDGE??-0.1}`
     +` · worst loss ≤$${P.H_REVERSAL_MAX_WORST_LOSS_USD??10} or improving · order ≤${P.H_REVERSAL_MAX_ORDER_SH??50}sh`
     +` · depth ≥${P.H_MIN_DEPTH_SH??4}sh`
-    +` · cooldown ${P.H_COOLDOWN_MS??1000}ms`
+    +` · cooldown ${P.H_COOLDOWN_MS??2000}ms`
     +` · simulation fixed-USD FAK · live ${(P.H_LIVE_ORDER_TYPE||"GTC")} · cap ask+${P.H_CAP_HEADROOM??0.01} · latency ${P.LATENCY_MS||0}ms</span>`; }
 function smoney(v){ return (v>=0?"+$":"−$")+Math.abs(v).toFixed(2); }
 function sessCard(title,cls,g){

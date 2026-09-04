@@ -46,15 +46,25 @@ async function jsonFetch(url, options = {}, attempt = 0) {
 
 async function listMarketsForCoin(coin) {
   const markets = [];
-  for (let page = 1; ; page++) {
-    const url = new URL("markets", `${base}/`);
-    for (const [name, value] of Object.entries({
-      coin, market_type: "5m", from: new Date(fromMs).toISOString(),
-      to: new Date(toMs).toISOString(), page, limit: 500,
-    })) url.searchParams.set(name, String(value));
-    const body = await jsonFetch(url, { headers: v4Headers });
-    markets.push(...(body.markets || []).map((market) => ({ ...market, coin })));
-    if (page >= Number(body.pagination?.totalPages || 1)) break;
+  try {
+    for (let page = 1; ; page++) {
+      const url = new URL("markets", `${base}/`);
+      for (const [name, value] of Object.entries({
+        coin, market_type: "5m", from: new Date(fromMs).toISOString(),
+        to: new Date(toMs).toISOString(), page, limit: 500,
+      })) url.searchParams.set(name, String(value));
+      const body = await jsonFetch(url, { headers: v4Headers });
+      markets.push(...(body.markets || []).map((market) => ({ ...market, coin })));
+      if (page >= Number(body.pagination?.totalPages || 1)) break;
+    }
+  } catch (error) {
+    // Some API credentials cover the v2/v3 replay databases but not the v4
+    // market index. Five-minute slugs are deterministic, so Gamma can provide
+    // the public condition/token identifiers needed to shard wallet trades.
+    // Do not turn an otherwise valid replay credential into a hard failure.
+    if (!/^401\b/.test(String(error?.message || ""))) throw error;
+    console.log(JSON.stringify({ phase: "v4-market-index-unavailable", coin,
+      fallback: "gamma-deterministic-slugs" }));
   }
   if (markets.length) return markets;
   // V4 currently has no XRP market index/snapshots even though Polymarket and

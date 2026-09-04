@@ -30,6 +30,8 @@ function state(extra = {}) {
 
 const FAST = {
   ...STRAT,
+  H_TARGET_DIRECTION_ON: false,
+  H_SIGNAL_HYSTERESIS_ON: false,
   H_COOLDOWN_MS: 0,
   H_MID_VELOCITY_MIN: 0.01,
   H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 5000,
@@ -63,8 +65,16 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal(STRAT.H_BINANCE_COUNTERTREND_LOOKBACK_SEC, 60);
   assert.equal(STRAT.H_BINANCE_COUNTERTREND_MIN_PCT, 0.075);
   assert.equal(STRAT.H_BINANCE_GAP_AGREE_ON, false);
+  assert.equal(STRAT.H_TARGET_DIRECTION_ON, true);
+  assert.equal(STRAT.H_DIRECTION_LOOKBACK_MS, 5000);
+  assert.equal(STRAT.H_DIRECTION_ENTER_SCORE, 0.35);
+  assert.equal(STRAT.H_DIRECTION_EXIT_SCORE, 0.15);
+  assert.equal(STRAT.H_FIRST_ENTRY_EARLIEST_S, 15);
+  assert.equal(STRAT.H_MAX_ACTIONS_PER_WINDOW, 7);
   assert.equal(STRAT.H_HEDGE_ON, true);
+  assert.equal(STRAT.H_HEDGE_SCORE_MIN, 0.6);
   assert.equal(STRAT.H_REVERSAL_ON, true);
+  assert.equal(STRAT.H_REVERSAL_SCORE_MIN, 0.95);
   assert.equal(STRAT.H_REVERSAL_CONFIRM_MS, 1000);
   assert.equal(STRAT.H_OPPOSITE_CANDIDATE_RESET_MS, 3000);
   assert.equal(STRAT.H_REVERSAL_MAX_ORDER_SH, 50);
@@ -91,17 +101,18 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal("executableMs" in order.signal, false);
 });
 
-test("default signal uses three-second velocities plus the poly-mom Binance trend regime", () => {
+test("default target policy uses five-second scored direction plus the Binance trend regime", () => {
   const s = state();
   step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), STRAT, 120, 0);
   step(s, tick(27, 0.51, 0.49, { bzPrice: 100 }), STRAT, 120, 27000);
   step(s, tick(29, 0.53, 0.47, { bzPrice: 100.002 }), STRAT, 120, 29000);
-  const [order] = step(s, tick(30, 0.59, 0.41, { bzPrice: 106 }), STRAT, 120, 30000);
+  assert.deepEqual(step(s, tick(30, 0.59, 0.41, { bzPrice: 106 }), STRAT, 120, 30000), []);
+  const [order] = step(s, tick(30.5, 0.59, 0.41, { bzPrice: 106 }), STRAT, 120, 30500);
   assert.equal(order.side, "Up");
-  assert.equal(order.signal.midVelocity, 0.08);
+  assert.equal(order.signal.midVelocity, 0.09);
   assert.equal(order.signal.binanceGapVelocity, 6);
-  assert.equal(order.signal.midLookbackMs, 3000);
-  assert.equal(order.signal.binanceLookbackMs, 3000);
+  assert.equal(order.signal.midLookbackMs, 5000);
+  assert.equal(order.signal.binanceLookbackMs, 5000);
   assert.equal(order.signal.binanceTrendOn, true);
   assert.equal(order.signal.binanceTrendLookbackSec, 30);
   assert.equal(order.signal.binanceTrendReferencePrice, 100);
@@ -109,7 +120,8 @@ test("default signal uses three-second velocities plus the poly-mom Binance tren
   assert.equal(order.signal.binanceTrendDir, "Up");
   assert.equal(order.signal.binanceStrongTrend, true);
   assert.equal(order.signal.binanceCountertrend, false);
-  assert.equal(order.reason, "dual-velocity-entry");
+  assert.equal(order.role, "first-entry");
+  assert.equal(order.reason, "target-score-first-entry");
 });
 
 test("CLOB-only mode fires without Binance when gap agreement is off", () => {
@@ -142,6 +154,15 @@ test("at least one fast momentum source must be enabled", () => {
   assert.equal(s.gateReason, "signal-toggle-required");
 });
 
+test("target policy validates its hysteresis band and sizing bounds", () => {
+  assert.throws(() => validateParams({ ...STRAT, H_DIRECTION_EXIT_SCORE: 0.35 }),
+    /exit < enter/i);
+  assert.throws(() => validateParams({ ...STRAT, H_DIRECTION_BINANCE_SCALE: 0 }),
+    /component scales/i);
+  assert.throws(() => validateParams({ ...STRAT, H_TARGET_SIZE_ON: true,
+    H_TARGET_SIZE_MAX_SH: 3 }), /max shares/i);
+});
+
 test("live taker transport remains configurable without changing replay FAK intent", () => {
   const s = state();
   const P = { ...FAST, H_LIVE_ORDER_TYPE: "FAK" };
@@ -150,6 +171,58 @@ test("live taker transport remains configurable without changing replay FAK inte
   assert.equal(order.orderType, "FAK");
   assert.equal(order.amountMode, "usd");
   assert.equal(order.liveOrderType, "FAK");
+});
+
+test("target sizing reshapes an entry by signed price cap while retaining fixed-USD transport", () => {
+  const s = state();
+  const P = { ...FAST, H_TARGET_SIZE_ON: true };
+  step(s, tick(0, 0.92, 0.08, { bzPrice: 100 }), P, 120, 0);
+  const [order] = step(s, tick(5, 0.94, 0.06, { bzPrice: 101 }), P, 120, 5000);
+  assert.equal(order.limitPx, 0.95);
+  assert.equal(order.minimumShares, 12);
+  assert.equal(order.budgetUsd, 11.4);
+  assert.equal(order.amountMode, "usd");
+  assert.equal(s.helpmeStatus.targetSizeOn, true);
+  assert.equal(s.helpmeStatus.staticBaseShares, 7);
+  assert.equal(s.helpmeStatus.targetSizedShares, 12);
+});
+
+test("target policy latches an impulse and enforces the per-window action cap", () => {
+  const s = state();
+  const P = { ...STRAT, H_BINANCE_TREND_ON: false,
+    H_FIRST_ENTRY_EARLIEST_S: 0, H_FIRST_ENTRY_CONFIRM_MS: 0,
+    H_MAX_ACTIONS_PER_WINDOW: 1, H_COOLDOWN_MS: 0 };
+  step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), P, 120, 0);
+  const [entry] = step(s, tick(5, 0.60, 0.40, { bzPrice: 110 }), P, 120, 5000);
+  assert.equal(entry.role, "first-entry");
+  assert.deepEqual(step(s, tick(6, 0.61, 0.39, { bzPrice: 111 }), P, 120, 6000), []);
+  assert.equal(s.gateReason, "window-action-cap");
+});
+
+test("target policy blocks an uneconomic partial hedge", () => {
+  const s = state({ upShares: 14, upCost: 7 });
+  const P = { ...STRAT, H_BINANCE_TREND_ON: false, H_REVERSAL_ON: false,
+    H_FIRST_ENTRY_EARLIEST_S: 0, H_HEDGE_CONFIRM_MS: 0,
+    H_HEDGE_SCORE_MIN: 0.35, H_HEDGE_MIN_PAIR_EDGE: 0,
+    H_COOLDOWN_MS: 0 };
+  step(s, tick(0, 0.55, 0.45, { bzPrice: 101 }), P, 120, 0);
+  assert.deepEqual(step(s, tick(5, 0.45, 0.55, { bzPrice: 99 }), P, 120, 5000), []);
+  assert.equal(s.gateReason, "hedge-economics");
+  assert.ok(s.helpmeStatus.pairEdge < 0);
+});
+
+test("target policy strong reversal crosses only to the configured residual", () => {
+  const s = state({ upShares: 7, upCost: 3.5 });
+  const P = { ...STRAT, H_BINANCE_TREND_ON: false,
+    H_FIRST_ENTRY_EARLIEST_S: 0, H_REVERSAL_CONFIRM_MS: 0,
+    H_REVERSAL_SCORE_MIN: 0.9, H_REVERSAL_MIN_PAIR_EDGE: -1,
+    H_REVERSAL_MAX_WORST_LOSS_USD: 100, H_REVERSAL_RESIDUAL_SH: 4,
+    H_COOLDOWN_MS: 0 };
+  step(s, tick(0, 0.55, 0.45, { bzPrice: 101 }), P, 120, 0);
+  const [reversal] = step(s, tick(5, 0.45, 0.55, { bzPrice: 91 }), P, 120, 5000);
+  assert.equal(reversal.role, "reversal");
+  assert.equal(reversal.minimumShares, 11);
+  assert.equal(s.helpmeStatus.plannedPostOrientedShares, 4);
 });
 
 test("ask differential cannot override a flat enabled CLOB midpoint", () => {
@@ -308,11 +381,11 @@ test("a strong CLOB, Binance, trend, and window-gap confirmation crosses into a 
   assert.equal(reversal.role, "reversal");
   assert.equal(reversal.leg, "reversal");
   assert.equal(reversal.amountMode, "shares");
-  assert.equal(reversal.minimumShares, 17);
+  assert.equal(reversal.minimumShares, 11);
   assert.equal(reversal.liveOrderType, "GTC");
   assert.equal(s.helpmeStatus.reversalConfirmed, true);
   assert.equal(s.helpmeStatus.reversalConfirmedMs, 1000);
-  assert.equal(s.helpmeStatus.plannedPostOrientedShares, 10);
+  assert.equal(s.helpmeStatus.plannedPostOrientedShares, 4);
 });
 
 test("an opposite candidate pauses old-side top-ups until its reset interval expires", () => {
@@ -503,7 +576,6 @@ test("removed action and release controls are absent from the active strategy co
     "H_SAME_SIDE_ADDS_ON",
     "H_HEDGING_ON",
     "H_HEDGE_VALUE_GATE_ON",
-    "H_HEDGE_MIN_PAIR_EDGE",
     "H_BOUNDED_HEDGE_SHARES",
     "H_CROSS_RESIDUAL_SH",
     "H_REVERSAL_MAX_IMBALANCE_SH",

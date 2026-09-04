@@ -1,9 +1,10 @@
-// FastMX — CLOB-mid and Binance-gap velocity signals with the Binance
-// rolling-trend regime and inventory-aware opposite-signal handling.
+// FastMX — target-derived scored direction with explicit release hysteresis,
+// the Binance rolling-trend regime, and role-aware inventory handling.
 //
-// Each enabled fast signal must clear its own absolute threshold. When both are
-// enabled they must agree on direction. Binance gap velocity is the raw-dollar
-// dev-tool definition:
+// The default policy weights current CLOB level, five-second CLOB impulse, and
+// five-second Binance impulse. The legacy strict dual-threshold selector stays
+// available when H_TARGET_DIRECTION_ON is disabled. Binance gap velocity is
+// the raw-dollar dev-tool definition:
 //   (priceNow - windowOpen) - (pricePrior - windowOpen)
 // = priceNow - pricePrior.
 //
@@ -18,9 +19,10 @@
 // current five-minute window open. This is independent of whether Binance
 // velocity itself is enabled as a signal source.
 //
-// A distinct qualifying signal snapshot emits one order once the configured
-// cooldown allows. A signal aligned with flat/current inventory is an entry.
-// An opposing signal can be handled in two independently-toggleable ways:
+// A qualified impulse emits once and re-arms only across the exit band, on an
+// opposite direction, or after a material same-side top-up step. A signal
+// aligned with flat/current inventory is an entry. An opposing signal can be
+// handled in two independently-toggleable ways:
 //   - partial hedge: reduce the imbalance without worsening worst-case loss;
 //   - reversal: after persistent CLOB + Binance + trend confirmation, buy
 //     through balance only when pair economics and projected risk allow it.
@@ -28,9 +30,16 @@
 
 import { midOf } from "../momentum.js";
 import { fillFee } from "../fees.js";
+import { targetWalletRoleShares } from "./fastmx-target-sizing.js";
+import {
+  evaluateDirectionScore,
+  evaluateRelease,
+  markReleaseFired,
+  observeReleaseBand,
+} from "./fastmx-signal-policy.js";
 
 export const NAME = "helpme";
-export const LABEL = "FastMX · dual momentum + Binance trend regime";
+export const LABEL = "FastMX · scored direction + role-aware inventory";
 
 export const STRAT = {
   STRATEGY: NAME,
@@ -58,6 +67,36 @@ export const STRAT = {
   H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 60,
   H_BINANCE_COUNTERTREND_MIN_PCT: 0.075,
   H_BINANCE_GAP_AGREE_ON: false,
+  // Target-derived direction selector. The public evidence supports a
+  // five-second weighted CLOB-level/CLOB-impulse/Binance-impulse score, with
+  // an abstention band, more strongly than the old strict dual threshold.
+  H_TARGET_DIRECTION_ON: true,
+  H_DIRECTION_LOOKBACK_MS: 5000,
+  H_DIRECTION_LEVEL_SCALE: 0.05,
+  H_DIRECTION_CLOB_SCALE: 0.05,
+  H_DIRECTION_BINANCE_SCALE: 10,
+  H_DIRECTION_LEVEL_WEIGHT: 0.2,
+  H_DIRECTION_CLOB_WEIGHT: 0.3,
+  H_DIRECTION_BINANCE_WEIGHT: 0.5,
+  H_DIRECTION_ENTER_SCORE: 0.35,
+  H_DIRECTION_EXIT_SCORE: 0.15,
+  // One release per impulse. Same-side adds need either a reset below the exit
+  // band or a material score/price step after their own cooldown.
+  H_SIGNAL_HYSTERESIS_ON: true,
+  H_FIRST_ENTRY_EARLIEST_S: 15,
+  H_FIRST_ENTRY_CONFIRM_MS: 360,
+  H_TOPUP_CONFIRM_MS: 360,
+  H_TOPUP_COOLDOWN_MS: 8000,
+  H_TOPUP_SCORE_STEP: 0.2,
+  H_TOPUP_PRICE_STEP: 0.05,
+  H_HEDGE_CONFIRM_MS: 600,
+  H_HEDGE_COOLDOWN_MS: 6000,
+  H_HEDGE_SCORE_MIN: 0.6,
+  H_HEDGE_MIN_PAIR_EDGE: -0.03,
+  H_REVERSAL_SCORE_MIN: 0.95,
+  H_REVERSAL_COOLDOWN_MS: 3000,
+  H_HEDGE_RETAIN_MAX_SH: 8,
+  H_MAX_ACTIONS_PER_WINDOW: 7,
   // Adaptive inventory control: an opposing qualified signal may immediately
   // reduce the old-side lead, but it cannot cross inventory without the stricter
   // persistent reversal confirmation below.
@@ -66,10 +105,10 @@ export const STRAT = {
   // receives price improvement.
   H_HEDGE_RETAIN_SH: 1,
   H_REVERSAL_ON: true,
-  H_REVERSAL_RESIDUAL_SH: 10,
+  H_REVERSAL_RESIDUAL_SH: 4,
   H_REVERSAL_CONFIRM_MS: 1000,
   H_OPPOSITE_CANDIDATE_RESET_MS: 3000,
-  H_REVERSAL_MIN_PAIR_EDGE: -0.03,
+  H_REVERSAL_MIN_PAIR_EDGE: -0.1,
   H_REVERSAL_MAX_WORST_LOSS_USD: 10,
   H_REVERSAL_MAX_ORDER_SH: 50,
   H_MIN_ASK: 0.05,
@@ -79,6 +118,15 @@ export const STRAT = {
   H_MIN_DEPTH_SH: 4,
   H_BASE_ORDER_SH: 7,
   H_MIN_ORDER_SH: 4,
+  // Preserve 7 shares as the capital anchor, but reshape each qualifying BUY
+  // using the target wallet's signed cap→integer-share menu.
+  H_TARGET_SIZE_ON: false,
+  H_TARGET_SIZE_SCALE: 1,
+  H_TARGET_SIZE_MAX_SH: 50,
+  H_TARGET_TOPUP_MIN_SCALE: 0.65,
+  // Keep the independently-gated reversal residual unchanged unless this is
+  // explicitly enabled after a paired replay.
+  H_TARGET_REVERSAL_SIZE_ON: false,
   H_COOLDOWN_MS: 1000,
   MAX_SESSION_LOSS: 25,
 };
@@ -100,12 +148,42 @@ export function signalToggles(P = STRAT) {
 }
 
 export function validateParams(P = STRAT) {
-  const toggles = signalToggles({ ...STRAT, ...(P || {}) });
+  const merged = { ...STRAT, ...(P || {}) };
+  const toggles = signalToggles(merged);
   if (!toggles.clobMid && !toggles.binanceGap) {
     throw new RangeError("at least one FastMX fast-momentum toggle must be enabled");
   }
   if (toggles.binanceTrend && !toggles.binanceGap) {
     throw new RangeError("the poly-mom Binance trend regime requires Binance gap momentum");
+  }
+  if (enabled(merged.H_TARGET_DIRECTION_ON, true)) {
+    const enter = finite(merged.H_DIRECTION_ENTER_SCORE);
+    const exit = finite(merged.H_DIRECTION_EXIT_SCORE);
+    const weights = [toggles.clobMid ? finite(merged.H_DIRECTION_LEVEL_WEIGHT) : 0,
+      toggles.clobMid ? finite(merged.H_DIRECTION_CLOB_WEIGHT) : 0,
+      toggles.binanceGap ? finite(merged.H_DIRECTION_BINANCE_WEIGHT) : 0];
+    if (!(finite(merged.H_DIRECTION_LOOKBACK_MS) >= 1000)) {
+      throw new RangeError("target direction lookback must be at least 1000 ms");
+    }
+    if (!(enter > 0 && enter <= 1) || !(exit >= 0 && exit < enter)) {
+      throw new RangeError("target direction scores require 0 <= exit < enter <= 1");
+    }
+    if (!weights.some((weight) => weight > 0)) {
+      throw new RangeError("target direction requires a positive enabled component weight");
+    }
+    if (toggles.clobMid && (!(finite(merged.H_DIRECTION_LEVEL_SCALE) > 0)
+        || !(finite(merged.H_DIRECTION_CLOB_SCALE) > 0))
+        || toggles.binanceGap && !(finite(merged.H_DIRECTION_BINANCE_SCALE) > 0)) {
+      throw new RangeError("target direction component scales must be positive");
+    }
+    if (!(finite(merged.H_MAX_ACTIONS_PER_WINDOW) >= 1)) {
+      throw new RangeError("target direction action cap must be at least one");
+    }
+  }
+  if (enabled(merged.H_TARGET_SIZE_ON, false)
+      && (!(finite(merged.H_TARGET_SIZE_SCALE) > 0)
+        || !(finite(merged.H_TARGET_SIZE_MAX_SH) >= finite(merged.H_MIN_ORDER_SH)))) {
+    throw new RangeError("target sizing requires positive scale and max shares >= minimum order");
   }
   return true;
 }
@@ -419,6 +497,13 @@ function makeOrder(state, model, tk, clockMs, {
       binanceLookbackMs: signal.binanceLookbackMs,
       velocityMin: round4(signal.velocityMin),
       binanceGapVelocityMin: round4(signal.binanceGapVelocityMin),
+      targetDirectionOn: signal.targetDirectionOn,
+      directionScore: round4(signal.directionScore),
+      directionConfidence: round4(signal.directionConfidence),
+      directionRawSide: signal.directionRawSide,
+      directionEnterScore: round4(signal.directionEnterScore),
+      directionExitScore: round4(signal.directionExitScore),
+      directionComponents: signal.directionComponents,
       capDepth: round4(quote.available),
     },
   };
@@ -443,8 +528,13 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   if (!Number.isFinite(model.lastOrderMs)) model.lastOrderMs = -Infinity;
   model.orderCount ||= 0;
 
-  const midLookbackMs = Math.max(1000, +P.H_MID_VELOCITY_LOOKBACK_MS || 3000);
-  const binanceLookbackMs = Math.max(1000, +P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS || 3000);
+  const targetDirectionOn = enabled(P.H_TARGET_DIRECTION_ON, true);
+  const signalHysteresisOn = targetDirectionOn && enabled(P.H_SIGNAL_HYSTERESIS_ON, true);
+  const targetLookbackMs = Math.max(1000, finite(P.H_DIRECTION_LOOKBACK_MS) ?? 5000);
+  const midLookbackMs = targetDirectionOn ? targetLookbackMs
+    : Math.max(1000, +P.H_MID_VELOCITY_LOOKBACK_MS || 3000);
+  const binanceLookbackMs = targetDirectionOn ? targetLookbackMs
+    : Math.max(1000, +P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS || 3000);
   const binanceCountertrendLookbackSec = Math.max(1, Math.min(60,
     finite(P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC) ?? 60));
   const binanceTrendLookbackSec = Math.max(1, Math.min(300,
@@ -494,6 +584,22 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   });
   const binanceTrendPct = trendRegime.trendPct;
   const binanceTrendDir = trendRegime.trendDirection;
+  const targetDirection = evaluateDirectionScore({
+    midpoint: momentum.midpoint,
+    midVelocity,
+    binanceVelocity: binanceGapVelocity,
+    clobLevelOn: toggles.clobMid,
+    clobVelocityOn: toggles.clobMid,
+    binanceVelocityOn: toggles.binanceGap,
+    levelScale: P.H_DIRECTION_LEVEL_SCALE,
+    clobScale: P.H_DIRECTION_CLOB_SCALE,
+    binanceScale: P.H_DIRECTION_BINANCE_SCALE,
+    levelWeight: P.H_DIRECTION_LEVEL_WEIGHT,
+    clobWeight: P.H_DIRECTION_CLOB_WEIGHT,
+    binanceWeight: P.H_DIRECTION_BINANCE_WEIGHT,
+    enterScore: P.H_DIRECTION_ENTER_SCORE,
+    exitScore: P.H_DIRECTION_EXIT_SCORE,
+  });
   const signal = {
     clobMidVelocityOn: toggles.clobMid,
     binanceGapMomentumOn: toggles.binanceGap,
@@ -533,6 +639,13 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     binanceLookbackMs,
     velocityMin,
     binanceGapVelocityMin,
+    targetDirectionOn,
+    directionScore: targetDirection.score,
+    directionConfidence: targetDirection.confidence,
+    directionRawSide: targetDirection.rawSide,
+    directionEnterScore: targetDirection.enterScore,
+    directionExitScore: targetDirection.exitScore,
+    directionComponents: targetDirection.components,
   };
   const inv = effectivePosition(state, P);
   const baseStatus = {
@@ -572,6 +685,14 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     binanceLookbackMs,
     velocityMin,
     binanceGapVelocityMin,
+    targetDirectionOn,
+    signalHysteresisOn,
+    directionScore: targetDirection.score,
+    directionConfidence: targetDirection.confidence,
+    directionRawSide: targetDirection.rawSide,
+    directionEnterScore: targetDirection.enterScore,
+    directionExitScore: targetDirection.exitScore,
+    directionComponents: targetDirection.components,
     upShares: inv.up,
     downShares: inv.down,
     net: inv.net,
@@ -590,22 +711,34 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     return resetSignal(state, model, { ...baseStatus, gate: "binance-trend-needs-binance-momentum" });
   }
   if (toggles.clobMid && midVelocity == null) {
+    if (signalHysteresisOn) observeReleaseBand(model, targetDirection);
     return resetSignal(state, model, { ...baseStatus, gate: "clob-mid-warmup" });
   }
-  if (toggles.clobMid && !velocityDir) {
-    return resetSignal(state, model, { ...baseStatus, gate: "clob-mid-velocity" });
-  }
   if (toggles.binanceGap && binanceGapVelocity == null) {
+    if (signalHysteresisOn) observeReleaseBand(model, targetDirection);
     return resetSignal(state, model, { ...baseStatus, gate: "binance-gap-warmup" });
   }
-  if (toggles.binanceGap && !binanceDir) {
-    return resetSignal(state, model, { ...baseStatus, gate: "binance-gap-velocity" });
-  }
-  const enabledDirections = [toggles.clobMid ? velocityDir : null,
-    toggles.binanceGap ? binanceDir : null].filter(Boolean);
-  const side = enabledDirections[0];
-  if (!enabledDirections.every((direction) => direction === side)) {
-    return resetSignal(state, model, { ...baseStatus, gate: "momentum-disagreement" });
+  let side = null;
+  if (targetDirectionOn) {
+    observeReleaseBand(model, targetDirection);
+    if (!targetDirection.qualified || !targetDirection.side) {
+      return resetSignal(state, model, { ...baseStatus,
+        gate: targetDirection.released ? "direction-score-rearmed" : "direction-score" });
+    }
+    side = targetDirection.side;
+  } else {
+    if (toggles.clobMid && !velocityDir) {
+      return resetSignal(state, model, { ...baseStatus, gate: "clob-mid-velocity" });
+    }
+    if (toggles.binanceGap && !binanceDir) {
+      return resetSignal(state, model, { ...baseStatus, gate: "binance-gap-velocity" });
+    }
+    const enabledDirections = [toggles.clobMid ? velocityDir : null,
+      toggles.binanceGap ? binanceDir : null].filter(Boolean);
+    side = enabledDirections[0];
+    if (!enabledDirections.every((direction) => direction === side)) {
+      return resetSignal(state, model, { ...baseStatus, gate: "momentum-disagreement" });
+    }
   }
   // poly-mom semantics: unavailable or weak trend history leaves the fast
   // signal unchanged. Only an opposing signal in a strong trend is gated.
@@ -662,6 +795,46 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     ? (reversalConfirmedMs + EPS >= reversalConfirmMs ? "confirmed" : "pending")
     : null;
 
+  const firstEntry = model.orderCount === 0 && inv.gross <= EPS;
+  const reversalScoreMin = Math.max(targetDirection.enterScore,
+    finite(P.H_REVERSAL_SCORE_MIN) ?? 0.95);
+  const strongOpposite = oppositeSignal && targetDirectionOn
+    && targetDirection.confidence + EPS >= reversalScoreMin;
+  const hedgeScoreMin = Math.max(targetDirection.enterScore,
+    finite(P.H_HEDGE_SCORE_MIN) ?? 0.6);
+  const qualifiedHedge = !targetDirectionOn
+    || targetDirection.confidence + EPS >= hedgeScoreMin;
+  const releaseRole = oppositeSignal
+    ? (reversalOn && strongOpposite ? "reversal" : "hedge")
+    : (firstEntry ? "first-entry" : "topup");
+  const roleConfirmMs = releaseRole === "first-entry"
+    ? Math.max(0, finite(P.H_FIRST_ENTRY_CONFIRM_MS) ?? 360)
+    : releaseRole === "topup" ? Math.max(0, finite(P.H_TOPUP_CONFIRM_MS) ?? 360)
+      : releaseRole === "hedge" ? Math.max(0, finite(P.H_HEDGE_CONFIRM_MS) ?? 600)
+        : reversalConfirmMs;
+  const roleCooldownMs = releaseRole === "topup"
+    ? Math.max(0, finite(P.H_TOPUP_COOLDOWN_MS) ?? 8000)
+    : releaseRole === "hedge" ? Math.max(0, finite(P.H_HEDGE_COOLDOWN_MS) ?? 6000)
+      : releaseRole === "reversal" ? Math.max(0, finite(P.H_REVERSAL_COOLDOWN_MS) ?? 3000)
+        : 0;
+  baseStatus.releaseRole = releaseRole;
+  baseStatus.roleConfirmMs = roleConfirmMs;
+  baseStatus.roleCooldownMs = roleCooldownMs;
+  baseStatus.hedgeScoreMin = hedgeScoreMin;
+
+  if (signalHysteresisOn && oppositeSignal && !qualifiedHedge) {
+    return resetSignal(state, model, { ...baseStatus, gate: "opposite-score", side });
+  }
+
+  if (signalHysteresisOn && firstEntry
+      && tk.t + EPS < Math.max(0, finite(P.H_FIRST_ENTRY_EARLIEST_S) ?? 15)) {
+    return resetSignal(state, model, { ...baseStatus, gate: "first-entry-earliest" });
+  }
+  const maxActions = Math.max(1, Math.round(finite(P.H_MAX_ACTIONS_PER_WINDOW) ?? 7));
+  if (signalHysteresisOn && model.orderCount >= maxActions) {
+    return resetSignal(state, model, { ...baseStatus, gate: "window-action-cap", maxActions });
+  }
+
   const cooldownMs = Math.max(0, +P.H_COOLDOWN_MS || 0);
   if (clockMs - model.lastOrderMs < cooldownMs) {
     setStatus(state, { ...baseStatus, gate: "cooldown", side,
@@ -669,8 +842,21 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     return [];
   }
 
-  const eventKey = signalEventKey(signal, side, toggles, oppositePhase);
-  if (model.lastSignalKey === eventKey) {
+  const eventKey = signalHysteresisOn ? null
+    : signalEventKey(signal, side, toggles, oppositePhase);
+  if (signalHysteresisOn) {
+    const release = evaluateRelease(model, { direction: targetDirection,
+      role: releaseRole, clockMs, midpoint: momentum.midpoint,
+      confirmMs: roleConfirmMs, roleCooldownMs,
+      topupScoreStep: P.H_TOPUP_SCORE_STEP,
+      topupPriceStep: P.H_TOPUP_PRICE_STEP });
+    if (!release.eligible) {
+      setStatus(state, { ...baseStatus, gate: release.gate, side,
+        releaseConfirmedMs: release.confirmedMs ?? null,
+        releaseRemainingMs: release.remainingMs ?? null });
+      return [];
+    }
+  } else if (model.lastSignalKey === eventKey) {
     setStatus(state, { ...baseStatus, gate: "signal-already-entered", side });
     return [];
   }
@@ -688,18 +874,42 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
       capDepth: quote.available }); return [];
   }
 
-  const baseShares = Math.max(minOrder, +P.H_BASE_ORDER_SH || +P.SIZE || 7);
-  const reversalResidual = Math.max(minOrder,
-    finite(P.H_REVERSAL_RESIDUAL_SH) ?? 10);
+  const staticBaseShares = Math.max(minOrder, +P.H_BASE_ORDER_SH || +P.SIZE || 7);
+  const targetSizeOn = enabled(P.H_TARGET_SIZE_ON, false);
+  const targetSizeMax = Math.max(minOrder,
+    finite(P.H_TARGET_SIZE_MAX_SH) ?? 50);
+  const targetSizedShares = targetWalletRoleShares(quote.cap, {
+    role: releaseRole,
+    confidence: targetDirection.confidence,
+    enterScore: targetDirection.enterScore,
+    topupMinScale: P.H_TARGET_TOPUP_MIN_SCALE,
+    baseShares: staticBaseShares,
+    minShares: minOrder,
+    maxShares: targetSizeMax,
+    scale: finite(P.H_TARGET_SIZE_SCALE) ?? 1,
+  });
+  const entrySizedRole = releaseRole === "first-entry" || releaseRole === "topup";
+  const baseShares = targetSizeOn && entrySizedRole ? targetSizedShares : staticBaseShares;
+  const staticReversalResidual = Math.max(minOrder,
+    finite(P.H_REVERSAL_RESIDUAL_SH) ?? 4);
+  const reversalResidual = targetSizeOn && enabled(P.H_TARGET_REVERSAL_SIZE_ON, false)
+    ? targetSizedShares : staticReversalResidual;
   // A reversal is intentionally stricter than an ordinary entry: both raw
   // momentum sources, the strong trailing trend, and spot-vs-window-open must
   // all point to the new side. This remains true even if ordinary entries use
   // only one source or have window-gap agreement disabled.
-  const reversalSnapshotConfirmed = velocityDir === side
-    && binanceDir === side
-    && trendRegime.strongTrend
-    && trendRegime.trendDirection === side
-    && binanceWindowGapDir === side;
+  const sideSign = side === "Up" ? 1 : -1;
+  const scoreSnapshotConfirmed = targetDirectionOn
+    && targetDirection.confidence + EPS >= reversalScoreMin
+    && (targetDirection.components.level ?? 0) * sideSign > 0
+    && ((targetDirection.components.clob ?? 0) * sideSign > 0
+      || (targetDirection.components.binance ?? 0) * sideSign > 0);
+  const reversalSnapshotConfirmed = targetDirectionOn ? scoreSnapshotConfirmed
+    : velocityDir === side
+      && binanceDir === side
+      && trendRegime.strongTrend
+      && trendRegime.trendDirection === side
+      && binanceWindowGapDir === side;
   const reversalConfirmed = reversalSnapshotConfirmed
     && reversalConfirmedMs + EPS >= reversalConfirmMs;
 
@@ -710,7 +920,10 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   const oldUnitCost = oldShares > EPS ? (oldCost + allocatedOldFee) / oldShares : null;
   const pairEdge = oldUnitCost == null ? null
     : 1 - oldUnitCost - quote.cap - fillFee(quote.cap, 1, true, P);
-  const minPairEdge = finite(P.H_REVERSAL_MIN_PAIR_EDGE) ?? -0.03;
+  const minPairEdge = finite(P.H_REVERSAL_MIN_PAIR_EDGE) ?? -0.1;
+  const hedgeMinPairEdge = finite(P.H_HEDGE_MIN_PAIR_EDGE) ?? -0.03;
+  const hedgeEconomic = !targetDirectionOn
+    || (pairEdge != null && pairEdge + EPS >= hedgeMinPairEdge);
   const maxWorstLoss = Math.max(0,
     finite(P.H_REVERSAL_MAX_WORST_LOSS_USD) ?? 10);
   const maxReversalOrder = Math.max(minOrder,
@@ -724,9 +937,10 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   const reversalSizeAllowed = desiredReversalShares <= maxReversalOrder + EPS;
   const reversalDepthAllowed = desiredReversalShares <= quote.available + EPS;
 
-  let leg = "entry", role = "entry", amountMode = "usd";
+  let leg = "entry", role = signalHysteresisOn ? releaseRole : "entry", amountMode = "usd";
   let shares = baseShares;
-  let reason = toggles.clobMid && toggles.binanceGap ? "dual-velocity-entry"
+  let reason = targetDirectionOn ? `target-score-${role}`
+    : toggles.clobMid && toggles.binanceGap ? "dual-velocity-entry"
     : toggles.clobMid ? "clob-mid-velocity-entry" : "binance-gap-momentum-entry";
 
   if (oppositeSignal) {
@@ -739,15 +953,29 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
       amountMode = "shares";
       reason = "strong-confirmed-inventory-reversal";
     } else if (hedgeOn) {
-      const retain = Math.max(EPS, finite(P.H_HEDGE_RETAIN_SH) ?? 1);
+      const minRetain = Math.max(EPS, finite(P.H_HEDGE_RETAIN_SH) ?? 1);
+      const maxRetain = Math.max(minRetain,
+        finite(P.H_HEDGE_RETAIN_MAX_SH) ?? minRetain);
+      const strength = targetDirectionOn
+        ? Math.max(0, Math.min(1, (targetDirection.confidence - targetDirection.enterScore)
+          / Math.max(EPS, reversalScoreMin - targetDirection.enterScore)))
+        : 1;
+      const retain = targetDirectionOn
+        ? Math.max(minRetain, Math.ceil(maxRetain - strength * (maxRetain - minRetain)))
+        : minRetain;
       // Q <= old imbalance - retained lead, so the pre-existing inventory side
       // remains the majority after any complete partial-hedge fill.
-      shares = Math.min(baseShares, oldImbalance - retain, quote.available,
+      shares = Math.min(staticBaseShares, oldImbalance - retain, quote.available,
         maxReversalOrder);
       if (shares + EPS < minOrder) {
         setStatus(state, { ...baseStatus, gate: "hedge-retained-majority", side,
           oldImbalance, retainedLeadShares: retain,
           maximumHedgeShares: Math.max(0, oldImbalance - retain) });
+        return [];
+      }
+      if (!hedgeEconomic) {
+        setStatus(state, { ...baseStatus, gate: "hedge-economics", side,
+          oldImbalance, pairEdge, hedgeMinPairEdge });
         return [];
       }
       const hedgeProjection = projectedPosition(inv, side, shares, quote.cap, P);
@@ -798,6 +1026,8 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     ask: quote.ask, cap: quote.cap, reason, signal, quote,
     liveOrderType: P.H_LIVE_ORDER_TYPE, leg, role, amountMode });
   model.lastSignalKey = eventKey;
+  if (signalHysteresisOn) markReleaseFired(model, { role, side, clockMs,
+    confidence: targetDirection.confidence, midpoint: momentum.midpoint });
   if (leg === "reversal") {
     model.oppositeCandidateSide = null;
     model.oppositeCandidateSinceMs = null;
@@ -806,8 +1036,10 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   setStatus(state, { ...baseStatus, gate: "fired", side, role,
     ask: quote.ask, cap: quote.cap, minimumShares: shares,
     budgetUsd: rec.budgetUsd, capDepth: quote.available,
+    targetSizeOn, staticBaseShares, targetSizedShares,
     oldImbalance, reversalConfirmed, reversalConfirmedMs, reversalConfirmMs,
     pairEdge, minPairEdge, currentWorstLoss: inv.worstLoss,
+    hedgeMinPairEdge, hedgeEconomic,
     projectedWorstLoss: leg === "reversal" ? reversalProjection.worstLoss : null,
     oppositeCandidateSide: leg === "reversal" ? null : model.oppositeCandidateSide,
     plannedPostOrientedShares: oppositeSignal

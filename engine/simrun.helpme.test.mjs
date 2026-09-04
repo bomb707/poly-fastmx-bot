@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { simulateFills } from "./simrun.js";
 
+const LEGACY_RELEASE = {
+  H_TARGET_DIRECTION_ON: false,
+  H_SIGNAL_HYSTERESIS_ON: false,
+};
+
 function side(bestAsk, bestBid, askRows = [[bestAsk, 30], [+(bestAsk + 0.01).toFixed(2), 30]]) {
   return { bestAsk, bestBid, asks: askRows, bids: [[bestBid, 50], [+(bestBid - 0.01).toFixed(2), 50]], depthKnown: true };
 }
@@ -22,6 +27,7 @@ test("recorded:false replay keeps entries fixed-USD and opposing hedges exact-sh
     tick(71.52, 0.43, 0.44, 98.9, undefined, [[0.44, 20]]),
   ];
   const fills = simulateFills({ ticks, openBinance: 100, openPrice: 100, windowStart: 0 }, {
+    ...LEGACY_RELEASE,
     LATENCY_MS: 520, STALE_GAP_MS: 10000, H_COOLDOWN_MS: 0,
     H_MID_VELOCITY_MIN: 0.01,
     H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 5000, H_BINANCE_GAP_VELOCITY_MIN: 0.01,
@@ -46,7 +52,7 @@ test("BBA-only historical ticks cannot fabricate Helpme L2 liquidity", () => {
     { t: 65, upAsk: 0.52, dnAsk: 0.48, bz: 100.1, cl: 100 },
   ];
   assert.deepEqual(simulateFills({ ticks, openBinance: 100, openPrice: 100 },
-    { LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
+    { ...LEGACY_RELEASE, LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
 });
 
 test("a one-sided coherent frame can trade only the side with real L2 liquidity", () => {
@@ -57,6 +63,7 @@ test("a one-sided coherent frame can trade only the side with real L2 liquidity"
     upBid: 0.50, dnBid: 0.48, up, down, bz: 110, cl: 100 };
   const fills = simulateFills({ ticks: [first, oneSided], openBinance: 100,
     openPrice: 100, windowStart: 0 }, {
+    ...LEGACY_RELEASE,
     LATENCY_MS: 0, H_BINANCE_TREND_ON: false,
     H_MID_VELOCITY_MIN: 0.02, H_BINANCE_GAP_VELOCITY_MIN: 5,
   });
@@ -72,6 +79,7 @@ test("replay inventory economics include fees already paid by completed fills", 
   ];
   const fills = simulateFills({ ticks, openBinance: 100, openPrice: 100,
     windowStart: 0 }, {
+    ...LEGACY_RELEASE,
     LATENCY_MS: 0, H_COOLDOWN_MS: 0,
     H_MID_VELOCITY_LOOKBACK_MS: 1000, H_MID_VELOCITY_MIN: 0.01,
     H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 1000, H_BINANCE_GAP_VELOCITY_MIN: 0.01,
@@ -94,6 +102,7 @@ test("completed inventory transitions from entry through hedge into a confirmed 
     tick(3, 0.44, 0.45, 98),
   ];
   const fills = simulateFills({ ticks, openBinance: 100, openPrice: 100, windowStart: 0 }, {
+    ...LEGACY_RELEASE,
     LATENCY_MS: 0, H_START_S: 0, H_COOLDOWN_MS: 0,
     H_MID_VELOCITY_LOOKBACK_MS: 1000, H_MID_VELOCITY_MIN: 0.01,
     H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 1000, H_BINANCE_GAP_VELOCITY_MIN: 0.01,
@@ -104,6 +113,7 @@ test("completed inventory transitions from entry through hedge into a confirmed 
     H_BINANCE_GAP_AGREE_ON: false,
     H_HEDGE_ON: true, H_REVERSAL_ON: true,
     H_REVERSAL_CONFIRM_MS: 1000, H_REVERSAL_MIN_PAIR_EDGE: -0.1,
+    H_REVERSAL_RESIDUAL_SH: 10,
     H_REVERSAL_MAX_WORST_LOSS_USD: 10, H_REVERSAL_MAX_ORDER_SH: 50,
   });
 

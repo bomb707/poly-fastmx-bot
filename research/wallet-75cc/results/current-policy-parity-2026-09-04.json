@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-09-04T10:54:37.144Z",
+  "target": "0x75cc3b63a2f2423085e10706c78b494017b93ce1",
+  "method": "one-to-one same-market, same-side causal decision-time matching",
+  "source": "cached coherent BAPI v2 full-L2 replay and public target actions shifted by 520 ms",
+  "usableMarkets": 562,
+  "roleCounts": {
+    "first-entry": 497,
+    "hedge": 50,
+    "reversal": 16,
+    "topup": 2746
+  },
+  "all": {
+    "750": {
+      "predictions": 3309,
+      "targetActions": 3594,
+      "matches": 202,
+      "precision": 0.061046,
+      "recall": 0.056205,
+      "f1": 0.058525,
+      "releaseMatchesIgnoringSide": 207,
+      "matchedReleaseSideAccuracy": 0.975845,
+      "medianDecisionDeltaMs": 78
+    },
+    "2000": {
+      "predictions": 3309,
+      "targetActions": 3594,
+      "matches": 536,
+      "precision": 0.161982,
+      "recall": 0.149137,
+      "f1": 0.155295,
+      "releaseMatchesIgnoringSide": 551,
+      "matchedReleaseSideAccuracy": 0.972777,
+      "medianDecisionDeltaMs": -6
+    },
+    "5000": {
+      "predictions": 3309,
+      "targetActions": 3594,
+      "matches": 798,
+      "precision": 0.24116,
+      "recall": 0.222037,
+      "f1": 0.231204,
+      "releaseMatchesIgnoringSide": 919,
+      "matchedReleaseSideAccuracy": 0.853101,
+      "medianDecisionDeltaMs": -167
+    }
+  },
+  "discovery": {
+    "750": {
+      "predictions": 2886,
+      "targetActions": 3123,
+      "matches": 172,
+      "precision": 0.059598,
+      "recall": 0.055075,
+      "f1": 0.057247,
+      "releaseMatchesIgnoringSide": 176,
+      "matchedReleaseSideAccuracy": 0.977273,
+      "medianDecisionDeltaMs": 9
+    },
+    "2000": {
+      "predictions": 2886,
+      "targetActions": 3123,
+      "matches": 468,
+      "precision": 0.162162,
+      "recall": 0.149856,
+      "f1": 0.155766,
+      "releaseMatchesIgnoringSide": 481,
+      "matchedReleaseSideAccuracy": 0.972973,
+      "medianDecisionDeltaMs": -32
+    },
+    "5000": {
+      "predictions": 2886,
+      "targetActions": 3123,
+      "matches": 700,
+      "precision": 0.24255,
+      "recall": 0.224143,
+      "f1": 0.232984,
+      "releaseMatchesIgnoringSide": 807,
+      "matchedReleaseSideAccuracy": 0.851301,
+      "medianDecisionDeltaMs": -230
+    }
+  },
+  "holdout": {
+    "750": {
+      "predictions": 423,
+      "targetActions": 471,
+      "matches": 30,
+      "precision": 0.070922,
+      "recall": 0.063694,
+      "f1": 0.067114,
+      "releaseMatchesIgnoringSide": 31,
+      "matchedReleaseSideAccuracy": 0.967742,
+      "medianDecisionDeltaMs": 113
+    },
+    "2000": {
+      "predictions": 423,
+      "targetActions": 471,
+      "matches": 68,
+      "precision": 0.160757,
+      "recall": 0.144374,
+      "f1": 0.152125,
+      "releaseMatchesIgnoringSide": 70,
+      "matchedReleaseSideAccuracy": 0.971429,
+      "medianDecisionDeltaMs": 92
+    },
+    "5000": {
+      "predictions": 423,
+      "targetActions": 471,
+      "matches": 98,
+      "precision": 0.231678,
+      "recall": 0.208068,
+      "f1": 0.219239,
+      "releaseMatchesIgnoringSide": 112,
+      "matchedReleaseSideAccuracy": 0.866071,
+      "medianDecisionDeltaMs": 70
+    }
+  }
+}
