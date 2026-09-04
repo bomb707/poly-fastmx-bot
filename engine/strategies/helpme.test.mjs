@@ -63,6 +63,11 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal(STRAT.H_BINANCE_COUNTERTREND_LOOKBACK_SEC, 60);
   assert.equal(STRAT.H_BINANCE_COUNTERTREND_MIN_PCT, 0.075);
   assert.equal(STRAT.H_BINANCE_GAP_AGREE_ON, false);
+  assert.equal(STRAT.H_HEDGE_ON, true);
+  assert.equal(STRAT.H_REVERSAL_ON, true);
+  assert.equal(STRAT.H_REVERSAL_CONFIRM_MS, 1000);
+  assert.equal(STRAT.H_OPPOSITE_CANDIDATE_RESET_MS, 3000);
+  assert.equal(STRAT.H_REVERSAL_MAX_ORDER_SH, 50);
 
   step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), FAST, 120, 0);
   step(s, tick(2, 0.51, 0.49, { bzPrice: 100 }), FAST, 120, 2000);
@@ -290,11 +295,15 @@ test("a strong CLOB, Binance, trend, and window-gap confirmation crosses into a 
     H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
     H_HEDGE_ON: true,
     H_REVERSAL_ON: true,
+    H_REVERSAL_CONFIRM_MS: 1000,
   };
   step(s, tick(0, 0.55, 0.45, { openBinance: 100, bzPrice: 101 }), P, 120, 0);
-  const [reversal] = step(s,
+  const [hedge] = step(s,
     tick(5, 0.45, 0.55, { openBinance: 100, bzPrice: 99 }), P, 120, 5000);
+  const [reversal] = step(s,
+    tick(6, 0.43, 0.45, { openBinance: 100, bzPrice: 98 }), P, 120, 6000);
 
+  assert.equal(hedge.role, "hedge");
   assert.equal(reversal.side, "Down");
   assert.equal(reversal.role, "reversal");
   assert.equal(reversal.leg, "reversal");
@@ -302,7 +311,58 @@ test("a strong CLOB, Binance, trend, and window-gap confirmation crosses into a 
   assert.equal(reversal.minimumShares, 17);
   assert.equal(reversal.liveOrderType, "GTC");
   assert.equal(s.helpmeStatus.reversalConfirmed, true);
+  assert.equal(s.helpmeStatus.reversalConfirmedMs, 1000);
   assert.equal(s.helpmeStatus.plannedPostOrientedShares, 10);
+});
+
+test("an opposite candidate pauses old-side top-ups until its reset interval expires", () => {
+  const s = state({ upShares: 14, upCost: 7 });
+  const P = { ...FAST, H_BINANCE_GAP_MOMENTUM_ON: false,
+    H_MID_VELOCITY_LOOKBACK_MS: 1000,
+    H_BINANCE_TREND_ON: false, H_BINANCE_GAP_AGREE_ON: false,
+    H_HEDGE_ON: false, H_REVERSAL_ON: true,
+    H_REVERSAL_CONFIRM_MS: 1000, H_OPPOSITE_CANDIDATE_RESET_MS: 3000 };
+  step(s, tick(0, 0.50, 0.50), P, 120, 0);
+  assert.deepEqual(step(s, tick(1, 0.48, 0.52), P, 120, 1000), []);
+  assert.equal(s.gateReason, "reversal-confirmation");
+
+  assert.deepEqual(step(s, tick(1.5, 0.52, 0.48), P, 120, 1500), []);
+  assert.equal(s.gateReason, "opposite-candidate-pending");
+
+  const [entry] = step(s, tick(5, 0.54, 0.46), P, 120, 5000);
+  assert.equal(entry.side, "Up");
+  assert.equal(entry.role, "entry");
+});
+
+test("large old inventory is de-risked instead of being disabled by a fixed imbalance cap", () => {
+  const s = state({ upShares: 207, upCost: 100 });
+  const P = { ...FAST, H_BINANCE_GAP_MOMENTUM_ON: false,
+    H_BINANCE_TREND_ON: false, H_BINANCE_GAP_AGREE_ON: false,
+    H_HEDGE_ON: true, H_REVERSAL_ON: true, H_REVERSAL_MAX_ORDER_SH: 50 };
+  step(s, tick(0, 0.55, 0.45), P, 120, 0);
+  const [order] = step(s, tick(5, 0.45, 0.45), P, 120, 5000);
+  assert.equal(order.side, "Down");
+  assert.equal(order.role, "hedge");
+  assert.equal(order.minimumShares, 7);
+  assert.equal("H_REVERSAL_MAX_IMBALANCE_SH" in STRAT, false);
+});
+
+test("insufficient reversal depth falls back to a bounded hedge", () => {
+  const s = state({ upShares: 14, upCost: 7 });
+  const P = { ...FAST, H_BINANCE_GAP_VELOCITY_MIN: 0.1,
+    H_BINANCE_TREND_ON: true, H_BINANCE_TREND_LOOKBACK_SEC: 5,
+    H_BINANCE_TREND_MIN_PCT: 0.05,
+    H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 5,
+    H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
+    H_HEDGE_ON: true, H_REVERSAL_ON: true, H_REVERSAL_CONFIRM_MS: 0,
+    H_REVERSAL_MIN_PAIR_EDGE: -1, H_REVERSAL_MAX_WORST_LOSS_USD: 100 };
+  step(s, tick(0, 0.55, 0.45, { openBinance: 100, bzPrice: 101 }), P, 120, 0);
+  const [order] = step(s, tick(5, 0.45, 0.45, {
+    openBinance: 100, bzPrice: 99, downAskSizes: [7],
+  }), P, 120, 5000);
+  assert.equal(order.role, "hedge");
+  assert.equal(order.minimumShares, 7);
+  assert.equal(order.reason, "reversal-risk-bounded-partial-hedge");
 });
 
 test("without strong reversal confirmation an opposing signal hedges but never crosses", () => {
@@ -446,6 +506,7 @@ test("removed action and release controls are absent from the active strategy co
     "H_HEDGE_MIN_PAIR_EDGE",
     "H_BOUNDED_HEDGE_SHARES",
     "H_CROSS_RESIDUAL_SH",
+    "H_REVERSAL_MAX_IMBALANCE_SH",
     "H_MAX_ORDERS",
     "H_MAX_CELL_USES",
     "H_MAX_WINDOW_LOSS_USD",

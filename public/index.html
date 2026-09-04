@@ -783,8 +783,8 @@
         </label>
         <label class="cfgnum" title="BASE ORDER — minimum shares signed at the limit cap. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
         <label class="cfgnum" title="COOLDOWN — minimum time between entry releases in the same five-minute market. This is the only release throttle.">cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="1000"></label>
-        <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal may buy the underweight side, but the previous inventory leader must retain more shares. Defaults off because it failed the paired train/holdout replay."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
-        <label class="cfgtgl" title="REVERSAL — cross inventory only when CLOB momentum, Binance momentum, a strong Binance trend, and Binance spot versus the window open all confirm the new side. Defaults off because its improvement did not generalize across splits."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
+        <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal immediately reduces the old-side lead when doing so does not worsen projected worst-case loss."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
+        <label class="cfgtgl" title="REVERSAL — after persistent CLOB, Binance, trailing-trend, and window-gap confirmation, cross inventory only when pair economics and projected worst-case loss pass."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="RISK — session-level emergency circuit breaker.">risk</span>
@@ -1411,7 +1411,11 @@ function shadowParams(){
     H_HEDGE_RETAIN_SH:1,
     H_REVERSAL_ON:document.getElementById("sigReversalOn")?.checked===true,
     H_REVERSAL_RESIDUAL_SH:10,
-    H_REVERSAL_MAX_IMBALANCE_SH:25,
+    H_REVERSAL_CONFIRM_MS:1000,
+    H_OPPOSITE_CANDIDATE_RESET_MS:3000,
+    H_REVERSAL_MIN_PAIR_EDGE:-0.03,
+    H_REVERSAL_MAX_WORST_LOSS_USD:10,
+    H_REVERSAL_MAX_ORDER_SH:50,
     H_MIN_ASK:0.05, H_MAX_ASK:0.98,
     H_CAP_HEADROOM:0.01, H_MIN_DEPTH_SH:4,
     H_LIVE_ORDER_TYPE:liveOrderType,
@@ -3078,9 +3082,18 @@ const GATE_LABELS={
   "wait-open":["◷ wait start","dim"], "signal-toggle-required":["⚠ enable momentum","warn"],
   "clob-mid-warmup":["◷ CLOB-mid warmup","dim"], "clob-mid-velocity":["○ CLOB-mid quiet","dim"],
   "binance-gap-warmup":["◷ Binance-gap warmup","dim"], "binance-gap-velocity":["○ Binance-gap quiet","dim"],
-  "velocity-disagreement":["○ velocities disagree","warn"],
+  "momentum-disagreement":["○ velocities disagree","warn"],
   "binance-gap-agree-warmup":["◷ Binance open warmup","dim"],
   "binance-gap-disagreement":["○ Binance gap disagrees","warn"],
+  "opposite-candidate-pending":["◷ opposite candidate","warn"],
+  "opposite-signal-disabled":["○ opposite disabled","warn"],
+  "hedge-retained-majority":["○ retained lead","dim"],
+  "hedge-risk":["○ hedge worsens risk","warn"],
+  "reversal-confirmation":["◷ reversal confirmation","warn"],
+  "reversal-economics":["○ reversal economics","warn"],
+  "reversal-risk":["○ reversal risk","warn"],
+  "reversal-order-cap":["○ reversal order cap","warn"],
+  "reversal-depth":["○ reversal depth","warn"],
   "signal-already-entered":["✓ signal entered","dim"],
   "ask-range":["○ ask outside range","dim"], "depth":["○ depth thin","dim"],
   "end-cutoff":["✕ end cutoff","dim"], "fired":["▲ entry fired","go"] };
@@ -3088,7 +3101,10 @@ const GATE_LABELS={
 function renderStratChips(strat){
   const els=document.querySelectorAll(".sb-strat"); if(!els.length) return;   // right end of each chart's livebar
   const parts=[];
-  const g=(strat&&strat.gate)||""; if(g){ const [lbl,cls]=GATE_LABELS[g]||[g,"dim"]; parts.push(`<span class="st-${cls}" title="bot decision: ${g}">${lbl}</span>`); }
+  const g=(strat&&strat.gate)||""; if(g){ let [lbl,cls]=GATE_LABELS[g]||[g,"dim"];
+    if(g==="fired"&&strat?.role==="hedge")lbl="▲ hedge fired";
+    else if(g==="fired"&&strat?.role==="reversal")lbl="▲ reversal fired";
+    parts.push(`<span class="st-${cls}" title="bot decision: ${g}">${lbl}</span>`); }
   const html=parts.length?("· "+parts.join(" · ")):"";
   els.forEach(el=>{ el.innerHTML=html; });
 }
@@ -3508,8 +3524,8 @@ function setSessFrom(v){
     V("sigBinanceCountertrendLookbackInput",60);
     V("sigBinanceCountertrendMinInput",0.075);
     C("sigBinanceGapAgreeOn",false);
-    C("sigHedgeOn",false);
-    C("sigReversalOn",false);
+    C("sigHedgeOn",true);
+    C("sigReversalOn",true);
     V("sigStartInput",0);
     V("sigStopInput",285);
     V("sigLiveOrderTypeInput","GTC");
@@ -4093,6 +4109,8 @@ function sessShadowCfg(P){
     +` · Binance window-gap agree ${P.H_BINANCE_GAP_AGREE_ON===true?"ON":"OFF"}`
     +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"}`
     +` · strong reversal ${P.H_REVERSAL_ON===true?"ON":"OFF"}`
+    +` ${P.H_REVERSAL_CONFIRM_MS??1000}ms · pair edge ≥${P.H_REVERSAL_MIN_PAIR_EDGE??-0.03}`
+    +` · worst loss ≤$${P.H_REVERSAL_MAX_WORST_LOSS_USD??10} or improving · order ≤${P.H_REVERSAL_MAX_ORDER_SH??50}sh`
     +` · depth ≥${P.H_MIN_DEPTH_SH??4}sh`
     +` · cooldown ${P.H_COOLDOWN_MS??1000}ms`
     +` · simulation fixed-USD FAK · live ${(P.H_LIVE_ORDER_TYPE||"GTC")} · cap ask+${P.H_CAP_HEADROOM??0.01} · latency ${P.LATENCY_MS||0}ms</span>`; }

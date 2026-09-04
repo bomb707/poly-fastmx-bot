@@ -21,12 +21,13 @@
 // A distinct qualifying signal snapshot emits one order once the configured
 // cooldown allows. A signal aligned with flat/current inventory is an entry.
 // An opposing signal can be handled in two independently-toggleable ways:
-//   - partial hedge: buy at most the imbalance minus a retained old-side lead;
-//   - reversal: on strong CLOB + Binance + trend confirmation, buy through
-//     balance and leave a configured residual on the newly predicted side.
+//   - partial hedge: reduce the imbalance without worsening worst-case loss;
+//   - reversal: after persistent CLOB + Binance + trend confirmation, buy
+//     through balance only when pair economics and projected risk allow it.
 // Repeated feed heartbeats with identical signal inputs are de-duplicated.
 
 import { midOf } from "../momentum.js";
+import { fillFee } from "../fees.js";
 
 export const NAME = "helpme";
 export const LABEL = "FastMX · dual momentum + Binance trend regime";
@@ -57,19 +58,20 @@ export const STRAT = {
   H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 60,
   H_BINANCE_COUNTERTREND_MIN_PCT: 0.075,
   H_BINANCE_GAP_AGREE_ON: false,
-  // Backtest default OFF: the paired Aug 16-25 replay found partial hedging
-  // degraded both fit and holdout PnL. The UI keeps it independently opt-in.
-  H_HEDGE_ON: false,
+  // Adaptive inventory control: an opposing qualified signal may immediately
+  // reduce the old-side lead, but it cannot cross inventory without the stricter
+  // persistent reversal confirmation below.
+  H_HEDGE_ON: true,
   // Share-denominated hedges preserve this old-side lead even when execution
   // receives price improvement.
   H_HEDGE_RETAIN_SH: 1,
-  // Backtest default OFF: reversal improved holdout but failed the fit segment,
-  // so it is not promoted as a stable runtime default.
-  H_REVERSAL_ON: false,
-  // Target extraction: median post-cross residual=10.44sh and p90 old
-  // imbalance among crosses=25.35sh.
+  H_REVERSAL_ON: true,
   H_REVERSAL_RESIDUAL_SH: 10,
-  H_REVERSAL_MAX_IMBALANCE_SH: 25,
+  H_REVERSAL_CONFIRM_MS: 1000,
+  H_OPPOSITE_CANDIDATE_RESET_MS: 3000,
+  H_REVERSAL_MIN_PAIR_EDGE: -0.03,
+  H_REVERSAL_MAX_WORST_LOSS_USD: 10,
+  H_REVERSAL_MAX_ORDER_SH: 50,
   H_MIN_ASK: 0.05,
   H_MAX_ASK: 0.98,
   H_CAP_HEADROOM: 0.01,
@@ -141,17 +143,41 @@ function executionQuote(book, P) {
   return { ask, cap, available: cap == null ? 0 : cappedDepth(asks, cap) };
 }
 
-function effectiveShares(state) {
+function effectivePosition(state, P) {
   let up = +state.upShares || 0;
   let down = +state.downShares || 0;
-  for (const p of (state.pendingFills || [])) {
-    const r = p?.rec;
-    if (!r) continue;
-    const shares = finite(r.minimumShares) ?? (+r.shares || 0);
-    if (r.side === "Up") up += shares;
-    else if (r.side === "Down") down += shares;
+  let upCost = +state.upCost || 0;
+  let downCost = +state.downCost || 0;
+  let fee = +state.fee || 0;
+  for (const pending of (state.pendingFills || [])) {
+    const rec = pending?.rec;
+    if (!rec) continue;
+    const shares = finite(rec.minimumShares) ?? (+rec.shares || 0);
+    const cap = finite(rec.limitPx) ?? finite(rec.effPx) ?? 0;
+    const cost = finite(rec.budgetUsd) ?? cap * shares;
+    if (rec.side === "Up") { up += shares; upCost += cost; }
+    else if (rec.side === "Down") { down += shares; downCost += cost; }
+    fee += fillFee(cap, shares, true, P);
   }
-  return { up, down, net: up - down };
+  const cost = upCost + downCost;
+  const ifUp = up - cost - fee;
+  const ifDown = down - cost - fee;
+  return { up, down, net: up - down, gross: up + down, upCost, downCost,
+    cost, fee, ifUp, ifDown, worstLoss: Math.max(0, -Math.min(ifUp, ifDown)) };
+}
+
+function projectedPosition(position, side, shares, cap, P) {
+  const cost = cap * shares;
+  const fee = fillFee(cap, shares, true, P);
+  const up = position.up + (side === "Up" ? shares : 0);
+  const down = position.down + (side === "Down" ? shares : 0);
+  const totalCost = position.cost + cost;
+  const totalFee = position.fee + fee;
+  const ifUp = up - totalCost - totalFee;
+  const ifDown = down - totalCost - totalFee;
+  return { up, down, net: up - down, gross: up + down,
+    cost: totalCost, fee: totalFee, ifUp, ifDown,
+    worstLoss: Math.max(0, -Math.min(ifUp, ifDown)) };
 }
 
 function pruneHistory(model, key, headKey, keepAfter) {
@@ -310,9 +336,10 @@ function resetSignal(state, model, values) {
   return [];
 }
 
-function signalEventKey(signal, side, toggles) {
+function signalEventKey(signal, side, toggles, oppositePhase = null) {
   return JSON.stringify([
     side,
+    oppositePhase,
     toggles.clobMid ? signal.midpoint : null,
     toggles.clobMid ? signal.midPriorMs : null,
     toggles.binanceGap ? signal.binancePrice : null,
@@ -507,7 +534,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     velocityMin,
     binanceGapVelocityMin,
   };
-  const inv = effectiveShares(state);
+  const inv = effectivePosition(state, P);
   const baseStatus = {
     t: tk.t,
     midpoint: momentum.midpoint ?? finite(midOf(tk.up)),
@@ -549,6 +576,8 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     downShares: inv.down,
     net: inv.net,
     orders: model.orderCount,
+    oppositeCandidateSide: model.oppositeCandidateSide || null,
+    oppositeCandidateSinceMs: model.oppositeCandidateSinceMs ?? null,
   };
 
   if (P.H_ON === false) return resetSignal(state, model, { ...baseStatus, gate: "disabled" });
@@ -592,6 +621,47 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     return resetSignal(state, model, { ...baseStatus, gate: "binance-gap-disagreement", side });
   }
 
+  const orientedNet = side === "Up" ? inv.net : -inv.net;
+  const oppositeSignal = orientedNet < -EPS;
+  const oldImbalance = oppositeSignal ? Math.abs(orientedNet) : 0;
+  const candidateResetMs = Math.max(0,
+    finite(P.H_OPPOSITE_CANDIDATE_RESET_MS) ?? 3000);
+  // Candidate state advances before cooldown/de-duplication: persistence is a
+  // property of qualified market observations, not of how often orders release.
+  if (oppositeSignal) {
+    if (model.oppositeCandidateSide !== side) {
+      model.oppositeCandidateSide = side;
+      model.oppositeCandidateSinceMs = clockMs;
+    }
+    model.oppositeCandidateLastSeenMs = clockMs;
+  } else if (model.oppositeCandidateSide) {
+    const candidateAgeMs = clockMs
+      - (finite(model.oppositeCandidateLastSeenMs) ?? -Infinity);
+    if (side !== model.oppositeCandidateSide && candidateAgeMs < candidateResetMs) {
+      setStatus(state, { ...baseStatus, gate: "opposite-candidate-pending", side,
+        oppositeCandidateSide: model.oppositeCandidateSide,
+        oppositeCandidateAgeMs: candidateAgeMs,
+        oppositeCandidateResetMs: candidateResetMs });
+      return [];
+    }
+    model.oppositeCandidateSide = null;
+    model.oppositeCandidateSinceMs = null;
+    model.oppositeCandidateLastSeenMs = null;
+  }
+  baseStatus.oppositeCandidateSide = model.oppositeCandidateSide || null;
+  baseStatus.oppositeCandidateSinceMs = model.oppositeCandidateSinceMs ?? null;
+  baseStatus.oppositeCandidateAgeMs = model.oppositeCandidateSide
+    ? Math.max(0, clockMs - (finite(model.oppositeCandidateSinceMs) ?? clockMs)) : null;
+  const reversalConfirmMs = Math.max(0,
+    finite(P.H_REVERSAL_CONFIRM_MS) ?? 1000);
+  const reversalConfirmedMs = oppositeSignal
+    && model.oppositeCandidateSide === side
+    && Number.isFinite(model.oppositeCandidateSinceMs)
+    ? Math.max(0, clockMs - model.oppositeCandidateSinceMs) : 0;
+  const oppositePhase = oppositeSignal
+    ? (reversalConfirmedMs + EPS >= reversalConfirmMs ? "confirmed" : "pending")
+    : null;
+
   const cooldownMs = Math.max(0, +P.H_COOLDOWN_MS || 0);
   if (clockMs - model.lastOrderMs < cooldownMs) {
     setStatus(state, { ...baseStatus, gate: "cooldown", side,
@@ -599,7 +669,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     return [];
   }
 
-  const eventKey = signalEventKey(signal, side, toggles);
+  const eventKey = signalEventKey(signal, side, toggles, oppositePhase);
   if (model.lastSignalKey === eventKey) {
     setStatus(state, { ...baseStatus, gate: "signal-already-entered", side });
     return [];
@@ -619,22 +689,40 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
   }
 
   const baseShares = Math.max(minOrder, +P.H_BASE_ORDER_SH || +P.SIZE || 7);
-  const orientedNet = side === "Up" ? inv.net : -inv.net;
-  const oppositeSignal = orientedNet < -EPS;
-  const oldImbalance = oppositeSignal ? Math.abs(orientedNet) : 0;
   const reversalResidual = Math.max(minOrder,
     finite(P.H_REVERSAL_RESIDUAL_SH) ?? 10);
-  const reversalMaxImbalance = Math.max(0,
-    finite(P.H_REVERSAL_MAX_IMBALANCE_SH) ?? 25);
   // A reversal is intentionally stricter than an ordinary entry: both raw
   // momentum sources, the strong trailing trend, and spot-vs-window-open must
   // all point to the new side. This remains true even if ordinary entries use
   // only one source or have window-gap agreement disabled.
-  const reversalConfirmed = velocityDir === side
+  const reversalSnapshotConfirmed = velocityDir === side
     && binanceDir === side
     && trendRegime.strongTrend
     && trendRegime.trendDirection === side
     && binanceWindowGapDir === side;
+  const reversalConfirmed = reversalSnapshotConfirmed
+    && reversalConfirmedMs + EPS >= reversalConfirmMs;
+
+  const oldSide = side === "Up" ? "Down" : "Up";
+  const oldShares = oldSide === "Up" ? inv.up : inv.down;
+  const oldCost = oldSide === "Up" ? inv.upCost : inv.downCost;
+  const allocatedOldFee = inv.gross > EPS ? inv.fee * oldShares / inv.gross : 0;
+  const oldUnitCost = oldShares > EPS ? (oldCost + allocatedOldFee) / oldShares : null;
+  const pairEdge = oldUnitCost == null ? null
+    : 1 - oldUnitCost - quote.cap - fillFee(quote.cap, 1, true, P);
+  const minPairEdge = finite(P.H_REVERSAL_MIN_PAIR_EDGE) ?? -0.03;
+  const maxWorstLoss = Math.max(0,
+    finite(P.H_REVERSAL_MAX_WORST_LOSS_USD) ?? 10);
+  const maxReversalOrder = Math.max(minOrder,
+    finite(P.H_REVERSAL_MAX_ORDER_SH) ?? 50);
+  const desiredReversalShares = oldImbalance + reversalResidual;
+  const reversalProjection = projectedPosition(inv, side,
+    desiredReversalShares, quote.cap, P);
+  const reversalEconomic = pairEdge != null && pairEdge + EPS >= minPairEdge;
+  const reversalRiskAllowed = reversalProjection.worstLoss <= maxWorstLoss + EPS
+    || reversalProjection.worstLoss + EPS < inv.worstLoss;
+  const reversalSizeAllowed = desiredReversalShares <= maxReversalOrder + EPS;
+  const reversalDepthAllowed = desiredReversalShares <= quote.available + EPS;
 
   let leg = "entry", role = "entry", amountMode = "usd";
   let shares = baseShares;
@@ -642,10 +730,11 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     : toggles.clobMid ? "clob-mid-velocity-entry" : "binance-gap-momentum-entry";
 
   if (oppositeSignal) {
-    if (reversalOn && reversalConfirmed && oldImbalance <= reversalMaxImbalance + EPS) {
+    if (reversalOn && reversalConfirmed && reversalEconomic
+      && reversalRiskAllowed && reversalSizeAllowed && reversalDepthAllowed) {
       // Exact-share intent: planned post-fill oriented inventory is the new
       // residual and cannot expand merely because execution improves in price.
-      shares = oldImbalance + reversalResidual;
+      shares = desiredReversalShares;
       leg = role = "reversal";
       amountMode = "shares";
       reason = "strong-confirmed-inventory-reversal";
@@ -653,22 +742,38 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
       const retain = Math.max(EPS, finite(P.H_HEDGE_RETAIN_SH) ?? 1);
       // Q <= old imbalance - retained lead, so the pre-existing inventory side
       // remains the majority after any complete partial-hedge fill.
-      shares = Math.min(baseShares, oldImbalance - retain, quote.available);
+      shares = Math.min(baseShares, oldImbalance - retain, quote.available,
+        maxReversalOrder);
       if (shares + EPS < minOrder) {
         setStatus(state, { ...baseStatus, gate: "hedge-retained-majority", side,
           oldImbalance, retainedLeadShares: retain,
           maximumHedgeShares: Math.max(0, oldImbalance - retain) });
         return [];
       }
+      const hedgeProjection = projectedPosition(inv, side, shares, quote.cap, P);
+      if (hedgeProjection.worstLoss > inv.worstLoss + EPS) {
+        setStatus(state, { ...baseStatus, gate: "hedge-risk", side,
+          oldImbalance, currentWorstLoss: inv.worstLoss,
+          projectedWorstLoss: hedgeProjection.worstLoss });
+        return [];
+      }
       leg = role = "hedge";
       amountMode = "shares";
       reason = reversalOn && reversalConfirmed
-        ? "reversal-imbalance-limit-partial-hedge"
+        ? "reversal-risk-bounded-partial-hedge"
         : "opposite-signal-partial-hedge";
     } else {
-      const gate = reversalOn ? "reversal-confirmation" : "opposite-signal-disabled";
+      const gate = reversalOn ? (!reversalConfirmed ? "reversal-confirmation"
+        : !reversalEconomic ? "reversal-economics"
+          : !reversalRiskAllowed ? "reversal-risk"
+            : !reversalSizeAllowed ? "reversal-order-cap"
+              : !reversalDepthAllowed ? "reversal-depth"
+              : "reversal-disabled") : "opposite-signal-disabled";
       setStatus(state, { ...baseStatus, gate, side, oldImbalance,
-        reversalConfirmed, reversalMaxImbalance });
+        reversalConfirmed, reversalConfirmedMs, reversalConfirmMs,
+        pairEdge, minPairEdge, currentWorstLoss: inv.worstLoss,
+        projectedWorstLoss: reversalProjection.worstLoss, maxWorstLoss,
+        desiredReversalShares, maxReversalOrder, reversalDepthAllowed });
       return [];
     }
   }
@@ -693,10 +798,18 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
     ask: quote.ask, cap: quote.cap, reason, signal, quote,
     liveOrderType: P.H_LIVE_ORDER_TYPE, leg, role, amountMode });
   model.lastSignalKey = eventKey;
+  if (leg === "reversal") {
+    model.oppositeCandidateSide = null;
+    model.oppositeCandidateSinceMs = null;
+    model.oppositeCandidateLastSeenMs = null;
+  }
   setStatus(state, { ...baseStatus, gate: "fired", side, role,
     ask: quote.ask, cap: quote.cap, minimumShares: shares,
     budgetUsd: rec.budgetUsd, capDepth: quote.available,
-    oldImbalance, reversalConfirmed,
+    oldImbalance, reversalConfirmed, reversalConfirmedMs, reversalConfirmMs,
+    pairEdge, minPairEdge, currentWorstLoss: inv.worstLoss,
+    projectedWorstLoss: leg === "reversal" ? reversalProjection.worstLoss : null,
+    oppositeCandidateSide: leg === "reversal" ? null : model.oppositeCandidateSide,
     plannedPostOrientedShares: oppositeSignal
       ? (leg === "reversal" ? reversalResidual : oldImbalance - shares)
       : orientedNet + shares });

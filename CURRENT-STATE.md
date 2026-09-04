@@ -21,19 +21,23 @@ the fast signal unchanged, matching `poly-mom-bot`. Trend is not a standalone di
 momentum. UI and server validation guarantee at least one fast source is enabled and enforce that dependency.
 `H_BINANCE_GAP_AGREE_ON` independently applies the `poly-mom-bot` window-gap rule: selected velocity direction
 must agree with Binance spot versus the five-minute Binance open. It is currently off.
-Every distinct qualified signal aligned with flat/current inventory creates a seven-share entry. Two independent
-opposite-signal controls are available: partial hedge retains at least a one-share old-side lead, while reversal
-requires CLOB + Binance fast momentum + strong trailing trend + window-gap confirmation, crosses only an old
-imbalance up to 25 shares, and targets a ten-share new-side residual. Inventory orders are exact-share sized and
-force live GTC plus immediate remainder cancellation. Both controls default off because partial hedging degraded
-fit and holdout, while reversal improved holdout but failed fit. Executable-duration, cap-cell, order-count, and
-per-window inventory-loss branches remain removed. Cooldown remains the sole release throttle at `1000` ms.
+Every distinct qualified signal aligned with flat/current inventory creates a seven-share entry. When an opposite
+candidate appears, old-side top-ups pause for a three-second reset interval and a bounded exact-share hedge may
+immediately reduce the old-side lead without worsening projected worst-case loss. A reversal requires persistent
+one-second CLOB + Binance fast momentum + strong trailing trend + window-gap confirmation, a minimum `-0.03`
+pair edge, and either a projected worst-case loss no greater than `$10` or a strict reduction from current risk.
+It targets a ten-share new-side residual and caps a single reversal order at 50 shares; there is no fixed old-
+imbalance exclusion, so larger positions de-risk through partial hedges instead of disabling adaptation. Both
+adaptive controls default on. Inventory orders are exact-share sized and force live GTC plus immediate remainder
+cancellation. Executable-duration, cap-cell, total-order-count, and total-cost branches remain removed.
+Cooldown remains the ordinary release throttle at `1000` ms.
 The external session circuit breaker remains at `-$25`.
 Chainlink, ask differentials, imbalance, microprice, and weighted scores are not direction gates.
 
-Current deployed PM2 profile: CLOB velocity OFF, Binance velocity ON at `3000ms/$5`, Binance trend regime ON at
-`30s/0.05%` with `60s/0.075%` countertrend confirmation, window-gap agreement ON, active through `T+300`,
-`2000ms` cooldown, hedge OFF, and reversal OFF.
+Configured PM2 simulation profile (effective after process restart): CLOB and Binance velocity ON at `3000ms` with `0.02/$5` thresholds,
+Binance trend regime ON at `30s/0.05%` with `60s/0.075%` countertrend confirmation, ordinary window-gap
+agreement OFF so a qualified counter-move can de-risk inventory before crossing the open, active through
+`T+300`, `2000ms` cooldown, and both bounded hedging and confirmed reversal ON.
 
 Each simulated/backtested automatic BUY is a fixed-USDC FAK: `budget = signed cap × minimum shares`. Modeled matching is delayed 520 ms,
 walks the future visible L2 ladder, can receive more shares through price improvement, books partials at actual

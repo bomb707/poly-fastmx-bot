@@ -164,7 +164,11 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       hedgeRetainShares: P.H_HEDGE_RETAIN_SH,
       reversalOn: P.H_REVERSAL_ON,
       reversalResidualShares: P.H_REVERSAL_RESIDUAL_SH,
-      reversalMaxImbalanceShares: P.H_REVERSAL_MAX_IMBALANCE_SH,
+      reversalConfirmMs: P.H_REVERSAL_CONFIRM_MS,
+      oppositeCandidateResetMs: P.H_OPPOSITE_CANDIDATE_RESET_MS,
+      reversalMinPairEdge: P.H_REVERSAL_MIN_PAIR_EDGE,
+      reversalMaxWorstLossUsd: P.H_REVERSAL_MAX_WORST_LOSS_USD,
+      reversalMaxOrderShares: P.H_REVERSAL_MAX_ORDER_SH,
       priceMin: P.H_MIN_ASK,
       priceMax: P.H_MAX_ASK,
       capHeadroom: P.H_CAP_HEADROOM,
@@ -189,7 +193,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, tInto, bz: bzPrice, cl: clPrice, nowMs };   // latest book (for MANUAL buys)
     activeSlug = slug;
 
-    // STRATEGY + FILL — the entry-only strategy returns decisions for this tick.
+    // STRATEGY + FILL — FastMX returns entry, hedge, or reversal decisions.
     const bzGap = (bzPrice != null && w.openBinance != null) ? bzPrice - w.openBinance : null;   // for @-fill stamps + seed trigger
     const bzGapPct = (bzGap != null && w.openBinance) ? (bzGap / w.openBinance) * 100 : null;
     const clGap = (clPrice != null && openChainlink != null) ? clPrice - openChainlink : null;
@@ -240,8 +244,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       // stamp spot price + gap @ fill (price − window-open) so the property menu's "market @ fill" shows it
       if (bzPrice != null) { rec.bz = bzPrice; if (bzGap != null) { rec.bzGap = bzGap; rec.bzGapPct = w.openBinance ? (bzGap / w.openBinance) * 100 : null; } }
       if (clPrice != null) { rec.cl = clPrice; if (clGap != null) { rec.clGap = clGap; rec.clGapPct = openChainlink ? (clGap / openChainlink) * 100 : null; } }
-      // Every distinct qualifying velocity snapshot is an entry. With the
-      // optional Binance gap gate on, its direction also agrees with spot vs open.
+      // Every distinct qualifying velocity snapshot can enter or adapt inventory.
       if (verboseOn && rec.leg !== "merge") {
         verbose("shadow.decision", { slug, t: +tInto.toFixed(3), leg: rec.leg, side: rec.side, reason: rec.reason,
           upBid: r2(up.bestBid), upAsk: r2(up.bestAsk), midpoint: rec.signal?.midpoint ?? null,

@@ -48,3 +48,34 @@ test("BBA-only historical ticks cannot fabricate Helpme L2 liquidity", () => {
   assert.deepEqual(simulateFills({ ticks, openBinance: 100, openPrice: 100 },
     { LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
 });
+
+test("completed inventory transitions from entry through hedge into a confirmed reversal", () => {
+  const ticks = [
+    tick(0, 0.50, 0.50, 100),
+    tick(1, 0.52, 0.48, 101),
+    tick(2, 0.48, 0.45, 99),
+    tick(3, 0.44, 0.45, 98),
+  ];
+  const fills = simulateFills({ ticks, openBinance: 100, openPrice: 100, windowStart: 0 }, {
+    LATENCY_MS: 0, H_START_S: 0, H_COOLDOWN_MS: 0,
+    H_MID_VELOCITY_LOOKBACK_MS: 1000, H_MID_VELOCITY_MIN: 0.01,
+    H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 1000, H_BINANCE_GAP_VELOCITY_MIN: 0.01,
+    H_BINANCE_TREND_ON: true, H_BINANCE_TREND_LOOKBACK_SEC: 1,
+    H_BINANCE_TREND_MIN_PCT: 0.05,
+    H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 1,
+    H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
+    H_BINANCE_GAP_AGREE_ON: false,
+    H_HEDGE_ON: true, H_REVERSAL_ON: true,
+    H_REVERSAL_CONFIRM_MS: 1000, H_REVERSAL_MIN_PAIR_EDGE: -0.1,
+    H_REVERSAL_MAX_WORST_LOSS_USD: 10, H_REVERSAL_MAX_ORDER_SH: 50,
+  });
+
+  assert.deepEqual(fills.map((fill) => [fill.side, fill.role]), [
+    ["Up", "entry"],
+    ["Down", "hedge"],
+    ["Down", "reversal"],
+  ]);
+  const up = fills.filter((fill) => fill.side === "Up").reduce((n, fill) => n + fill.shares, 0);
+  const down = fills.filter((fill) => fill.side === "Down").reduce((n, fill) => n + fill.shares, 0);
+  assert.ok(Math.abs(down - up - 10) < 1e-9);
+});
