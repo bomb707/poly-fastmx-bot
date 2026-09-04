@@ -34,7 +34,10 @@ export function simulateFills(d, params) {
   const staleMs = P.STALE_GAP_MS > 0 ? P.STALE_GAP_MS : STALE_GAP_MS;
   const openBz = d && d.openBinance != null ? d.openBinance : null;
   const openCl = d && d.openPrice != null ? d.openPrice : null;
-  const bk = ticks.filter((tk) => tk.upAsk != null && tk.dnAsk != null);   // per-tick replay (native cadence)
+  // Keep every timestamped coherent frame, including a legitimately one-sided
+  // market. Live still evaluates the available side in that state; bookAt()
+  // preserves null asks and the strategy's depth gate prevents invented fills.
+  const bk = ticks.filter((tk) => Number.isFinite(Number(tk?.t)));
   if (bk.length < 2) return [];
   const state = {};               // fresh causal strategy state
   const fills = [];
@@ -71,9 +74,12 @@ export function simulateFills(d, params) {
   const applyInventory = (f) => {
     state.upShares = +state.upShares || 0; state.downShares = +state.downShares || 0;
     state.upCost = +state.upCost || 0; state.downCost = +state.downCost || 0; state.cost = +state.cost || 0;
+    state.fee = +state.fee || 0;
     if (f.side === "Up") { state.upShares += f.shares; state.upCost += f.usdc; }
     else { state.downShares += f.shares; state.downCost += f.usdc; }
     state.cost += f.usdc;
+    state.fee += fillFee(f.effPx ?? (f.shares ? f.usdc / f.shares : null), f.shares,
+      isFeeFill(f, P), P);
     (state.fills = state.fills || []).push(f);
   };
   const resolveDue = (throughT) => {
@@ -139,7 +145,7 @@ export function simulateFills(d, params) {
 
 
 /** Settlement position/PnL from a set of fills, given the winning side. Taker fills pay the modeled fee. */
-export function positionFromFills(fills, winSide, ticks) {
+export function positionFromFills(fills, winSide, ticks, params = undefined) {
   // MERGE records (leg:"merge") reclaim complete sets: they REMOVE `sets` from BOTH sides and return
   // `reclaimUsd` cash (reducing net cost). PnL-neutral vs holding to settlement; see strategy.maybeMerge.
   // Every non-merge leg is a BUY (entry + hedge; sell-to-close removed) → all add shares to their side.
@@ -160,7 +166,9 @@ export function positionFromFills(fills, winSide, ticks) {
   const upC = usdOf(opens, "Up") - mergedUpCost;   // merged shares' cost leaves the live position
   const dnC = usdOf(opens, "Down") - mergedDnCost;
   const total = upC + dnC;
-  const fee = opens.reduce((t, f) => t + fillFee(f.effPx ?? (f.shares ? f.usdc / f.shares : null), f.shares, isFeeFill(f)), 0) - mergedFee;
+  const fee = opens.reduce((t, f) => t + fillFee(
+    f.effPx ?? (f.shares ? f.usdc / f.shares : null), f.shares,
+    isFeeFill(f, params), params), 0) - mergedFee;
   const ifUp = up - total - fee, ifDn = dn - total - fee;   // REMAINING (un-merged) position — decreased by each merge
   const realized = winSide ? merged + (winSide === "Up" ? ifUp : ifDn) : null;   // total = banked + remaining settlement
   return {

@@ -5,7 +5,7 @@
   "type": "module",
   "description": "FastMX — simulation-only BTC 5m CLOB/Binance velocity strategy with the poly-mom Binance trend regime. Dashboard on :4520.",
   "engines": {
-    "node": ">=18"
+    "node": ">=20.12"
   },
   "scripts": {
     "start": "node src/index.js",

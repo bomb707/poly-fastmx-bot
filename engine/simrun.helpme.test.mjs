@@ -49,6 +49,43 @@ test("BBA-only historical ticks cannot fabricate Helpme L2 liquidity", () => {
     { LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
 });
 
+test("a one-sided coherent frame can trade only the side with real L2 liquidity", () => {
+  const first = tick(0, 0.50, 0.50, 100);
+  const up = side(0.52, 0.50, [[0.52, 30], [0.53, 30]]);
+  const down = { bestAsk: null, bestBid: 0.48, asks: [], bids: [[0.48, 50]], depthKnown: false };
+  const oneSided = { t: 5, ms: 5000, upAsk: 0.52, dnAsk: null,
+    upBid: 0.50, dnBid: 0.48, up, down, bz: 110, cl: 100 };
+  const fills = simulateFills({ ticks: [first, oneSided], openBinance: 100,
+    openPrice: 100, windowStart: 0 }, {
+    LATENCY_MS: 0, H_BINANCE_TREND_ON: false,
+    H_MID_VELOCITY_MIN: 0.02, H_BINANCE_GAP_VELOCITY_MIN: 5,
+  });
+  assert.equal(fills.length, 1);
+  assert.equal(fills[0].side, "Up");
+});
+
+test("replay inventory economics include fees already paid by completed fills", () => {
+  const ticks = [
+    tick(0, 0.50, 0.50, 100),
+    tick(1, 0.52, 0.48, 101),
+    tick(2, 0.48, 0.45, 99),
+  ];
+  const fills = simulateFills({ ticks, openBinance: 100, openPrice: 100,
+    windowStart: 0 }, {
+    LATENCY_MS: 0, H_COOLDOWN_MS: 0,
+    H_MID_VELOCITY_LOOKBACK_MS: 1000, H_MID_VELOCITY_MIN: 0.01,
+    H_BINANCE_GAP_VELOCITY_LOOKBACK_MS: 1000, H_BINANCE_GAP_VELOCITY_MIN: 0.01,
+    H_BINANCE_TREND_ON: true, H_BINANCE_TREND_LOOKBACK_SEC: 1,
+    H_BINANCE_TREND_MIN_PCT: 0.05,
+    H_BINANCE_COUNTERTREND_LOOKBACK_SEC: 1,
+    H_BINANCE_COUNTERTREND_MIN_PCT: 0.05,
+    H_HEDGE_ON: false, H_REVERSAL_ON: true, H_REVERSAL_CONFIRM_MS: 0,
+    H_REVERSAL_MIN_PAIR_EDGE: -0.01,
+    H_REVERSAL_MAX_WORST_LOSS_USD: 100, H_REVERSAL_MAX_ORDER_SH: 50,
+  });
+  assert.deepEqual(fills.map((fill) => [fill.side, fill.role]), [["Up", "entry"]]);
+});
+
 test("completed inventory transitions from entry through hedge into a confirmed reversal", () => {
   const ticks = [
     tick(0, 0.50, 0.50, 100),

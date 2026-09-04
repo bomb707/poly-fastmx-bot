@@ -191,9 +191,12 @@ export function setBacktestApiVersion(v) {
 // Resolve the API key for a polywinbot backtest URL by host — v3 has its own key; v2/generic fall back to the
 //   legacy key. Returns "" for non-polywinbot hosts.
 export function bapiKeyForUrl(url) {
-  const u = String(url || "");
-  if (!u.includes("polywinbot.com")) return "";
-  if (u.includes("bapi-v3")) return config.bapiV3Key || config.bapiKey;
+  let hostname;
+  try { hostname = new URL(String(url || "")).hostname.toLowerCase(); }
+  catch { return ""; }
+  if (hostname !== "polywinbot.com" && !hostname.endsWith(".polywinbot.com")) return "";
+  if (hostname === "bapi-v3.polywinbot.com" || hostname.startsWith("bapi-v3."))
+    return config.bapiV3Key || config.bapiKey;
   return config.bapiKey || config.bapiV3Key;
 }
 // Allowed market dimensions for the UI selector (asset × interval = 8 combos).

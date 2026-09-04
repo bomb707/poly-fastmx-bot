@@ -92,6 +92,13 @@ node --test engine/simrun.helpme.test.mjs src/sources/history.test.mjs
 npm start
 ```
 
+Daily v2 replay requires `BAPI_KEY` in the project-root `.env`. The runner
+reproduces the application profile precedence (`STRAT` defaults, persisted
+runtime settings, PM2 overrides, then explicit CLI overrides), rejects unknown
+override names, and records a SHA-256 profile fingerprint in every result.
+The key is used only for authenticated `*.polywinbot.com` requests and is never
+written into result files.
+
 The PM2 deployment auto-starts the live simulation; the dashboard **Stop/Start** controls disconnect and reconnect
 its feeds. No real orders are submitted.
 

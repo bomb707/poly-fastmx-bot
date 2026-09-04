@@ -2678,20 +2678,20 @@ function createGroup(rootEl, kind){
       // DEFAULT: re-run the backtest with the CURRENT sidebar config, so Apply / any config change
       // takes effect on this chart. The "recorded" toggle instead shows the ACTUAL recorded live-sim
       // fills for this window (matches Live History) — falling back to the backtest if none were recorded.
-      let fills=null;
+      let fills=null, replayParams=null;
       if($("shadowRecordedTgl")?.checked){   // scoped $ — createGroup suffixes the id to shadowRecordedTgl-s (global getElementById would be null → toggle never fired)
         try{ const rec=await fetch("/api/shadow-window?slug="+encodeURIComponent(slug)).then(x=>x.json());
           if(rec && Array.isArray(rec.fills) && rec.fills.length) fills=rec.fills; }catch{}
       }
       const recorded=!!fills;
-      if(!fills){ const P=shadowParams();
+      if(!fills){ const P=replayParams=shadowParams();
         fills=simulateFills({ticks:d.ticks, openBinance:d.openBinance,
           openPrice:d.openPrice, windowStart:d.windowStart}, P); }
       const shaped=buildShapedSim(fills, slug, d.ticks, d.openBinance, d.winSide);
       if(!recorded){ try{ OS.feedBackview(state.viewWs??liveWindowStart(), fills); }catch(e){} }   // backview → give the Order Status panel content
       for(const b of shaped){const s=b.side==="Up"?"up":"dn"; state.buys[s].push({t:b.tInto,px:b.effPx,shares:b.shares,born:0,d:b});}
       state.histBuys=shaped.slice().reverse();
-      const P=positionFromFills(fills, d.winSide, d.ticks);
+      const P=positionFromFills(fills, d.winSide, d.ticks, replayParams||undefined);
       setPos({upShares:P.upShares,downShares:P.downShares,totalCost:P.totalCost, merged:P.merged,
               ifUpWins:P.ifUpWins, ifDownWins:P.ifDownWins, mtm:P.realizedPnl});
       setResult(d.winSide,P.realizedPnl,P.upLegPnl,P.downLegPnl);

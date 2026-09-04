@@ -61,7 +61,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         if (rec.side === "Up") { w.upShares += shares; w.upCost += usdc; }
         else if (rec.side === "Down") { w.downShares += shares; w.downCost += usdc; }
         w.cost += usdc;
-        w.fee += fillFee(rec.effPx, shares, isFeeFill(rec));
+        w.fee += fillFee(rec.effPx, shares, isFeeFill(rec, mergedP), mergedP);
       }
       w.fills.push(rec);
       w.seq = Math.max(w.seq, +rec.oid || 0);
@@ -95,7 +95,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
 
   // Book a taker FILL (record from stepMomTaker) → update aggregate position + emit a circle + persist.
   function bookFill(w, rec) {
-    const fee = fillFee(rec.effPx, rec.shares, isFeeFill(rec));
+    const fee = fillFee(rec.effPx, rec.shares, isFeeFill(rec, mergedP), mergedP);
     // snapshot BEFORE this fill (for the property menu's before→after view)
     const posBefore = { upShares: w.upShares, downShares: w.downShares, upCost: w.upCost, downCost: w.downCost, totalCost: w.cost,
                         ifUpWins: w.upShares - w.cost - w.fee, ifDownWins: w.downShares - w.cost - w.fee };
@@ -367,7 +367,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     //   marketable match, or at the reconcile-poll moment for a resting order that fills LATE. So this is the real
     //   fill x-position (vs `tInto` = the decision time). The chart plots the solid circle here in live mode.
     const fillTInto = +((Date.now() / 1000) - windowStart).toFixed(2);
-    const fee = fillFee(px, sh, true);
+    const fee = fillFee(px, sh, true, mergedP);
     w.realUp = w.realUp || 0; w.realDn = w.realDn || 0; w.realCost = w.realCost || 0; w.realFee = w.realFee || 0; w.realFills = w.realFills || 0;
     if (side === "Up") w.realUp += sh; else w.realDn += sh;   // every active leg is an entry BUY
     w.realCost += usd; w.realFee += fee; w.realFills += 1;

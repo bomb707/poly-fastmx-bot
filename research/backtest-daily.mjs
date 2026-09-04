@@ -8,16 +8,40 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { createRequire } from "node:module";
-import { config } from "../src/config/config.js";
+import { bapiKeyForUrl, config } from "../src/config/config.js";
 import { fetchWindowHistory } from "../src/sources/history.js";
 import { simulateFills, positionFromFills } from "../engine/simrun.js";
-import { STRAT } from "../engine/strategies/helpme.js";
+import { STRAT, validateParams } from "../engine/strategies/helpme.js";
 
 const require = createRequire(import.meta.url);
+const projectRoot = path.resolve(import.meta.dirname, "..");
 const ecosystem = require("../ecosystem.config.cjs");
-const pm2App = ecosystem.apps?.find((app) => app?.env?.SHADOW_PARAMS_JSON);
-const pm2Profile = JSON.parse(pm2App?.env?.SHADOW_PARAMS_JSON || "{}");
+const pm2App = ecosystem.apps?.find((app) => app?.name === "poly-fastmx-simulation")
+  ?? ecosystem.apps?.find((app) => app?.env?.SHADOW_PARAMS_JSON);
+if (!pm2App) throw new Error("FastMX PM2 app/profile not found in ecosystem.config.cjs");
+const pm2Env = pm2App.env || {};
+const rawPm2Profile = JSON.parse(pm2Env.SHADOW_PARAMS_JSON || "{}");
+const strategyKeys = new Set(Object.keys(STRAT));
+const pickStrategyParams = (value) => Object.fromEntries(Object.entries(value || {})
+  .filter(([key]) => strategyKeys.has(key)));
+
+// Match src/index.js boot order exactly: defaults, then durable dashboard
+// settings, then the unattended PM2 profile. CLI overrides remain last and
+// are recorded in the output manifest.
+const runtimeConfigFile = path.resolve(pm2App.cwd || path.resolve("."),
+  pm2Env.RUNTIME_CONFIG_FILE || "data/runtime-config.json");
+let persistedStore = {};
+try { persistedStore = JSON.parse(fs.readFileSync(runtimeConfigFile, "utf8")); } catch {}
+const persistedProfile = pickStrategyParams(persistedStore.shadowParams);
+const pm2Profile = pickStrategyParams(rawPm2Profile);
+const bootProfile = { ...STRAT, ...persistedProfile, ...pm2Profile,
+  STRATEGY: "helpme", LIVE_FILLS: false };
+
+if ([config.backtestApi, config.v2OrderbookApi].some((url) => !bapiKeyForUrl(url))) {
+  throw new Error("BAPI_KEY is required in the project .env for v2 metadata and L2 backtests");
+}
 const args = process.argv.slice(2);
 const unixPart = (value) => Number(String(value || "").trim().split("-").at(-1));
 const start = unixPart(args[0]);
@@ -27,6 +51,7 @@ if (!Number.isFinite(start)) {
 }
 const latencies = String(args[1] || "520").split(",").map(Number)
   .filter((value) => Number.isFinite(value) && value >= 0);
+if (!latencies.length) throw new RangeError("latencyList must contain at least one non-negative number");
 const overrides = {};
 for (const arg of args.slice(2)) {
   const [key, ...rest] = arg.split("=");
@@ -36,24 +61,33 @@ for (const arg of args.slice(2)) {
   else { try { overrides[key] = JSON.parse(raw); } catch { overrides[key] = raw; } }
 }
 
-const windowSec = 300;
 const endOverride = unixPart(overrides.END);
 delete overrides.END;
+const allowedOverrideKeys = new Set([...strategyKeys, "STALE_GAP_MS"]);
+const unknownOverrides = Object.keys(overrides).filter((key) => !allowedOverrideKeys.has(key));
+if (unknownOverrides.length) throw new RangeError(`unknown strategy override(s): ${unknownOverrides.join(", ")}`);
+const asset = String(pm2Env.ASSET || config.asset || "btc").trim().toLowerCase();
+const interval = String(pm2Env.INTERVAL || config.interval || "5m").trim().toLowerCase();
+const derivedWindowSec = interval === "15m" ? 900 : 300;
+const windowSec = Number(bootProfile.WINDOW_SEC || pm2Env.WINDOW_SEC || derivedWindowSec);
+if (!Number.isFinite(windowSec) || windowSec <= 0) throw new RangeError("invalid PM2 strategy window length");
 // Default to the latest complete UTC day. This prevents a partial current day
 // from being compared with complete daily rows.
 const end = Number.isFinite(endOverride)
   ? endOverride
   : Math.floor(Date.now() / 86_400_000) * 86_400;
 if (end <= start) throw new RangeError("END must be after START");
-config.asset = "btc";
-config.interval = "5m";
+config.asset = asset;
+config.interval = interval;
+config.windowSec = windowSec;
 config.backtestApiVersion = "v2";
 
 const slugs = [];
-for (let ws = start; ws < end; ws += windowSec) slugs.push(`btc-updown-5m-${ws}`);
+for (let ws = start; ws < end; ws += windowSec) slugs.push(`${asset}-updown-${interval}-${ws}`);
 console.log("\nFastMX BAPI v2 L2 daily backtest");
 console.log(`${new Date(start * 1000).toISOString()} → ${new Date(end * 1000).toISOString()} (exclusive)`);
-console.log(`${slugs.length} requested five-minute windows; source=${config.v2OrderbookApi}`);
+console.log(`${slugs.length} requested ${asset.toUpperCase()} ${interval} windows; source=${config.v2OrderbookApi}`);
+console.log(`profile=STRAT < ${path.relative(projectRoot, runtimeConfigFile)} < PM2 < CLI; authenticated=yes`);
 
 const blank = () => ({ windows: 0, activeMarkets: 0, orders: 0, entries: 0,
   hedges: 0, reversals: 0, full: 0, partial: 0, upShares: 0,
@@ -75,18 +109,35 @@ const metrics = (raw) => ({
   roiPct: raw.cost + raw.fees > 0 ? round(raw.pnl / (raw.cost + raw.fees) * 100, 4) : null,
 });
 const dateOf = (ws) => new Date(ws * 1000).toISOString().slice(0, 10);
+const sessionBreakerView = (windows, limitValue) => {
+  const limit = Math.max(0, Number(limitValue) || 0);
+  const total = blank();
+  let sessionPnl = 0, haltedAtSlug = null, skippedAfterHalt = 0;
+  for (const row of [...windows].sort((a, b) => a.slug.localeCompare(b.slug))) {
+    if (haltedAtSlug) { skippedAfterHalt++; continue; }
+    add(total, row);
+    sessionPnl += row.pnl;
+    if (limit > 0 && sessionPnl <= -limit) haltedAtSlug = row.slug;
+  }
+  return { enabled: limit > 0, limit, assumedSessionStart: start,
+    haltedAtSlug, skippedAfterHalt, total: metrics(total) };
+};
 
 const reportStates = latencies.map((latencyMs) => {
-  const params = { ...STRAT, ...pm2Profile, ...overrides, LATENCY_MS: latencyMs,
+  const params = { ...bootProfile, ...overrides, LATENCY_MS: latencyMs,
     STRATEGY: "helpme", LIVE_FILLS: false };
-  return { latencyMs, params, total: blank(), daily: {}, windows: [] };
+  validateParams(params);
+  const canonicalParams = JSON.stringify(Object.fromEntries(Object.entries(params)
+    .sort(([a], [b]) => a.localeCompare(b))));
+  const profileSha256 = crypto.createHash("sha256").update(canonicalParams).digest("hex");
+  return { latencyMs, params, profileSha256, total: blank(), daily: {}, windows: [] };
 });
 function replayWindow(data) {
   for (const report of reportStates) {
     const { params } = report;
     const fills = simulateFills({ ticks: data.ticks, openBinance: data.openBinance,
       openPrice: data.openPrice, windowStart: data.ws }, params);
-    const position = positionFromFills(fills, data.winSide, data.ticks);
+    const position = positionFromFills(fills, data.winSide, data.ticks, params);
     const row = {
       slug: data.slug,
       day: dateOf(data.ws),
@@ -145,8 +196,10 @@ if (!usableWindows) {
 }
 const reports = reportStates.map((report) => ({
   latencyMs: report.latencyMs,
+  profileSha256: report.profileSha256,
   params: report.params,
   total: metrics(report.total),
+  sessionCircuitBreaker: sessionBreakerView(report.windows, report.params.MAX_SESSION_LOSS),
   daily: Object.fromEntries(Object.entries(report.daily).sort(([a], [b]) => a.localeCompare(b))
     .map(([day, raw]) => [day, metrics(raw)])),
   windows: report.windows.sort((a, b) => a.slug.localeCompare(b.slug)),
@@ -171,6 +224,11 @@ for (const report of reports) {
     + `${`${total.entries}/${total.hedges}/${total.reversals}`.padEnd(15)}`
     + `${(total.pnl >= 0 ? "+" : "") + "$" + total.pnl.toFixed(2)}`.padStart(11)
     + `${total.roiPct == null ? "—" : `${total.roiPct.toFixed(2)}%`}`.padStart(10));
+  const breaker = report.sessionCircuitBreaker;
+  if (breaker.enabled) console.log(`SESSION BREAKER −$${breaker.limit}: `
+    + (breaker.haltedAtSlug
+      ? `halted after ${breaker.haltedAtSlug}; PnL $${breaker.total.pnl.toFixed(2)}; skipped ${breaker.skippedAfterHalt} later windows`
+      : `not reached; PnL $${breaker.total.pnl.toFixed(2)}`));
 }
 
 const outputDir = path.resolve("research/results");
@@ -178,11 +236,14 @@ fs.mkdirSync(outputDir, { recursive: true });
 const outputFile = path.join(outputDir,
   `fastmx-daily-bapi-v2-${dateOf(start)}_${dateOf(end - windowSec)}.json`);
 const result = { schema: 1, generatedAt: new Date().toISOString(),
-  source: "BAPI v2 coherent full-L2 orderbooks downsampled to the live 120 ms cadence",
+  source: "BAPI v2 coherent full-L2 orderbooks downsampled to the deterministic 120 ms replay cadence",
   range: { start, endExclusive: end, startIso: new Date(start * 1000).toISOString(),
     endExclusiveIso: new Date(end * 1000).toISOString() },
+  market: { asset, interval, windowSec },
+  profilePrecedence: ["strategy-defaults", "persisted-runtime", "pm2", "cli"],
+  runtimeConfigFile: path.relative(projectRoot, runtimeConfigFile),
   requestedWindows: slugs.length, usableWindows,
-  failures: Object.fromEntries(failures), pm2Profile, overrides, reports };
+  failures: Object.fromEntries(failures), persistedProfile, pm2Profile, overrides, reports };
 fs.writeFileSync(outputFile, JSON.stringify(result, null, 2) + "\n");
 console.log(`\nSaved ${outputFile}`);
 console.log(`Usable ${usableWindows}/${slugs.length}; failures=${JSON.stringify(result.failures)}`);
