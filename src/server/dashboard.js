@@ -139,9 +139,9 @@ export function renderHeadless(state, tracker, shadow = null) {
   const bzStale = bzAge != null && bzAge > (config.binanceQuoteStaleReconnectMs || 30000);
   const bhStr = bh && (bzStale || bh.reconnects || bh.staleReconnects || bh.errors)
     ? ` | BZFEED ${bzStale ? "STALE " + Math.round(bzAge / 1000) + "s " : ""}reconn ${bh.reconnects} stale ${bh.staleReconnects} err ${bh.errors}` : "";
-  // In Helpme simulation the tracker is intentionally hidden and represents
-  // the observed target wallet, not our modeled position. Printing that
-  // tracker's zero ledger after a shadow fill made healthy runs look broken.
+  // In Helpme simulation the optional tracker is hidden by default and is
+  // separate from our modeled position. Printing its empty ledger after a
+  // shadow fill made healthy runs look broken.
   // Use the shadow ledger for the PM2 heartbeat while leaving tracker mode
   // unchanged for deployments that explicitly show it.
   const sw = config.showTracker === false

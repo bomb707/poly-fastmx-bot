@@ -527,11 +527,11 @@ async function setMarket({ asset, interval, wallet }) {
   config.asset = asset;
   config.interval = interval;
   config.windowSec = INTERVALS[interval] ?? 300;
-  // WALLET: apply a passed-in address (validated 0x…40hex) so the tracker can re-point to ANY wallet live;
-  //   fall back to the current wallet when none/blank is given. The window/wallet-scoped reset below flushes
-  //   the old wallet's cached fills so nothing bleeds across the swap.
+  // WALLET: apply a passed-in address (validated 0x…40hex) so the optional
+  // tracker can re-point live. An empty value explicitly disables tracking.
+  // The window/wallet-scoped reset below flushes the previous wallet's fills.
   const _w = String(wallet || "").toLowerCase().trim();
-  if (/^0x[0-9a-f]{40}$/.test(_w)) config.wallet = _w;
+  if (wallet != null && (_w === "" || /^0x[0-9a-f]{40}$/.test(_w))) config.wallet = _w;
   // restart Binance spot feed on the new asset (chainlink is all-assets; CLOB re-subs per window)
   if (engineOn) { try { stopBinance?.(); } catch {} stopBinance = _startBinance(state, [config.asset]); }
   // reset everything window/wallet-scoped so stale data from the old market can't bleed through

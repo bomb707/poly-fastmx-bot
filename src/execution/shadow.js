@@ -1,4 +1,4 @@
-// Live Helpme simulation harness. Runs the reconstructed strategy on the same
+// Live Helpme simulation harness. Runs the forward-testing strategy on the same
 // Binance, RTDS, and Polymarket CLOB data displayed by the dashboard.
 import fs from "node:fs";
 import path from "node:path";

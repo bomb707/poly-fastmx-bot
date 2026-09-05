@@ -20,3 +20,9 @@ npm-debug.log*
 # order-latency probes (contain a private-key slot — never commit)
 research/latency_test.mjs
 research/latency_test_standalone.mjs
+
+# generated/retired research artifacts — keep wallet-fitted material out of the runtime tree
+research/results/
+research/models/
+reports/
+research/wallet-*/

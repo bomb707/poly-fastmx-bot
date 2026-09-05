@@ -1,7 +1,7 @@
 # FastMX
 
-Simulation-only BTC five-minute strategy reconstruction for target wallet
-`0x75cc3b63a2f2423085e10706c78b494017b93ce1`.
+Simulation-only BTC five-minute momentum strategy with a single forward-testing
+policy and fixed market/risk assumptions.
 
 - Dashboard: `https://dev-fastmx.polywinbot.com` or `http://localhost:4520`
 - PM2 process: `poly-fastmx-simulation`
@@ -16,17 +16,16 @@ The active strategy is a deliberately simple CLOB/Binance velocity policy plus i
 1. Direction is a normalized score of CLOB Up-token midpoint change and Binance spot change. CLOB price level is
    excluded. The checked-in profile uses a three-second lookback, scales of `0.05` and `$10`, equal `0.5/0.5`
    weights, an entry band of `0.35`, and a re-arm band of `0.15`. Both enabled velocities must be ready, nonzero,
-   and agree in sign.
+   and agree in sign. These values are baseline assumptions and require forward validation.
 2. `H_CLOB_MID_VELOCITY_ON` and `H_BINANCE_GAP_MOMENTUM_ON` control the CLOB and Binance score components.
-   At least one must be enabled. These score weights, scales, and thresholds are implementation assumptions; the
-   conservative wallet analysis below validates signs, not this exact numerical score.
+   At least one must be enabled. The score weights, scales, and thresholds are baseline assumptions; the controls
+   are generic signal components, not wallet-specific branches.
 3. `H_BINANCE_TREND_ON` applies the `poly-mom-bot` regime filter. A fast signal opposing a strong 30-second trend
    needs a same-direction 60-second countertrend move. `H_BINANCE_GAP_AGREE_ON` optionally requires direction to
    agree with Binance spot versus the five-minute open; it is off in the checked-in PM2 profile.
 4. A hysteresis latch, confirmation periods, role cooldowns, and score/price steps control release timing. Entry
    and opposite-side actions have separate seven-fill caps; pending intents count, while rejected/no-fill attempts
-   re-arm and do not permanently consume capacity. Those release parameters have not been recovered from the
-   public wallet history.
+   re-arm and do not permanently consume capacity. These release parameters are explicit baseline choices.
 5. Signals aligned with flat/current inventory create fixed seven-share entries. Opposing signals can partially
    hedge while retaining at least one old-side share when worst-case loss strictly improves, or reverse to a
    four-share new-side residual after stricter score, persistence, depth, size, and projected-risk gates pass.
@@ -45,14 +44,10 @@ The Order Release panel also exposes a **live order type** selector. `GTC + canc
 default for real automatic execution; `FAK` is available for atomic immediate-or-cancel behavior. The selection is
 durable and live-only, so it does not silently alter recorded:false or backtest accounting.
 
-The canonical target-wallet study is now
-`research/wallet-75cc/results/causal-entry-analysis.md`. It fixes the features and timestamp rules before scoring,
-uses September 4 as a chronological holdout, and reports market-window cluster intervals. Historical grid searches,
-fitted trees, threshold rankings, and sizing variants were removed because they encouraged selection on target
-actions rather than genuine forward validation. Direction agreement is not release parity, causal attribution, or
-profitability. FastMX therefore remains an instrumented forward simulation, not a profitability or exact-clone
-claim. Only `helpme` is registered internally at runtime; copied experimental strategies are not selectable by this
-app.
+Wallet-specific studies, fitted trees, threshold rankings, sizing variants, and their generated datasets are kept
+out of the working tree. They encouraged selection on historical actions rather than genuine forward validation.
+FastMX therefore remains an instrumented forward simulation, not a profitability or exact-clone claim. Only
+`helpme` is registered internally at runtime; copied experimental strategies are not selectable by this app.
 
 ## Feeds
 
@@ -61,7 +56,7 @@ app.
 | Binance spot websocket + boundary REST open | `wss://stream.binance.com:9443/...` | raw-dollar velocity, current-window gap, and poly-mom trailing trend/countertrend regime |
 | Polymarket RTDS | `wss://ws-live-data.polymarket.com` | settlement-aligned dashboard/reference data; not a strategy signal |
 | Polymarket CLOB market websocket | `wss://ws-subscriptions-clob.polymarket.com/ws/market` | switchable midpoint-velocity family plus executable depth |
-| Polymarket Gamma/data APIs | official public APIs | market metadata and public wallet activity |
+| Polymarket Gamma/data APIs | official public APIs | market metadata and optional self-tracker activity |
 | Backtest v2 metadata API | configured `BACKTEST_API` | open/final/settlement metadata |
 | Backtest v2 orderbook API | configured `BAPI_V2_OB_BASE` | coherent 50 ms full-L2 frames, replayed causally at 120 ms |
 
@@ -104,6 +99,6 @@ either `npm start` or PM2; both use the same loopback dashboard address.
 
 ## Important limitation
 
-This is a reconstruction from observable behavior, not the wallet owner's private source code. Live simulation
-and forward validation can falsify the inferred policy, but cannot establish literal 100% certainty about hidden
-logic. Keep profitability claims tied to out-of-sample and live-simulation evidence.
+This is a forward-testing baseline, not a recovered private strategy. Live simulation can falsify its assumptions;
+it cannot establish profitability. Keep all performance claims tied to untouched out-of-sample and live-simulation
+evidence.

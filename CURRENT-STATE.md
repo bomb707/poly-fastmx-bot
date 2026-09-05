@@ -1,19 +1,18 @@
 # FastMX current state
 
-_Updated: 2026-09-04 UTC_
+_Updated: 2026-09-05 UTC_
 
 - Runtime: `poly-fastmx-simulation`, registered under PM2 (currently stopped)
 - Dashboard: `https://dev-fastmx.polywinbot.com`
 - Local port: `4520`
 - Execution: hard-locked simulation; no real orders
-- Target wallet: `0x75cc3b63a2f2423085e10706c78b494017b93ce1`
+- Wallet-specific research: removed; optional self-tracker has no configured wallet
 - Active strategy: only `helpme`, in `engine/strategies/helpme.js`
 
 The active direction is a normalized score of three-second CLOB Up-midpoint velocity and three-second Binance spot
 velocity. CLOB price level is excluded. Both enabled feeds must be ready, nonzero, and agree in sign. Their weights
 are deliberately equal (`0.5/0.5`), their normalization scales are `0.05/$10`, and the enter/re-arm bands are
-`0.35/0.15`. These magnitudes remain implementation assumptions; only direction-sign agreement is supported by the
-conservative analysis below.
+`0.35/0.15`. These magnitudes are explicit baseline assumptions that require forward validation.
 
 Binance trend uses the `poly-mom-bot` formula
 `100 × (current Binance spot - Binance spot 30 seconds earlier) / prior spot`. At `0.05%` or stronger, a fast signal
@@ -26,12 +25,12 @@ entry. An opposing release may hedge while preserving one old-side share only if
 projected worst-case portfolio loss. A reversal requires score confidence `0.95`, a persistent one-second opposite
 candidate, agreeing velocities, sufficient depth, a maximum 50-share order, and projected worst loss no greater
 than `$10` or an improvement over current risk. It targets a four-share residual. Pair price is retained as a
-diagnostic but no longer blocks a risk-improving opposite order. These release and inventory parameters have not
-been recovered from the wallet. Both adaptive controls default on.
+diagnostic but no longer blocks a risk-improving opposite order. These release and inventory parameters are
+deliberate baseline choices. Both adaptive controls default on.
 
 Entry/top-up fills and opposing hedge/reversal fills have independent seven-action caps. The counters include
 successful fills and currently pending latency intents, not historical attempts. A no-fill re-arms its release and
-does not consume the cap. Sizing remains fixed rather than fitted from the target wallet.
+does not consume the cap. Sizing remains fixed rather than fitted from historical actions.
 Inventory orders are exact-share sized and force live GTC plus immediate remainder cancellation. The ordinary
 cooldown default is `1000` ms. Session-loss auto-halting is removed for unrestricted strategy testing. Chainlink,
 ask differentials, order-book imbalance, and microprice are not direction gates.
@@ -65,15 +64,7 @@ The CLOB feed follows Polymarket's documented market-channel protocol: full `boo
 as step functions. Obsolete experimental overlays, controls, training endpoints, and artifacts have been
 removed.
 
-The canonical wallet-direction analysis is
-`research/wallet-75cc/results/causal-entry-analysis.md`. It uses only predeclared CLOB/Binance features, reads BAPI
-v2 L2 state strictly before each whole-second wallet timestamp, reserves September 4 as a chronological holdout,
-and clusters uncertainty by five-minute market. On that holdout, direction matched CLOB 3-second velocity on
-`92.62%` of usable target actions and Binance 3-second velocity on `93.86%`; when both signs agreed, target direction
-matched on `97.43%` at `82.26%` action coverage. The result is stable at 500, 1000, and 1500 ms pre-event offsets.
-
-These are conditional direction correlations at times the wallet acted. They do not prove which feed the wallet
-reads, identify its release timing, recover its sizing rule, or establish profitability. Historical parameter grids,
-fitted trees, threshold rankings, inventory-mode screens, and sizing variants were removed to prevent them being
-mistaken for forward evidence. Exact trigger and sizing work requires every eligible non-entry timestamp and a later
-untouched period. The process therefore remains simulation-only.
+Wallet-specific analyses and generated datasets have been removed from the working tree. Historical parameter
+grids, fitted trees, threshold rankings, inventory-mode screens, and sizing variants are retained only in Git
+history so they cannot be mistaken for forward evidence or silently reused by tooling. Exact trigger and sizing
+claims require a preregistered protocol and a later untouched period. The process remains simulation-only.

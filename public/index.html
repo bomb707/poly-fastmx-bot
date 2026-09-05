@@ -719,7 +719,7 @@
   .fl-tbl td{padding:2px 6px; text-align:right; border-bottom:1px solid rgba(255,255,255,.03)} .fl-tbl td:nth-child(-n+3){text-align:left}
   .fl-tbl .none{color:var(--txt2); padding:6px}
 
-  /* FastMX has one fixed reconstructed strategy. */
+  /* FastMX has one fixed forward-testing strategy. */
   .scfg-section.pcfg,.pcfg-bar,.manual-legacy{display:none!important}
 
   @media (max-width:1100px){
@@ -761,8 +761,8 @@
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="MOMENTUM — CLOB and Binance velocities are the primary direction sources. When both are enabled, both must be ready, nonzero, and agree.">momentum</span>
-        <label class="cfgtgl" title="TARGET DIRECTION POLICY — combine causal CLOB-mid and Binance-price velocities with equal weight. Enabled feeds must agree before the bot acts."><input type="checkbox" id="sigTargetDirectionOn" checked><span class="tgl-track"></span><span class="tgl-lbl">target direction</span></label>
-        <label class="cfgnum" title="TARGET LOOKBACK — causal lookback shared by the CLOB and Binance velocity components.">target lookback ms<input id="sigDirectionLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
+        <label class="cfgtgl" title="DIRECTION SCORE — combine causal CLOB-mid and Binance-price velocities with equal weight. Enabled feeds must agree before the bot acts."><input type="checkbox" id="sigTargetDirectionOn" checked><span class="tgl-track"></span><span class="tgl-lbl">direction score</span></label>
+        <label class="cfgnum" title="SCORE LOOKBACK — causal lookback shared by the CLOB and Binance velocity components.">score lookback ms<input id="sigDirectionLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
         <label class="cfgnum" title="ENTER SCORE — minimum absolute normalized direction score needed to arm an action.">enter score<input id="sigDirectionEnterInput" type="number" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="cfgnum" title="EXIT SCORE — lower hysteresis boundary. A fired impulse re-arms only after confidence falls to this level or direction changes.">exit score<input id="sigDirectionExitInput" type="number" min="0" max="1" step="0.05" value="0.15"></label>
         <label class="cfgtgl" title="Use Up-token CLOB midpoint velocity as a signal. At least one momentum toggle must stay on."><input type="checkbox" id="sigClobMidOn" checked><span class="tgl-track"></span><span class="tgl-lbl">CLOB mid</span></label>
@@ -786,14 +786,14 @@
           <select id="sigLiveOrderTypeInput" class="momsel"><option value="GTC">GTC + cancel remainder</option><option value="FAK">FAK</option></select>
         </label>
         <label class="cfgnum" title="BASE ORDER — fixed minimum shares. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
-        <label class="cfgnum" title="FIRST ENTRY — do not release the first action before this time. The target's first-action distribution supports 15 seconds.">first entry s<input id="sigFirstEntryInput" type="number" min="0" max="120" step="1" value="15"></label>
+        <label class="cfgnum" title="FIRST ENTRY — do not release the first action before this time.">first entry s<input id="sigFirstEntryInput" type="number" min="0" max="120" step="1" value="15"></label>
         <label class="cfgnum" title="TOP-UP COOLDOWN — minimum spacing between same-side additions; a new impulse or material score/price step is still required.">top-up cooldown ms<input id="sigTopupCooldownInput" type="number" min="0" max="60000" step="500" value="8000"></label>
         <label class="cfgnum" title="ENTRY CAP — maximum successful plus currently pending entry/top-up orders in one five-minute market. Rejected or no-fill attempts do not consume it.">max entry fills<input id="sigMaxActionsInput" type="number" min="1" max="50" step="1" value="7"></label>
         <label class="cfgnum" title="OPPOSITE CAP — maximum successful plus currently pending hedge/reversal orders in one five-minute market. Rejected or no-fill attempts do not consume it.">max opposite fills<input id="sigMaxOppositeActionsInput" type="number" min="1" max="50" step="1" value="7"></label>
         <label class="cfgnum" title="GLOBAL COOLDOWN — minimum spacing between any two releases after role-specific gates pass.">global cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="2000"></label>
         <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal reduces the old-side lead only when the projected worst-case portfolio loss strictly improves."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
         <label class="cfgtgl" title="REVERSAL — after a persistent agreeing CLOB/Binance signal, cross inventory only when confirmation, depth, size, and projected portfolio-risk limits pass."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
-        <label class="cfgnum" title="REVERSAL SCORE — minimum target-direction confidence before inventory may be crossed into a new four-share residual.">reversal score<input id="sigReversalScoreInput" type="number" min="0" max="1" step="0.05" value="0.95"></label>
+        <label class="cfgnum" title="REVERSAL SCORE — minimum direction confidence before inventory may be crossed into a new four-share residual.">reversal score<input id="sigReversalScoreInput" type="number" min="0" max="1" step="0.05" value="0.95"></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="SIMULATION knobs — how the BACKTEST/shadow models fills. No effect on REAL live (live fills come from the actual order book).">simulation</span>
@@ -825,7 +825,7 @@
     <!-- row 1: identity · track · tools -->
     <div class="top-row top-nav">
       <div class="hdr-brand">
-        <span class="brand"><a class="brandlink" id="brandLink" data-addr="" href="#" target="_blank" rel="noopener" title="reference wallet used for signal validation"><b id="brandName">FastMX</b></a><small id="marketLabel">—</small><span class="vtag" title="FastMX — simulation-only BTC momentum strategy">shadow</span></span>
+        <span class="brand"><a class="brandlink" id="brandLink" data-addr="" href="#" target="_blank" rel="noopener" title="FastMX dashboard"><b id="brandName">FastMX</b></a><small id="marketLabel">—</small><span class="vtag" title="FastMX — simulation-only BTC momentum strategy">shadow</span></span>
       </div>
       <div class="hdr-track config-bar" title="choose the market + wallet to track, then click Track">
         <span class="scfg-tag">TRACK</span>
@@ -1284,8 +1284,7 @@
 // server (POST /api/set-market). These globals mirror the current selection so slugs,
 // the countdown window length (WIN), and the brand all follow the live market.
 let MARKET_PREFIX="btc-updown-5m";   // "<asset>-updown-<interval>" — drives every slug
-const FIXED_WALLET="0x75cc3b63a2f2423085e10706c78b494017b93ce1";   // public target used for reconstruction
-let TRACK_WALLET=FIXED_WALLET;       // the wallet being tracked (fixed)
+let TRACK_WALLET="";              // optional wallet selected by the server/UI
 // Load the EXACT strategy/sim modules the live shadow uses (same decide()/decideLadder + fillsim).
 // Dynamic import keeps this a classic script so inline handlers (dismissPop) still work.
 let simulateFills=null, positionFromFills=null, FEE_PARAMS=null;
@@ -3326,7 +3325,7 @@ function copyFlash(el, text, restore){ copyText(text).then(()=>{ el.textContent=
 document.getElementById("slugRaw").addEventListener("click",(e)=>{ const a=e.currentTarget, s=a.dataset.slug||a.textContent, o=a.textContent;
   copyFlash(a, s, ()=> o); });
 // wallet-address copy — left-click the brand copies the tracked wallet address (right-click opens its profile)
-document.getElementById("brandLink").addEventListener("click",(e)=>{ e.preventDefault(); const b=e.currentTarget, full=b.dataset.addr, o=b.innerHTML;
+document.getElementById("brandLink").addEventListener("click",(e)=>{ e.preventDefault(); const b=e.currentTarget, full=b.dataset.addr, o=b.innerHTML; if(!full)return;
   copyText(full).then(()=>{ b.innerHTML="<b>copied ✓</b>"; setTimeout(()=>{b.innerHTML=o;},900); }).catch(()=>{ b.innerHTML="<b>copy failed</b>"; setTimeout(()=>{b.innerHTML=o;},900); }); });
 
 // main render loop — both groups + rulers each frame.
@@ -3513,7 +3512,7 @@ function setSessFrom(v){
     const o=applyBtn.textContent; applyBtn.textContent="applied ✓"; setTimeout(()=>{applyBtn.textContent=o;},800);
   });
   fetch("/api/bot/status").then(r=>r.json()).then(s=>setBotUI(!!s.running)).catch(()=>{});   // reflect state on load
-  // "default" — reset the reconstructed signal, timing, simulation, and diagnostics controls.
+  // "default" — reset the signal, timing, simulation, and diagnostics controls.
   const calBtn=document.getElementById("momDefaultBtn");
   if(calBtn) calBtn.addEventListener("click",()=>{
     const V=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=String(v); };
@@ -3761,17 +3760,19 @@ function applyMarket(m){
   }
   if(m.asset && m.interval) MARKET_PREFIX=`${m.asset}-updown-${m.interval}`;
   if(m.windowSec) WIN=Number(m.windowSec)||WIN;
-  if(m.wallet){ TRACK_WALLET=String(m.wallet).toLowerCase();
-    const bl=$g("brandLink"); if(bl){ bl.dataset.addr=TRACK_WALLET; bl.href="https://polymarket.com/profile/"+TRACK_WALLET; } }
+  if(Object.prototype.hasOwnProperty.call(m,"wallet")){
+    TRACK_WALLET=String(m.wallet||"").toLowerCase();
+    const bl=$g("brandLink"); if(bl){ bl.dataset.addr=TRACK_WALLET; bl.href=TRACK_WALLET?"https://polymarket.com/profile/"+TRACK_WALLET:"#"; }
+  }
   const a=(m.asset||"").toUpperCase(), iv=m.interval||"";
   const ml=$g("marketLabel"); if(ml) ml.textContent=(a?a+" up/down "+iv:"—");
   const bn=document.getElementById("brandName");
   if(bn) bn.textContent = "FastMX";
   const sel=document.getElementById("marketSelect"); if(sel && m.asset && m.interval) sel.value=m.asset+"|"+m.interval;
-  if(m.wallet && !/^0x0+$/.test(m.wallet)) renderWalletField();   // honor the show/hide mask
+  renderWalletField();   // honor the show/hide mask, including no wallet
   goLiveBoth(); setMarket(MARKET_PREFIX+"-"+liveWindowStart());   // reset view to the new market
 }
-// Set/track the selected market (target wallet is fixed by the server) → returns the resolved market.
+// Set the selected market and optional tracked wallet → returns the resolved market.
 // Called by the Track button (only while stopped) AND by Start (starting the bot also tracks).
 async function trackMarket(){
   const sel=document.getElementById("marketSelect"), st=document.getElementById("trackStatus");
@@ -3779,7 +3780,7 @@ async function trackMarket(){
   if(st){ st.textContent="switching…"; st.className="track-status"; }
   try{
     const res=await fetch("/api/set-market",{method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({asset,interval,wallet:(TRACK_WALLET||FIXED_WALLET)})}).then(r=>r.json());
+      body:JSON.stringify({asset,interval,wallet:TRACK_WALLET})}).then(r=>r.json());
     if(res&&res.error){ if(st){ st.textContent="✗ "+res.error; st.className="track-status err"; } }
     else { if(st){ st.textContent="✓ "+asset.toUpperCase()+" "+interval; st.className="track-status ok"; setTimeout(()=>{ st.textContent=""; },2500); } applyMarket(res); }
     return res;
@@ -3802,9 +3803,10 @@ async function initMarket(){
 let walletShown=(localStorage.getItem("walletShown")==="1");
 function renderWalletField(){
   const wi=document.getElementById("walletInput"); if(!wi) return;
-  const real=(typeof TRACK_WALLET!=="undefined" && TRACK_WALLET) ? TRACK_WALLET : FIXED_WALLET;
+  const real=(typeof TRACK_WALLET!=="undefined" && TRACK_WALLET) ? TRACK_WALLET : "";
   if(document.activeElement===wi) return;   // don't stomp a focused field
   const eye=document.getElementById("walletEye"); if(eye) eye.textContent=walletShown?"🙈":"👁";
+  if(!real){ wi.value=""; wi.title="no tracked wallet configured"; return; }
   if(walletShown){ wi.value=real; wi.title="tracked wallet "+real+" — click to edit · 🙈 to hide"; }
   else { wi.value="0x"+"•".repeat(8)+"…"+"•".repeat(4); wi.title="tracked wallet hidden — click 👁 to show"; }
 }
@@ -3815,7 +3817,7 @@ function renderWalletField(){
 function wireWalletInput(){
   const wi=document.getElementById("walletInput"); if(!wi||wi._wired) return; wi._wired=true;
   wi.placeholder="0x… wallet address";
-  wi.addEventListener("focus",()=>{ const real=(TRACK_WALLET||FIXED_WALLET); if(real){ wi.value=real; requestAnimationFrame(()=>{ try{wi.select();}catch{} }); } });
+  wi.addEventListener("focus",()=>{ const real=TRACK_WALLET; if(real){ wi.value=real; requestAnimationFrame(()=>{ try{wi.select();}catch{} }); } });
   wi.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); wi.blur(); } });
   wi.addEventListener("blur",()=>{ applyWalletInput(); });
 }

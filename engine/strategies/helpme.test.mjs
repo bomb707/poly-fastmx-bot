@@ -104,7 +104,7 @@ test("agreeing CLOB and Binance velocities fire an entry at inclusive thresholds
   assert.equal("executableMs" in order.signal, false);
 });
 
-test("default target policy uses three-second agreeing velocities without CLOB level", () => {
+test("default direction score uses three-second agreeing velocities without CLOB level", () => {
   const s = state();
   step(s, tick(0, 0.50, 0.50, { bzPrice: 100 }), STRAT, 120, 0);
   step(s, tick(27, 0.51, 0.49, { bzPrice: 100 }), STRAT, 120, 27000);
@@ -120,7 +120,7 @@ test("default target policy uses three-second agreeing velocities without CLOB l
   assert.equal(order.signal.directionComponents.level, null);
   assert.equal(order.signal.velocityAgreement, true);
   assert.equal(order.role, "first-entry");
-  assert.equal(order.reason, "target-score-first-entry");
+  assert.equal(order.reason, "direction-score-first-entry");
 });
 
 test("CLOB-only mode fires without Binance when gap agreement is off", () => {
@@ -153,7 +153,7 @@ test("at least one fast momentum source must be enabled", () => {
   assert.equal(s.gateReason, "signal-toggle-required");
 });
 
-test("target policy validates its hysteresis band", () => {
+test("direction score validates its hysteresis band", () => {
   assert.throws(() => validateParams({ ...STRAT, H_DIRECTION_EXIT_SCORE: 0.35 }),
     /exit < enter/i);
   assert.throws(() => validateParams({ ...STRAT, H_DIRECTION_BINANCE_SCALE: 0 }),
@@ -170,7 +170,7 @@ test("live taker transport remains configurable without changing replay FAK inte
   assert.equal(order.liveOrderType, "FAK");
 });
 
-test("target policy counts filled entries, not historical release attempts, against its cap", () => {
+test("direction score counts filled entries, not historical release attempts, against its cap", () => {
   const s = state();
   const P = { ...STRAT, H_BINANCE_TREND_ON: false,
     H_FIRST_ENTRY_EARLIEST_S: 0, H_FIRST_ENTRY_CONFIRM_MS: 0,
@@ -185,7 +185,7 @@ test("target policy counts filled entries, not historical release attempts, agai
   assert.equal(s.helpmeStatus.actionCounts.entryFilled, 1);
 });
 
-test("target policy allows a risk-improving partial hedge despite negative pair edge", () => {
+test("direction score allows a risk-improving partial hedge despite negative pair edge", () => {
   const s = state({ upShares: 14, upCost: 7 });
   const P = { ...STRAT, H_BINANCE_TREND_ON: false, H_REVERSAL_ON: false,
     H_FIRST_ENTRY_EARLIEST_S: 0, H_HEDGE_CONFIRM_MS: 0,
@@ -211,7 +211,7 @@ test("a no-fill re-arms the most recent release and does not consume the fill ca
   assert.equal(s.helpme.noFillCount, 1);
 });
 
-test("target policy strong reversal crosses only to the configured residual", () => {
+test("direction score strong reversal crosses only to the configured residual", () => {
   const s = state({ upShares: 7, upCost: 3.5 });
   const P = { ...STRAT, H_BINANCE_TREND_ON: false,
     H_FIRST_ENTRY_EARLIEST_S: 0, H_REVERSAL_CONFIRM_MS: 0,

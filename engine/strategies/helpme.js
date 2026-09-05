@@ -69,7 +69,7 @@ export const STRAT = {
   H_BINANCE_COUNTERTREND_MIN_PCT: 0.075,
   H_BINANCE_GAP_AGREE_ON: false,
   // Direction confidence uses only agreeing short-horizon velocity. Exact
-  // weights are equal by design rather than fitted to target actions.
+  // weights are equal by design rather than fitted to historical actions.
   H_TARGET_DIRECTION_ON: true,
   H_DIRECTION_LOOKBACK_MS: 3000,
   H_DIRECTION_CLOB_SCALE: 0.05,
@@ -149,17 +149,17 @@ export function validateParams(P = STRAT) {
     const weights = [toggles.clobMid ? finite(merged.H_DIRECTION_CLOB_WEIGHT) : 0,
       toggles.binanceGap ? finite(merged.H_DIRECTION_BINANCE_WEIGHT) : 0];
     if (!(finite(merged.H_DIRECTION_LOOKBACK_MS) >= 1000)) {
-      throw new RangeError("target direction lookback must be at least 1000 ms");
+      throw new RangeError("direction score lookback must be at least 1000 ms");
     }
     if (!(enter > 0 && enter <= 1) || !(exit >= 0 && exit < enter)) {
-      throw new RangeError("target direction scores require 0 <= exit < enter <= 1");
+      throw new RangeError("direction scores require 0 <= exit < enter <= 1");
     }
     if (!weights.some((weight) => weight > 0)) {
-      throw new RangeError("target direction requires a positive enabled component weight");
+      throw new RangeError("direction score requires a positive enabled component weight");
     }
     if (toggles.clobMid && !(finite(merged.H_DIRECTION_CLOB_SCALE) > 0)
         || toggles.binanceGap && !(finite(merged.H_DIRECTION_BINANCE_SCALE) > 0)) {
-      throw new RangeError("target direction component scales must be positive");
+      throw new RangeError("direction score component scales must be positive");
     }
     if (!(finite(merged.H_MAX_ACTIONS_PER_WINDOW) >= 1)) {
       throw new RangeError("entry action cap must be at least one");
@@ -934,7 +934,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = tk.t * 1000) {
 
   let leg = "entry", role = signalHysteresisOn ? releaseRole : "entry", amountMode = "usd";
   let shares = baseShares;
-  let reason = targetDirectionOn ? `target-score-${role}`
+  let reason = targetDirectionOn ? `direction-score-${role}`
     : toggles.clobMid && toggles.binanceGap ? "dual-velocity-entry"
     : toggles.clobMid ? "clob-mid-velocity-entry" : "binance-gap-momentum-entry";
 

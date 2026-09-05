@@ -21,7 +21,9 @@ export function startActivityPoller(onEvent) {
 
   const poll = async () => {
     if (stopped) return;
-    if (config.trackerDisabled) {   // tracker disabled → skip the wallet-activity fetch, keep the loop alive
+    if (config.trackerDisabled || !/^0x[0-9a-f]{40}$/.test(config.wallet)) {
+      // Tracker disabled or no wallet configured → skip the activity fetch,
+      // but keep the loop alive so a later dashboard selection takes effect.
       if (!stopped) timer = setTimeout(poll, Math.max(1000, config.activityPollMs));
       return;
     }
