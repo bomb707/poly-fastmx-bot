@@ -95,9 +95,9 @@ async function fetchBinanceOpen(windowStartSec) {
 // WINDOW OPEN (Binance) = aggTrades REST as the AUTHORITATIVE source (same value the v3 DB stores, queryable ~250ms
 //   after the boundary). The open is IMMUTABLE + recoverable at ANY point, so on failure we KEEP RETRYING (backoff,
 //   never giving up) for the WHOLE window. WS-OPEN FALLBACK: if the REST open still hasn't landed by
-//   BINANCE_OPEN_FALLBACK_S, seed a PROVISIONAL open for dashboard/reference analytics. The active strategy uses
-//   Binance gap velocity, not distance from this open. The open cancels when
-//   two gap levels are subtracted. REST keeps trying and replaces the provisional when it lands.
+//   BINANCE_OPEN_FALLBACK_S, seed a PROVISIONAL open. The optional gap-agreement
+//   gate uses this reference; raw Binance velocity is independent of it. REST
+//   keeps trying and its correction reaches the strategy on the next tick.
 function ensureBinanceOpen(w) {
   if (!w || w.openInFlight) return;
   if (w.openBinance != null && !w.openBinanceProvisional) return;   // AUTHORITATIVE REST open already set → nothing to do

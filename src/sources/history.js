@@ -9,7 +9,7 @@ import zlib from "node:zlib";
 //    it is SETTLED (winSide present) AND stable (ended > WIN_CACHE_STABLE_SEC ago), keyed by slug+apiVersion. Reruns of
 //    a settled range then replay byte-identical data. Recent/unsettled windows are never cached → always re-fetched. ──
 function _cacheDir() { return path.join(config.dataDir, "wincache"); }
-function _cachePath(slug) { return path.join(_cacheDir(), `${slug}_v2-l2-120-coherent.json.gz`); }
+function _cachePath(slug) { return path.join(_cacheDir(), `${slug}_v2-l2-native-full.json.gz`); }
 function _cacheRead(slug) { try { return JSON.parse(zlib.gunzipSync(fs.readFileSync(_cachePath(slug)))); } catch { return null; } }
 function _cacheWrite(slug, data) { try {
   fs.mkdirSync(_cacheDir(), { recursive: true });
@@ -29,8 +29,8 @@ export function hasCompleteV2Coverage(data, windowSec = config.windowSec || 300)
 
 // ── Helpme backtest source ──────────────────────────────────────────────────────────────────────────
 // /snapshot-ticks supplies authoritative window metadata; /orderbooks supplies coherent 50 ms full-L2 frames.
-// The strategy needs actual visible depth, so a BBA-only replay is deliberately not accepted. We retain the last
-// observed frame in each 120 ms live-sampler bucket, preserving causality and matching the dashboard cadence.
+// Retain native capturedAtMs frames and every level. UI sampling must not erase
+// a liquidity transition or truncate the ladder used to execute an intent.
 async function fetchTicksMeta(slug, ws) {
   if (config.winCache) {
     const c = _cacheRead(slug);
@@ -43,7 +43,7 @@ async function fetchTicksMeta(slug, ws) {
   return r;
 }
 const ORDERBOOK_PAGE = 2000;
-export const V2_REPLAY_SAMPLE_MS = 120;
+export const V2_REPLAY_SAMPLE_MS = 0; // no extra sampling over the native recorder
 const numberOrNull = (value) => {
   if (value == null || value === "") return null;
   const n = Number(value); return Number.isFinite(n) ? n : null;
@@ -61,10 +61,11 @@ export function normalizeV2Levels(levels, side, limit = Infinity) {
 export function normalizeV2OrderbookFrame(frame, ws) {
   const ms = numberOrNull(frame?.capturedAtMs);
   if (ms == null) return null;
-  const upBids = normalizeV2Levels(frame?.orderbookUp?.bids, "bid", 3);
-  const upAsks = normalizeV2Levels(frame?.orderbookUp?.asks, "ask", 3);
-  const dnBids = normalizeV2Levels(frame?.orderbookDown?.bids, "bid", 3);
-  const dnAsks = normalizeV2Levels(frame?.orderbookDown?.asks, "ask", 3);
+  const upBids = normalizeV2Levels(frame?.orderbookUp?.bids, "bid");
+  const upAsks = normalizeV2Levels(frame?.orderbookUp?.asks, "ask");
+  const dnBids = normalizeV2Levels(frame?.orderbookDown?.bids, "bid");
+  const dnAsks = normalizeV2Levels(frame?.orderbookDown?.asks, "ask");
+  const depthTs = numberOrNull(frame.clobMinRecvTsMs);
   const upBid = upBids[0]?.[0] ?? null, upAsk = upAsks[0]?.[0] ?? null;
   const dnBid = dnBids[0]?.[0] ?? null, dnAsk = dnAsks[0]?.[0] ?? null;
   // A market can legitimately become one-sided at the 0.001/0.999 boundary.
@@ -77,9 +78,9 @@ export function normalizeV2OrderbookFrame(frame, ws) {
     ms, t: (ms - ws * 1000) / 1000, upAsk, dnAsk, upBid, dnBid, upPlot, dnPlot,
     cl: numberOrNull(frame.chainlinkPrice ?? frame.twapPrice),
     bz: numberOrNull(frame.binanceAggPrice ?? frame.binancePrice),
-    up: { bestBid: upBid, bestAsk: upAsk, bids: upBids, asks: upAsks,
+    up: { bestBid: upBid, bestAsk: upAsk, bids: upBids, asks: upAsks, depthTs,
       depthKnown: upBids.length > 0 && upAsks.length > 0 },
-    down: { bestBid: dnBid, bestAsk: dnAsk, bids: dnBids, asks: dnAsks,
+    down: { bestBid: dnBid, bestAsk: dnAsk, bids: dnBids, asks: dnAsks, depthTs,
       depthKnown: dnBids.length > 0 && dnAsks.length > 0 },
   };
 }
@@ -91,7 +92,8 @@ export function downsampleV2Frames(frames, ws, sampleMs = V2_REPLAY_SAMPLE_MS) {
     // Keep one-sided boundary frames for chart/spot continuity. Their real asks,
     // bids and depthKnown flags remain untouched, so replay cannot trade them as
     // synthetic/infinite BBA liquidity.
-    if (!tick || (tick.upPlot == null && tick.dnPlot == null)) continue;
+    if (!tick) continue;
+    if (!(sampleMs > 0)) { ticks.push(tick); continue; }
     const bucket = Math.floor((tick.ms - ws * 1000) / sampleMs);
     if (ticks.length && ticks[ticks.length - 1]._bucket === bucket) ticks[ticks.length - 1] = { ...tick, _bucket: bucket };
     else ticks.push({ ...tick, _bucket: bucket });
@@ -112,7 +114,7 @@ async function fetchV2L2(slug, ws) {
     const d = await getJson(`${config.v2OrderbookApi}/orderbooks?slug=${encodeURIComponent(slug)}&page=${page}&limit=${ORDERBOOK_PAGE}`, 45000);
     const pageTicks = downsampleV2Frames(d.frames || [], ws, V2_REPLAY_SAMPLE_MS);
     // A page boundary can share a bucket. Latest observed frame wins.
-    if (ticks.length && pageTicks.length && Math.floor((ticks.at(-1).ms - ws * 1000) / V2_REPLAY_SAMPLE_MS)
+    if (V2_REPLAY_SAMPLE_MS > 0 && ticks.length && pageTicks.length && Math.floor((ticks.at(-1).ms - ws * 1000) / V2_REPLAY_SAMPLE_MS)
         === Math.floor((pageTicks[0].ms - ws * 1000) / V2_REPLAY_SAMPLE_MS)) ticks.pop();
     ticks.push(...pageTicks);
     if (page >= (d.pagination?.totalPages || 0)) break;

@@ -34,6 +34,20 @@ The PM2 profile enables Binance velocity, the trend filter, and window-gap agree
 
 Chainlink supports settlement and reference displays; it is not a direction gate for Helpme. The application is an observable-behavior reconstruction and simulation, with no claim of exact private-wallet logic or proven profitability.
 
+Simulation fills use visible L2 at or before arrival, including at zero latency.
+Empty or stale books produce no fill; partial matches book only their actual
+shares and cost. Five-minute windows cover `[start, start + 300)`: arrivals at
+or after expiry are canceled, including pending orders handled at window close.
+Corrections to a provisional Binance open apply to subsequent strategy steps.
+
+V2 replay retains native `capturedAtMs` frames and all supplied depth levels,
+including empty books. Settlement comes from snapshot metadata. The native-L2
+cache uses a new key, so older sampled, truncated caches are not reused. Native
+frames and full ladders require more memory than the former 120ms/three-level
+replay. For native execution research, the supplied V2 guide specifies window
+starts from `1787388900`; its verified snapshot 60s-TWAP cutoff is `1786923600`.
+Older imported L2 is research history, not independent native V2 capture.
+
 ## Code layout
 
 | Path | Purpose |

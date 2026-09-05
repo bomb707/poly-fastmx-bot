@@ -2,16 +2,14 @@
 // Pure ESM.
 import { fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
-import { stampLatencyDisplay, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
+import { matchMarketableIntent } from "./fillsim.js";
 
 // NOTE (browser-safe): this module is dynamically imported by the dashboard and
 // must not import Node-only modules.
 
 const REF_MS = 120;   // reference tick for fill-speed normalization (matches strategy.js)
-// STALE GUARD: live never trades on a stale book (src/index.js gates on config.tradeFreshMs). The replay
-// must match — when the recorded feed has a gap > STALE_GAP_MS the book was stale, so we DON'T feed that
-// just-reconnected tick as a trade opportunity (it would otherwise spawn a spurious huge-dt fill / a fake
-// velocity spike across the gap). Default 6s = config.tradeFreshMs default. Override via P.STALE_GAP_MS.
+// Avoid momentum decisions across recording gaps, and reject stale arrival
+// books. Default 6s matches config.tradeFreshMs. Override via P.STALE_GAP_MS.
 const STALE_GAP_MS = 6000;
 
 /**
@@ -19,13 +17,6 @@ const STALE_GAP_MS = 6000;
  * @param {{ticks:Array<{t,upAsk,upBid,dnAsk,dnBid,bz?}>, openBinance:number}} d
  * @param {object} [params] UI overrides merged over the Helpme defaults
  */
-// Down-sample ticks to a grid at `ms`. `mode`:
-//   "last" (DEFAULT) — keep the LAST tick per bucket. Mirrors the live periodic sampler ("read latest state every N ms"),
-//                      so live↔backtest stay in parity. Proven best live-$ in the 33-window gap study (2026-07-19).
-//   "tmean"/"mean"   — flicker-ROBUST: replace each bucket's ask with a trimmed-mean (drops the bucket hi+lo, then means)
-//                      or plain mean, stamped at the bucket's LAST tick time so NO extra latency is added. Cuts per-window
-//                      scatter ~3-12% vs keep-last but is PnL-neutral (within noise). Only use when the LIVE sampler
-//                      aggregates the same way — otherwise this reopens the live/backtest gap. Robust to 1-tick book spikes.
 export function simulateFills(d, params) {
   const ticks = (d && d.ticks) || [];
   if (ticks.length < 2) return [];
@@ -34,7 +25,11 @@ export function simulateFills(d, params) {
   const staleMs = P.STALE_GAP_MS > 0 ? P.STALE_GAP_MS : STALE_GAP_MS;
   const openBz = d && d.openBinance != null ? d.openBinance : null;
   const openCl = d && d.openPrice != null ? d.openPrice : null;
-  const bk = ticks.filter((tk) => tk.upAsk != null && tk.dnAsk != null);   // per-tick replay (native cadence)
+  const windowSec = Number(d?.windowSec) > 0 ? Number(d.windowSec) : P.WINDOW_SEC;
+  // Empty/one-sided books are causal state transitions too: dropping them
+  // would let pending orders match liquidity that has disappeared.
+  const bk = ticks.filter((tk) => tk.t != null && Number.isFinite(+tk.t)
+    && +tk.t >= 0 && +tk.t < windowSec);
   if (bk.length < 2) return [];
   const state = {};               // fresh causal strategy state
   const fills = [];
@@ -43,7 +38,7 @@ export function simulateFills(d, params) {
   const winDay = (d && d.windowStart != null) ? new Date(d.windowStart * 1000).getUTCDay() : null;   // UTC weekday → WEEKDAY GATE (V_DAYS)
   // LATENCY model: resolve each intent against the complete book AS OF decision+LATENCY_MS. Keep it pending until
   // that causal clock is reached, then feed the actual (possibly partial) match into inventory before the next decision.
-  const latSec = (P.LATENCY_MS || 0) / 1000;
+  const latSec = Math.max(0, Number(P.LATENCY_MS) || 0) / 1000;
   const arrivalIndex = new Array(bk.length);
   let aj = 0;
   for (let i = 0; i < bk.length; i++) {
@@ -66,7 +61,7 @@ export function simulateFills(d, params) {
     const bidField = side === "Up" ? tk.upBid : tk.dnBid;
     return { bestAsk: nested?.bestAsk ?? bestAsk ?? asks[0]?.[0] ?? null,
       bestBid: nested?.bestBid ?? bidField ?? bids[0]?.[0] ?? null,
-      asks, bids, depthKnown: asks.length > 0 && bids.length > 0 };
+      asks, bids, depthTs: nested?.depthTs ?? null, depthKnown: asks.length > 0 && bids.length > 0 };
   };
   const applyInventory = (f) => {
     state.upShares = +state.upShares || 0; state.downShares = +state.downShares || 0;
@@ -79,25 +74,17 @@ export function simulateFills(d, params) {
   const resolveDue = (throughT) => {
     while (pending.length && pending[0].dueT <= throughT + 1e-9) {
       const p = pending.shift(), f = p.rec, at = p.arrivalTick;
+      // Slug windows are half-open. A final book cannot authorize an arrival
+      // at/after expiry, nor may it be held beyond the freshness allowance.
+      if (p.dueT >= windowSec || (p.dueT - at.t) * 1000 > staleMs) continue;
       const arrivalBook = bookAt(at, f.side);
-      const fixedUsd = f.amountMode === "usd"
-        || (f.budgetUsd != null && Number.isFinite(+f.budgetUsd));
-      const requestedShares = f.minimumShares ?? f.shares;
-      const requestedBudgetUsd = fixedUsd ? (+f.budgetUsd || +f.usdc || 0) : null;
-      const match = fixedUsd
-        ? walkVisibleBudget(arrivalBook, requestedBudgetUsd, f.limitPx, { allowBbaFallback: false })
-        : walkVisibleAsks(arrivalBook, requestedShares, f.limitPx, { allowBbaFallback: false });
-      stampLatencyDisplay(f, p.dueT);
-      f.requestedShares = requestedShares;
-      if (fixedUsd) f.requestedBudgetUsd = requestedBudgetUsd;
-      if (!(match.shares > 0)) continue;
-      f.shares = +match.shares.toFixed(4);
-      f.effPx = +match.avgPx.toFixed(4);
-      f.usdc = +match.cost.toFixed(4);
-      f.status = fixedUsd
-        ? (match.cost + 1e-9 < requestedBudgetUsd ? "partial" : "full")
-        : (match.shares + 1e-9 < f.requestedShares ? "partial" : "full");
-      f.filledLate = latSec > 0;
+      if (arrivalBook.depthTs != null) {
+        const capturedMs = at.ms ?? ((d?.windowStart || 0) * 1000 + at.t * 1000);
+        const arrivalMs = capturedMs + (p.dueT - at.t) * 1000;
+        const ageMs = arrivalMs - arrivalBook.depthTs;
+        if (arrivalBook.depthTs > capturedMs || ageMs > staleMs) continue;
+      }
+      if (!matchMarketableIntent(f, arrivalBook, p.dueT)) continue;
       if (at.bz != null) {
         f.bz = at.bz;
         if (openBz != null) { f.bzGap = at.bz - openBz; f.bzGapPct = openBz ? (f.bzGap / openBz) * 100 : null; }
@@ -133,7 +120,7 @@ export function simulateFills(d, params) {
     }
     resolveDue(tk.t);   // latency=0 intents match on the decision frame
   }
-  resolveDue(Infinity);
+  resolveDue(windowSec);
   return fills.sort((a, b) => a.tInto - b.tInto);
 }
 

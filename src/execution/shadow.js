@@ -6,14 +6,16 @@ import { config } from "../config/config.js";
 import { fillFee, isFeeFill } from "../../engine/fees.js";
 import { DEFAULT_STRATEGY, getStrategy } from "../../engine/strategies/index.js";
 import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim — apply a merge record to the live ledger
-import { walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
+import { matchMarketableIntent } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
 import { isRunning } from "./botState.js";
 import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
 import { recordFill, recordSession } from "../sources/db.js";   // MongoDB record store (mode-split collections)
 import { verbose, verboseOn } from "../logging/verbose.js";     // diagnostic trace (verbose switch) → pm2 logs
 
-export function createShadow(onEvent = () => {}, uiActive = () => true) {
+export function createShadow(onEvent = () => {}, uiActive = () => true, {
+  persistFill = recordFill, persistSession = recordSession,
+} = {}) {
   /** @type {Map<string, object>} */
   const windows = new Map();
   let liveParams = {};             // UI overrides merged over STRAT (set by setParams; defaults until then)
@@ -31,7 +33,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   function getW(slug, windowStart, openBinance) {
     let w = windows.get(slug);
     if (!w) {
-      w = { slug, windowStart, openBinance, winSide: null, upShares: 0, downShares: 0, cost: 0, fee: 0,
+      w = { slug, windowStart, windowSec: config.windowSec, openBinance, winSide: null, upShares: 0, downShares: 0, cost: 0, fee: 0,
             upCost: 0, downCost: 0, mergedRealized: 0, mergedUsd: 0, fills: [], settled: false,
             breakerGeneration: circuitBreaker.stamp(),
             // strategy state (self-initialized by Helpme on the first tick)
@@ -40,7 +42,9 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
             vDiag: { open: false, tickN: 0, dtSum: 0, dtMax: 0, gate: {} } };
       windows.set(slug, w);
     }
-    if (openBinance != null && w.openBinance == null) w.openBinance = openBinance;
+    // The tracker replaces a provisional WS opening price when REST lands.
+    // Apply that correction on the next observation, without rewriting past fills.
+    if (openBinance != null) w.openBinance = openBinance;
     return w;
   }
 
@@ -115,7 +119,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         tInto: rec.tInto, shares: rec.shares, simFillPx: rec.effPx, simFilledLate: !!rec.filledLate,
         maker: !!rec.maker, ts: Date.now() });
     } catch {}
-    recordFill({ ...rec, slug: w.slug, windowStart: w.windowStart });   // → MongoDB shadow_fills_<mode>
+    persistFill({ ...rec, slug: w.slug, windowStart: w.windowStart });   // → MongoDB shadow_fills_<mode>
   }
 
   // Apply a MERGE record (leg:"merge") from stepSignalHedge — reclaim the MAIN complete sets: remove them
@@ -133,7 +137,55 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
                mergedRealized: w.mergedRealized, mergedUsd: w.mergedUsd, posBefore,
                ifUpWins: w.upShares - w.cost - w.fee, ifDownWins: w.downShares - w.cost - w.fee } });
     } catch {}
-    recordFill({ ...rec, slug: w.slug, windowStart: w.windowStart });   // → MongoDB shadow_fills_<mode>
+    persistFill({ ...rec, slug: w.slug, windowStart: w.windowStart });   // → MongoDB shadow_fills_<mode>
+  }
+
+  function queueFill(w, rec, frame, latencyMs) {
+    (w.pendingFills ||= []).push({ rec, dueMs: rec.ts + latencyMs,
+      dueTInto: rec.tInto + latencyMs / 1000, frame, decPx0: rec.effPx });
+  }
+
+  // One matching path for immediate orders, delayed orders, and window close.
+  // Frames at the deadline are eligible; later observations never price a fill.
+  function resolvePending(w, nowMs, frame = null) {
+    const keep = [];
+    const endMs = (w.windowStart + w.windowSec) * 1000;
+    for (const p of w.pendingFills || []) {
+      if (frame && frame.nowMs <= p.dueMs && frame.nowMs < endMs) p.frame = frame;
+      if (nowMs < p.dueMs && nowMs < endMs) { keep.push(p); continue; }
+      const r = p.rec, at = p.frame;
+      const book = r.side === "Up" ? at?.up : at?.down;
+      const bookMs = book?.depthTs ?? at?.nowMs;
+      let reason = p.dueMs >= endMs ? "arrival at or after market expiry" : null;
+      if (!reason && (bookMs == null || bookMs > at.nowMs
+          || p.dueMs - bookMs > config.tradeFreshMs)) reason = "stale or missing arrival book";
+      if (!reason && !matchMarketableIntent(r, book, p.dueTInto)) reason = "no visible asks within cap";
+      if (reason) {
+        if (verboseOn) verbose("shadow.no_fill", { slug: w.slug, leg: r.leg, side: r.side,
+          decidedT: r.tInto, arrivalT: p.dueTInto, cap: r.limitPx, reason });
+        try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED,
+          key: `${w.windowStart}:${r.oid}`, slug: w.slug, ws: w.windowStart,
+          oid: r.oid, side: r.side, leg: r.leg, note: reason, ts: nowMs }); } catch {}
+        continue;
+      }
+      r.ts = nowMs;
+      // Price context also comes from the as-of frame, never the later tick
+      // which happened to advance the simulation clock past the deadline.
+      if (at.bzPrice != null) {
+        r.bz = at.bzPrice;
+        if (at.openBinance != null) {
+          r.bzGap = at.bzPrice - at.openBinance;
+          r.bzGapPct = at.openBinance ? r.bzGap / at.openBinance * 100 : null;
+        }
+      }
+      if (at.clPrice != null) r.cl = at.clPrice;
+      if (verboseOn) verbose("shadow.fill", { slug: w.slug, leg: r.leg, side: r.side,
+        decidedT: r2(r.decidedT), fillT: r2(r.tInto), decPx: r2(p.decPx0), fillPx: r2(r.effPx),
+        shares: r2(r.shares), usdc: r2(r.usdc),
+        slip: r2(r.effPx - p.decPx0), latencyMs: (r.tInto - r.decidedT) * 1000 });
+      bookFill(w, r);
+    }
+    w.pendingFills = keep;
   }
 
   // Full config snapshot for a window — the SINGLE source of truth for what settings produced these fills.
@@ -180,13 +232,20 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     openChainlink, tInto, up, down, bzPrice, binanceAtMs, clPrice, nowMs }) {
     if (!isRunning()) return;   // bot is STOPPED → no strategy step (no shadow entries, no live orders)
     const w = getW(slug, windowStart, openBinance);
-    if (w.settled || !up || !down) return;
+    if (w.settled) return;
     const P = mergedP;
-    if (tInto >= config.windowSec) return;
+    if (tInto >= w.windowSec) {
+      resolvePending(w, nowMs);
+      return;
+    }
+    const frame = { up, down, bzPrice, clPrice, openBinance: w.openBinance, nowMs };
+    // Arrival fills update inventory before a new decision, matching replay.
+    resolvePending(w, nowMs, frame);
+    if (tInto < 0 || !up || !down) return;
 
     const dtMs = w.lastTickMs != null ? Math.max(1, nowMs - w.lastTickMs) : 120;
     w.lastTickMs = nowMs;
-    w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, tInto, bz: bzPrice, cl: clPrice, nowMs };   // latest book (for MANUAL buys)
+    w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, tInto, bz: bzPrice, cl: clPrice, nowMs, frame };   // latest book (for MANUAL buys)
     activeSlug = slug;
 
     // STRATEGY + FILL — the entry-only strategy returns decisions for this tick.
@@ -234,7 +293,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     // display/PnL booking by LATENCY_MS and book it at the current (delayed) ask when due. This is now applied
     // in ALL modes — including real-live — because the REAL order is routed IMMEDIATELY (shadow_order below),
     // decoupled from this deferred display booking, so real orders are never delayed.
-    const simLat = P.LATENCY_MS || 0;
+    const simLat = Math.max(0, Number(P.LATENCY_MS) || 0);
     for (const rec of got) {
       rec.ts = nowMs;
       // stamp spot price + gap @ fill (price − window-open) so the property menu's "market @ fill" shows it
@@ -276,64 +335,10 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         reason: rec.reason, tInto: rec.tInto, reqShares: rec.shares, decPx: rec.effPx,
         limitPx: rec.limitPx, budgetUsd: rec.budgetUsd ?? null,
         mode: (config.executionMode === "live" ? "live" : "sim"), simLatencyMs: (P.LATENCY_MS || 0), ts: nowMs }); } catch {} }
-      if (simLat > 0 && rec.exec === "marketable") (w.pendingFills = w.pendingFills || []).push(
-        { rec, dueMs: nowMs + simLat, dueTInto: rec.tInto + simLat / 1000, upA: up.bestAsk, dnA: down.bestAsk,
-          upBook: up, dnBook: down, decPx0: rec.effPx });  // snapshot decision book + decision px, track fwd
+      if (rec.exec === "marketable") queueFill(w, rec, frame, simLat);
       else bookFill(w, rec);
     }
-    // resolve deferred fills now due → fill at the CURRENT (delayed) ask, capped at the order's limit.
-    if (w.pendingFills && w.pendingFills.length) {
-      const keep = [];
-      for (const p of w.pendingFills) {
-        if (nowMs >= p.dueMs) {
-          const r = p.rec;
-          // Fill EXACTLY at decision+LATENCY — do NOT wait for the next tick. Price against the book AS OF the
-          //   deadline (p.upA/p.dnA = the last book ≤ deadline, tracked forward while pending), and stamp the fill
-          //   time at the exact deadline (p.dueTInto). Matches the backview's fill-at-exactly-latency model.
-          const upA = p.upA, dnA = p.dnA;
-          const px0 = (r.side === "Up" ? upA : dnA);   // every leg is a BUY → fill at its own-side ask
-          const fixedUsd = r.amountMode === "usd"
-            || (r.budgetUsd != null && Number.isFinite(+r.budgetUsd));
-          const requestedShares = r.minimumShares ?? r.shares;
-          const requestedBudgetUsd = fixedUsd ? (+r.budgetUsd || +r.usdc || 0) : null;
-          const arrivalBook = r.side === "Up" ? p.upBook : p.dnBook;
-          const fill = fixedUsd
-            ? walkVisibleBudget(arrivalBook, requestedBudgetUsd, r.limitPx)
-            : walkVisibleAsks(arrivalBook, requestedShares, r.limitPx);
-          r.decidedT = r.tInto; r.tInto = p.dueTInto;   // exact fill time = decision + latency (no tick-wait)
-          r.placedT = r.decidedT;                       // SIM: placed (order-fire) time = the decision tick
-          if (fill.shares > 0) {
-            r.requestedShares = requestedShares;
-            if (fixedUsd) r.requestedBudgetUsd = requestedBudgetUsd;
-            r.shares = +fill.shares.toFixed(4); r.effPx = +fill.avgPx.toFixed(4); r.usdc = +fill.cost.toFixed(4);
-            r.status = fixedUsd
-              ? (fill.cost + 1e-9 < requestedBudgetUsd ? "partial" : "full")
-              : (fill.shares + 1e-9 < r.requestedShares ? "partial" : "full");
-            r.filledLate = true; r.ts = nowMs;
-            if (bzPrice != null) { r.bz = bzPrice; if (bzGap != null) { r.bzGap = bzGap; r.bzGapPct = w.openBinance ? (bzGap / w.openBinance) * 100 : null; } } }
-          // VERBOSE: distinguish an actual match from a FAK that reached the
-          // future book after its cap had disappeared. Previously both paths
-          // were labeled `shadow.fill`, which could corrupt forward-analysis
-          // counts even though the ledger and order-status record were correct.
-          if (verboseOn && fill.shares > 0) verbose("shadow.fill", { slug, leg: r.leg, side: r.side,
-            decidedT: r2(r.decidedT), fillT: r2(r.tInto), decPx: r2(p.decPx0), fillPx: r2(r.effPx),
-            shares: r2(r.shares), usdc: r2(r.usdc),
-            slip: (p.decPx0 != null && r.effPx != null) ? r2(r.effPx - p.decPx0) : null, latencyMs: simLat });
-          else if (verboseOn) verbose("shadow.no_fill", { slug, leg: r.leg, side: r.side,
-            decidedT: r2(r.decidedT), arrivalT: r2(r.tInto), decPx: r2(p.decPx0), cap: r2(r.limitPx),
-            arrivalAsk: r2(px0), reason: px0 == null ? "no-ask" : "outside-cap-or-no-depth", latencyMs: simLat });
-          if (fill.shares > 0) bookFill(w, r);
-          else {
-            try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
-              slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
-              note: px0 == null ? "no ask at simulated match time" : `ask/depth outside cap ${r.limitPx}`,
-              ts: nowMs }); } catch {}
-          }
-        } else { if (up.bestAsk != null) p.upA = up.bestAsk; if (down.bestAsk != null) p.dnA = down.bestAsk;
-          p.upBook = up; p.dnBook = down; keep.push(p); }   // track full book fwd to the deadline
-      }
-      w.pendingFills = keep;
-    }
+    resolvePending(w, nowMs, frame); // latency=0 matches the decision L2
 
     // broadcast a live snapshot (open order + aggregate position) — THROTTLED: now event-driven (one tick
     // per book update), an un-throttled broadcast would flood every browser with JSON. Always emit on a
@@ -389,8 +394,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   function settle(slug, winSide, botSummary) {
     const w = windows.get(slug);
     if (!w || w.settled) return null;
-    // flush any still-deferred (latency) fills at their last price so they're counted in settlement
-    if (w.pendingFills && w.pendingFills.length) { for (const p of w.pendingFills) bookFill(w, p.rec); w.pendingFills = []; }
+    // Resolve pre-expiry arrivals against their last causal L2; expire the rest.
+    resolvePending(w, (w.windowStart + w.windowSec) * 1000);
     w.winSide = winSide;
     w.settled = true;
     const winSh = winSide === "Up" ? w.upShares : w.downShares;
@@ -454,7 +459,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     }
     ab.netMatch = ab.bot ? ab.sim.net === ab.bot.net : null;
     ab.pnlErr = ab.bot && ab.bot.pnl != null ? r2(Math.abs(ab.sim.pnl - ab.bot.pnl)) : null;
-    recordSession(ab);   // → MongoDB shadow_sessions_<mode>
+    persistSession(ab);   // → MongoDB shadow_sessions_<mode>
     try { onEvent({ kind: "shadow_resolved", slug, ab }); } catch {}
     // SESSION CIRCUIT-BREAKER: accumulate the session's realized PnL (REAL in live, else sim) and, if it breaches
     //   the configured max loss, emit `circuit_breaker` ONCE (index.js halts the bot). Re-arms via resetBreaker().
@@ -474,7 +479,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     if (!w || w.settled || w.pendingRecorded) return;
     // Record EVERY closed window as pending — including 0-fill windows — so the history shows a ⏳ pending row
     // the instant a window ends, then flips to the winner on settle (mirrors settle(), which records all windows).
-    if (w.pendingFills && w.pendingFills.length) { for (const p of w.pendingFills) bookFill(w, p.rec); w.pendingFills = []; }
+    resolvePending(w, (w.windowStart + w.windowSec) * 1000);
     w.pendingRecorded = true;
     const ab = {
       slug, windowStart: w.windowStart, winSide: null, status: "pending", ts: Math.floor(Date.now() / 1000),
@@ -486,7 +491,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     };
     if (w.realFills > 0) ab.real = { pnl: null, upShares: r2(w.realUp || 0), downShares: r2(w.realDn || 0),
                                      cost: r2(w.realCost || 0), fee: r2(w.realFee || 0), nFills: w.realFills };
-    recordSession(ab);
+    persistSession(ab);
     try { onEvent({ kind: "shadow_pending", slug, ab }); } catch {}
   }
 
@@ -528,23 +533,25 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const w = activeSlug ? windows.get(activeSlug) : null;
     if (!w || w.settled) return { error: "no active window yet — wait for a live window" };
     if (!w.lastAsk) return { error: "no book yet — wait a moment" };
-    if (Date.now() / 1000 - w.windowStart >= config.windowSec) return { error: "window is closing — wait for the next window" };   // rollover guard
+    const nowMs = Date.now();
+    if (nowMs / 1000 - w.windowStart >= w.windowSec) return { error: "window is closing — wait for the next window" };   // rollover guard
     const S = side === "Down" ? "Down" : "Up";
     const ask = S === "Up" ? w.lastAsk.up : w.lastAsk.dn;
     if (ask == null) return { error: `no ${S} ask on the book` };
     if (ask > lim) return { error: `${S} ask ${ask.toFixed(2)} > limit ${lim.toFixed(2)} — GTC would rest, no fill` };
-    const px = Math.min(ask, lim), t = w.lastAsk.tInto;
+    const px = Math.min(ask, lim), t = nowMs / 1000 - w.windowStart;
     const rec = { tInto: t, decidedT: t, placedT: t, side: S, shares: sh, effPx: +px.toFixed(4), usdc: +(px * sh).toFixed(4),
-      exec: "marketable", kind: "taker", leg: "entry", reason: "manual", manual: true, status: "full", limitPx: lim, oid: ++w.seq, ts: w.lastAsk.nowMs };
+      exec: "marketable", kind: "taker", leg: "entry", reason: "manual", manual: true, status: "full", limitPx: lim, oid: ++w.seq, ts: nowMs };
     if (w.lastAsk.bz != null) { rec.bz = w.lastAsk.bz; if (w.openBinance != null) { rec.bzGap = w.lastAsk.bz - w.openBinance; rec.bzGapPct = w.openBinance ? (rec.bzGap / w.openBinance) * 100 : null; } }
     if (w.lastAsk.cl != null) rec.cl = w.lastAsk.cl;
-    const simLat = mergedP.LATENCY_MS || 0;
+    const simLat = Math.max(0, Number(mergedP.LATENCY_MS) || 0);
+    queueFill(w, rec, w.lastAsk.frame, simLat);
     if (simLat > 0) {   // fill at decision+LATENCY_MS, tracked forward — SAME latency model as strategy fills (property-menu latency row)
-      (w.pendingFills = w.pendingFills || []).push({ rec, dueMs: w.lastAsk.nowMs + simLat, dueTInto: t + simLat / 1000, upA: w.lastAsk.up, dnA: w.lastAsk.dn, decPx0: rec.effPx });
       return { ok: true, manual: true, pending: true, side: S, shares: sh, decidedT: +t.toFixed(2), latencyMs: simLat, slug: w.slug };
     }
-    bookFill(w, rec);   // latency 0 → book immediately
-    return { ok: true, manual: true, side: S, shares: sh, px: +px.toFixed(4), tInto: +t.toFixed(2), slug: w.slug };
+    resolvePending(w, nowMs);
+    if (!w.fills.includes(rec)) return { error: "no fresh visible depth within limit" };
+    return { ok: true, manual: true, side: S, shares: rec.shares, px: rec.effPx, tInto: +t.toFixed(2), slug: w.slug };
   }
 
   // Draw a circle for a LIVE manual fill: emit a DISPLAY-ONLY shadow_buy (using the REAL position) so the chart marks

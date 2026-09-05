@@ -48,3 +48,57 @@ test("BBA-only historical ticks cannot fabricate Helpme L2 liquidity", () => {
   assert.deepEqual(simulateFills({ ticks, openBinance: 100, openPrice: 100 },
     { LATENCY_MS: 520, H_BINANCE_TREND_ON: false }), []);
 });
+
+const BINANCE_ONLY = { H_CLOB_MID_VELOCITY_ON: false, H_BINANCE_TREND_ON: false,
+  H_BINANCE_GAP_AGREE_ON: false, H_STOP_S: 300, H_COOLDOWN_MS: 2000 };
+
+for (const latency of [500, 520]) {
+  test(`replay rejects an arrival ${latency === 500 ? 'at' : 'after'} market expiry`, () => {
+    const ticks = [tick(296, .5, .5, 100), tick(299.5, .5, .5, 106)];
+    assert.deepEqual(simulateFills({ ticks, openBinance: 100 },
+      { ...BINANCE_ONLY, LATENCY_MS: latency }), []);
+  });
+}
+
+test('replay excludes boundary/post-window decisions even with zero latency', () => {
+  const ticks = [tick(297, .5, .5, 100), tick(300, .5, .5, 106), tick(301, .5, .5, 112)];
+  assert.deepEqual(simulateFills({ ticks, openBinance: 100 },
+    { ...BINANCE_ONLY, H_STOP_S: 999, LATENCY_MS: 0 }), []);
+});
+
+test('replay retains a one-sided frame which removes pending arrival liquidity', () => {
+  const empty = tick(3.4, .5, .5, 106);
+  empty.upAsk = null; empty.up.bestAsk = null; empty.up.asks = [];
+  const ticks = [tick(0, .5, .5, 100), tick(3, .5, .5, 106), empty, tick(3.6, .5, .5, 106)];
+  assert.deepEqual(simulateFills({ ticks, openBinance: 100 }, BINANCE_ONLY), []);
+});
+
+test('replay uses the book at the deadline and never the first future frame', () => {
+  const ticks = [tick(0, .5, .5, 100), tick(3, .5, .5, 106),
+    tick(3.519, .5, .5, 107, [[.5, 4]]), tick(3.521, .6, .5, 120)];
+  const [fill] = simulateFills({ ticks, openBinance: 100 }, BINANCE_ONLY);
+  assert.equal(fill.shares, 4); assert.equal(fill.usdc, 2); assert.equal(fill.bz, 107);
+  ticks[2].t = 3.52;
+  assert.equal(simulateFills({ ticks, openBinance: 100 }, BINANCE_ONLY)[0].shares, 4);
+});
+
+test('replay cannot extrapolate a stale final book through a long latency', () => {
+  const ticks = [tick(0, .5, .5, 100), tick(3, .5, .5, 106)];
+  assert.deepEqual(simulateFills({ ticks, openBinance: 100 },
+    { ...BINANCE_ONLY, LATENCY_MS: 7000 }), []);
+});
+
+test('replay rejects stale or future CLOB receive timestamps carried by fresh frames', () => {
+  for (const depthTs of [-5000, 5000]) {
+    const ticks = [tick(0, .5, .5, 100), tick(3, .5, .5, 106)];
+    ticks[1].up.depthTs = depthTs;
+    assert.deepEqual(simulateFills({ ticks, openBinance: 100 }, BINANCE_ONLY), []);
+  }
+});
+
+test('a pre-expiry final arrival remains depth-limited and causally timestamped', () => {
+  const ticks = [tick(296, .5, .5, 100), tick(299.2, .5, .5, 106, [[.5, 4]])];
+  const [f] = simulateFills({ ticks, openBinance: 100 }, BINANCE_ONLY);
+  assert.equal(f.shares, 4); assert.equal(f.usdc, 2); assert.equal(f.status, 'partial');
+  assert.ok(Math.abs(f.tInto - 299.72) < 1e-9);
+});

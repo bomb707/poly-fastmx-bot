@@ -110,6 +110,31 @@ export function walkVisibleBudget(book, budgetUsd, cap, { allowBbaFallback = tru
   return { shares, cost, avgPx: shares > 0 ? cost / shares : null, unspent: left };
 }
 
+/** Match a modeled intent against actual L2 as of its arrival. Mutates only
+ * matched records; an empty ladder or an exhausted cap produces no fill. */
+export function matchMarketableIntent(rec, book, arrivalT) {
+  const fixedUsd = rec.amountMode === "usd"
+    || (rec.budgetUsd != null && Number.isFinite(+rec.budgetUsd));
+  const requestedShares = rec.minimumShares ?? rec.shares;
+  const requestedBudgetUsd = fixedUsd ? (+rec.budgetUsd || +rec.usdc || 0) : null;
+  const match = fixedUsd
+    ? walkVisibleBudget(book, requestedBudgetUsd, rec.limitPx, { allowBbaFallback: false })
+    : walkVisibleAsks(book, requestedShares, rec.limitPx, { allowBbaFallback: false });
+  if (!(match.shares > 0)) return false;
+  const decidedT = rec.tInto;
+  stampLatencyDisplay(rec, arrivalT);
+  rec.requestedShares = requestedShares;
+  if (fixedUsd) rec.requestedBudgetUsd = requestedBudgetUsd;
+  rec.shares = +match.shares.toFixed(4);
+  rec.effPx = +match.avgPx.toFixed(4);
+  rec.usdc = +match.cost.toFixed(4);
+  rec.status = fixedUsd
+    ? (match.cost + EPS < requestedBudgetUsd ? "partial" : "full")
+    : (match.shares + EPS < requestedShares ? "partial" : "full");
+  rec.filledLate = arrivalT > decidedT;
+  return true;
+}
+
 /**
  * BACKTEST latency precompute — for each tick i, the Up/Down ask that exists LATENCY_MS in the FUTURE (the ask a
  *   marketable order fills at, since it lands at decision+latency, not now). Two-pointer forward scan, O(n).
