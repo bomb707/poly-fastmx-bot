@@ -1,5 +1,5 @@
-// momentum.js — the ONE momentum implementation, shared by the chart marks (public/index.html),
-// the live strategy (research/strategy.js → stepMomTaker) and the backtest (research/simrun.js).
+// Momentum utilities: Helpme uses midOf; the history page uses velocity and mark helpers.
+// Chart marks are separate from the main strategy's fixed-threshold entry rules.
 //
 // This is live-tracker-tool's vel_mid mark logic, verbatim:
 //   • signal  = RAW CLOB Up-implied mid, velocity over a FIXED 5s lookback:  v(t) = mid(t) − mid(t−5)

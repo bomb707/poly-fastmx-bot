@@ -1,7 +1,0 @@
-[
-  { "name": "p95_e10_t5", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 2733, "pauseMakerAboveLatencyMs": 3500, "takerLatencyMs": 520, "unpairedTimeoutS": 5, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p95_e10_t10", "signalMode": "twoSided", "pairQuoteCap": 0.95, "pairCostCap": 0.95, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 2733, "pauseMakerAboveLatencyMs": 3500, "takerLatencyMs": 520, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p94_e15_t10", "signalMode": "twoSided", "pairQuoteCap": 0.94, "pairCostCap": 0.94, "orderSize": 5, "minOrderShares": 5, "exposureCap": 15, "targetMakerLatencyMs": 2733, "pauseMakerAboveLatencyMs": 3500, "takerLatencyMs": 520, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p94_e10_t10", "signalMode": "twoSided", "pairQuoteCap": 0.94, "pairCostCap": 0.94, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 2733, "pauseMakerAboveLatencyMs": 3500, "takerLatencyMs": 520, "unpairedTimeoutS": 10, "minTimeS": 5, "maxTimeS": 255 },
-  { "name": "p94_e10_t5", "signalMode": "twoSided", "pairQuoteCap": 0.94, "pairCostCap": 0.94, "orderSize": 5, "minOrderShares": 5, "exposureCap": 10, "targetMakerLatencyMs": 2733, "pauseMakerAboveLatencyMs": 3500, "takerLatencyMs": 520, "unpairedTimeoutS": 5, "minTimeS": 5, "maxTimeS": 255 }
-]

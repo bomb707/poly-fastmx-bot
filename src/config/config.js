@@ -128,8 +128,8 @@ export const config = {
   //   the session-log dir + verbose lines carry this tag. Override with INSTANCE_NAME=… ; default = "<name>-pm<id>" / "pid<pid>".
   instanceName: E("INSTANCE_NAME", process.env.pm_id != null ? `${process.env.name || "app"}-pm${process.env.pm_id}` : `pid${process.pid}`),
 
-  // SHADOW strategy A/B: run research/strategy.js decide() on the same live feeds alongside the
-  // bot and log a per-window bot-vs-sim PnL ledger (data/shadow-ab.jsonl). Set SHADOW=0 to disable.
+  // Run the main strategy simulation on the live feeds and record its per-window ledger.
+  // Set SHADOW=0 to disable.
   shadow: E("SHADOW", "1") !== "0",
 
   // ───── EXECUTION MODE ───────────────────────────────────────────────────────

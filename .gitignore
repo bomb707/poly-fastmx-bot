@@ -16,7 +16,3 @@ ai_data/
 *.log
 npm-debug.log*
 .DS_Store
-
-# order-latency probes (contain a private-key slot — never commit)
-research/latency_test.mjs
-research/latency_test_standalone.mjs

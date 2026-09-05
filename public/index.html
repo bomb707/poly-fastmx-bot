@@ -1286,7 +1286,7 @@ let TRACK_WALLET=FIXED_WALLET;       // the wallet being tracked (fixed)
 let simulateFills=null, positionFromFills=null, FEE_PARAMS=null;
 const simReady=import("/engine/simrun.js").then(m=>{simulateFills=m.simulateFills;positionFromFills=m.positionFromFills;}).catch(()=>{});
 const feeReady=import("/engine/fees.js").then(m=>{FEE_PARAMS=m.PARAMS;}).catch(()=>{});
-// modeled taker fee for a SHADOW fill (FEE_ALL_FILLS → charged on every fill). Matches strategy.js.
+// modeled taker fee for a SHADOW fill (FEE_ALL_FILLS → charged on every fill). Matches engine/fees.js.
 function clientFee(px,shares){ if(px==null||shares==null) return 0; const p=FEE_PARAMS||{};
   const rate=(p.FEE_BPS!=null?p.FEE_BPS:700)/10000, useMin=!!p.FEE_USE_MIN;
   return rate*(useMin?Math.min(px,1-px):px*(1-px))*shares; }
@@ -2754,7 +2754,7 @@ function createGroup(rootEl, kind){
   // momentum-driven points on the side OPPOSITE the selected momentum (the falling side), each with the
   // side bid (for the limit) and ask px (for the CLOB-gap filter). Mirrors the draw() overlay logic.
   // Gold ◆ marks = PURE momentum detection for `side` (every onset/peak), via the SHARED momentum module
-  // (research/momentum.js). Their show/hide is decided ONLY by the marks toggle (showMomMarks) — they are
+  // (engine/momentum.js). Their show/hide is decided ONLY by the marks toggle (showMomMarks) — they are
   // NOT filtered by the entry gate / warmup / cooldown (those are PLACEMENT decisions in the engine).
   // MEMOIZED: draw() calls this per side every frame; recompute only when its inputs change.
   function render(){

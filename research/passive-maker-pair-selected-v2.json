@@ -1,9 +1,0 @@
-[
-  {
-    "name": "pair95_q3_forward",
-    "signalMode": "twoSided",
-    "pairQuoteCap": 0.95,
-    "pairCostCap": 0.95,
-    "exposureCap": 3
-  }
-]

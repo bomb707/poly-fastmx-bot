@@ -1,9 +1,8 @@
 // engine/mergesim.js — REUSABLE merge-sim model (MERGE ON PROFIT: reclaim balanced $1-sets, bank the profit).
 //
 // ── LIB BOUNDARY ─────────────────────────────────────────────────────────────────────────────────────
-// The modeled-merge logic, single-source. Lives in engine/ (not src/lib/) because engine/strategy.js imports
-// it AND is served to the browser at /engine/*.js (a src/lib/ path wouldn't resolve there). SIM/backtest side
-// only — the REAL on-chain CTF merge is src/execution/liveMerge.js (mergeOnChain).
+// Shared merge accounting supports persisted fills in the simulation ledger.
+// The on-chain CTF merge adapter is src/execution/liveMerge.js (mergeOnChain).
 //
 // THE MODEL. When the hedge-accumulated position is BALANCED (equal Up/Down shares = complete $1-sets) and its
 // guaranteed profit (fee-inclusive) ≥ MERGE_X, the strategy emits a fee-free "merge" record: reclaim $1 per set

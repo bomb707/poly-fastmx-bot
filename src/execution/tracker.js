@@ -3,7 +3,7 @@ import path from "node:path";
 import { config } from "../config/config.js";
 import { bookAround, depthAround } from "../util/state.js";
 import { slugFor, windowStartFor } from "../util/util.js";
-import { PARAMS, fillFee } from "../../engine/strategy.js";   // shared fee model so bot+sim PnL match
+import { PARAMS, fillFee } from "../../engine/fees.js";   // shared fee model so bot+sim PnL match
 
 const EPS = 1e-9;
 

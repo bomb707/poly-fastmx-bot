@@ -3,7 +3,7 @@
 import { makerTouchFill, latencyFillPrice, futureAsks, stampLatencyDisplay, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
 let pass = 0, fail = 0; const ok = (n, c) => { c ? pass++ : fail++; console.log((c ? "✓" : "✗ FAIL") + " " + n); };
 
-// makerTouchFill — mirrors engine/strategy.js maker-touch block
+// makerTouchFill — shared visible-book fill accounting
 ok("maker crossed → full", makerTouchFill({ askNow: 0.40, limit: 0.45, filled: 0, target: 10, dtMs: 120, touchMs: 250, fillPct: 100 }) === 10);
 ok("maker touch full chunk", makerTouchFill({ askNow: 0.45, limit: 0.45, filled: 0, target: 10, dtMs: 250, touchMs: 250, fillPct: 100 }) === 10);
 ok("maker touch 50%", makerTouchFill({ askNow: 0.45, limit: 0.45, filled: 0, target: 10, dtMs: 250, touchMs: 250, fillPct: 50 }) === 5);

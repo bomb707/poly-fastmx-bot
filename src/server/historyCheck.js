@@ -3,7 +3,7 @@
 //       placed time (placedMs). Heavy (data-api + RPC decode) → disk-cached.
 //   (2) estimateMomentum(excluded) — grid-search the LIVE momentum params (lb, sens, dens, min) that
 //       best reproduce the placed times of the NON-excluded buys (the page lets you tick wash buys to
-//       drop). Uses the SAME research/momentum.js the live engine + backtest use, so the result is
+//       drop). Uses the SAME engine/momentum.js the live engine + backtest use, so the result is
 //       directly usable as config.
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +14,7 @@ import { velocitySeries, markEvents, buySide } from "../../engine/momentum.js";
 const W = config.wallet.toLowerCase();
 const DAPI = (config.dataApiHost || "https://data-api.polymarket.com").replace(/\/$/, "");
 const BT = (config.backtestApi || "http://localhost:3841").replace(/\/$/, "");
-const ONCHAIN_CACHE = new URL("../../research/.onchain-cache.json", import.meta.url).pathname;
+const ONCHAIN_CACHE = path.join(config.dataDir, "onchain-cache.json");
 const BUYS_CACHE = path.join(config.dataDir, "tracker-buys.json");
 
 async function gj(u, n = 2, timeoutMs = 12000) {
@@ -72,7 +72,7 @@ export async function getTrackerBuys({ days = 20, market = "btc-updown-5m", refr
     }
     estProgress.done = ++decoded;
   });
-  try { fs.writeFileSync(ONCHAIN_CACHE, JSON.stringify(cache)); } catch {}
+  try { fs.mkdirSync(config.dataDir, { recursive: true }); fs.writeFileSync(ONCHAIN_CACHE, JSON.stringify(cache)); } catch {}
   // all-in cost per (window, side) from the data-api taker fills: usdcSize = notional + taker fee (what was actually paid)
   const costBy = new Map();
   for (const f of takerFills) { const k = f.slug + "|" + f.outcome, c = costBy.get(k) || { usdc: 0, notional: 0, shares: 0 };

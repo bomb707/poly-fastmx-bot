@@ -2,14 +2,12 @@
 //
 // ── LIB BOUNDARY ─────────────────────────────────────────────────────────────────────────────────────
 // Pure, dependency-free functions — the SINGLE SOURCE OF TRUTH for "when and at what price does a modeled order
-// fill". Lives in engine/ (not src/lib/) because engine/strategy.js + engine/simrun.js import it AND are served
-// to the browser at /engine/*.js — a src/lib/ path wouldn't resolve there. Wired into all three consumers:
-//   engine/strategy.js (makerTouchFill) · engine/simrun.js (futureAsks + stampLatencyDisplay) ·
-//   src/execution/shadow.js (latencyFillPrice). Two ORCHESTRATION modes wrap these primitives (same model):
+// fill". Browser/server replay imports this module through engine/simrun.js; live simulation uses it
+// through src/execution/shadow.js. Both consumers walk visible depth for share and USDC intents.
+// Two orchestration modes wrap these primitives:
 //   • Backtest — precompute the ask LATENCY_MS in the future per tick (`futureAsks`) and price the fill there.
 //   • Live-shadow — defer the fill in a queue and, at decision+latency, price it against the book AS OF then.
-// The maker touch-fill accrual (`makerTouchFill`) drives the engine's resting-order block; the taker/crossing
-// case is just "fill at the ask" (`latencyFillPrice` with no maker resting).
+// Maker helpers remain available for shared fill-accounting tests; Helpme produces taker intents.
 //
 // SIM/backtest ONLY — real live books the REAL CLOB fill via lib/executor.js (never a modeled fill).
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────
