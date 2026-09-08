@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import * as gapPredictor from "./gap_predictor.js";
-import * as helpme from "./helpme.js";
+import * as wallet3048 from "./wallet3048.js";
 import { getStrategy, listStrategies } from "./index.js";
 
 const tick = (t, gap, upAsk, downAsk, intensity) => ({
@@ -24,8 +24,8 @@ function run(ticks, overrides = {}) {
 }
 
 test("Gap Predictor remains a research artifact while wallet3048 is runtime-selectable", () => {
-  assert.equal(getStrategy("gap_predictor"), helpme);
-  assert.deepEqual(listStrategies().map((row) => row.name), ["helpme", "wallet3048"]);
+  assert.equal(getStrategy("gap_predictor"), wallet3048);
+  assert.deepEqual(listStrategies().map((row) => row.name), ["wallet3048"]);
   assert.equal(getStrategy("wallet3048").NAME, "wallet3048");
   // Its extracted defaults stay testable in isolation for reproducible research.
   assert.equal(gapPredictor.STRAT.L_VOL_ROUNDS, 6);

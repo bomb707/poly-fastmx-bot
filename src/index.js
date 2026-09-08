@@ -1,5 +1,5 @@
 import { config } from "./config/config.js";
-import { STRAT } from "../engine/strategies/helpme.js";
+import { STRAT } from "../engine/strategies/wallet3048.js";
 import { initSessionLog, setLogWindow, logConfigChange, logFeedEvent, refreshEnvSnapshot, setStrategySnapshot } from "./logging/sessionLog.js";
 initSessionLog(config.logDir, { config, strat: STRAT, maxMb: config.logMaxMb, instance: config.instanceName });   // per-INSTANCE per-run session dir + per-window logs + config history — do this FIRST
 import { createLiveState, pruneTokens } from "./util/state.js";
@@ -327,7 +327,7 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
       // exact-share GTC while ordinary entries may use the selected transport.
       let p, placedPx = null;
       {
-      // Use the exact cap computed by Helpme, with the strategy ceiling as a defensive fallback.
+      // Use the exact cap computed by wallet3048, with the strategy ceiling as a defensive fallback.
       const price = rec.limitPx != null ? rec.limitPx : (params.LIMIT ?? 0.98);
       if (verboseOn) verbose("route.fill", { slug: String(e.slug).split("-").pop(), side: rec.side, leg: rec.leg, reason: rec.reason,
         shares: rec.shares, shadowPx: rec.effPx, ceiling: price, tInto: Math.round(rec.tInto ?? 0) });
@@ -422,11 +422,11 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
     try { ui.circuitBreaker(e); } catch {}
   }
 }, () => !!(ui && ui.hasClients && ui.hasClients())) : null;   // uiActive → shadow skips the UI-only ladder payload when no browser is watching
-// Restore the last-applied Helpme strategy parameters from the config store.
+// Restore the last-applied wallet3048 parameters from the config store.
 if (shadow && _savedCfg.shadowParams && typeof _savedCfg.shadowParams === "object") shadow.setParams(_savedCfg.shadowParams);
 // General strategy-param override for unattended runs (pm2): a JSON blob of
-// current Helpme STRAT keys. Unknown/obsolete keys are discarded.
-//   SHADOW_PARAMS_JSON='{"H_CLOB_MID_VELOCITY_ON":true,"H_MID_VELOCITY_LOOKBACK_MS":3000,"H_MID_VELOCITY_MIN":0.02,"H_BINANCE_GAP_MOMENTUM_ON":true,"H_BINANCE_GAP_VELOCITY_LOOKBACK_MS":3000,"H_BINANCE_GAP_VELOCITY_MIN":5,"H_BINANCE_TREND_ON":true,"H_BINANCE_TREND_LOOKBACK_SEC":30,"H_BINANCE_TREND_MIN_PCT":0.05,"H_BINANCE_COUNTERTREND_LOOKBACK_SEC":60,"H_BINANCE_COUNTERTREND_MIN_PCT":0.075,"H_BINANCE_GAP_AGREE_ON":false,"LATENCY_MS":520}'
+// current wallet3048 STRAT keys. Unknown/obsolete keys are discarded.
+//   SHADOW_PARAMS_JSON='{"STRATEGY":"wallet3048","W3048_SPEC_VERSION":2,"LATENCY_MS":520}'
 if (shadow && process.env.SHADOW_PARAMS_JSON) {
   try {
     const p = JSON.parse(process.env.SHADOW_PARAMS_JSON);
@@ -718,7 +718,7 @@ function samplerTick() {
     ageMs: bzAgeMs, reconnects: H.reconnects, staleReconnects: H.staleReconnects,
     errors: H.errors, downMs: H.totalDownMs + (H.downSince ? Date.now() - H.downSince : 0),
   } : null;
-  // STRATEGY STATUS — Helpme's live gate for this window, surfaced so
+  // STRATEGY STATUS — wallet3048's live gate for this window, surfaced so
   // "what's the bot doing / why isn't it entering" is visible at a glance.
   let strat = null; try { strat = shadow ? shadow.liveStatus() : null; } catch {}
   const openProvisional = !!w.openBinanceProvisional;

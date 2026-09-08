@@ -50,7 +50,7 @@ export const config = {
   // open/final/winSide. Optional; tracker degrades gracefully if absent.
   backtestApi: E("BACKTEST_API", "https://bapi-v2.polywinbot.com").replace(/\/$/, ""),
   // Full-depth V2 recorder: 50 ms coherent Up/Down order-book frames used by
-  // Helpme's recorded:false replay. /snapshot-ticks remains the metadata source.
+  // wallet3048's recorded:false replay. /snapshot-ticks remains the metadata source.
   v2OrderbookApi: E("BAPI_V2_OB_BASE", "https://bapi-v2-ob.polywinbot.com").replace(/\/$/, ""),
   // v3 backtest API (bapi-v3): GET /markets/{slug}/snapshots — camelCase fields, higher tick resolution,
   // per-tick binance spot native. Default domain below; override in .env with BAPI_V3_BASE.
@@ -133,7 +133,7 @@ export const config = {
   shadow: E("SHADOW", "1") !== "0",
 
   // ───── EXECUTION MODE ───────────────────────────────────────────────────────
-  // This copied Helpme research tool has a CODE-LEVEL simulation lock. Environment values and copied secrets
+  // This wallet3048 reconstruction has a CODE-LEVEL simulation lock. Environment values and copied secrets
   // cannot arm real execution; enabling money movement requires a separate, reviewed code change.
   simulationOnly: true,
   executionMode: "simulation",
@@ -142,9 +142,7 @@ export const config = {
   // size (that's the primary "$" / HEAP config) — just a ceiling that catches a typo/bug. 0 = disabled.
   liveMaxOrderUsd: ENUM("LIVE_MAX_ORDER_USD", 25),
   liveMinOrderUsd: ENUM("LIVE_MIN_ORDER_USD", 1),   // Polymarket rejects a BUY below $1 notional → bump sub-$1 orders up to this. 0 = off.
-  // Fallback live automated taker transport. Helpme's persisted dashboard
-  // H_LIVE_ORDER_TYPE selects GTC/FAK per automatic intent; this value covers
-  // legacy/manual callers that do not carry a runtime selection. GTC was
+  // Fallback live automated taker transport for legacy/manual callers. GTC was
   // materially faster than FAK in the production probe and any unfilled
   // remainder is canceled immediately.
   // This changes live execution only; recorded:false simulation remains the

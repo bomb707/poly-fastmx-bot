@@ -123,8 +123,8 @@ export function prewarmClobLimitSignerOnce({ client, Side, tokenMeta, isOrderSub
     let signed = null;
     let body = null;
     try {
-      // Helpme's automated path is fixed-USD FAK. Exercise that exact local
-      // signer path once; no order is POSTed. Explicit price avoids a book GET.
+      // Exercise the fixed-USD FAK signer path once; no order is POSTed.
+      // An explicit price avoids a book GET.
       const tick = Number(tokenMeta.tickSize);
       const price = Math.max(tick, Math.min(1 - tick, 0.5));
       const args = {
@@ -170,7 +170,7 @@ export async function prewarmClobTokens({ client, Side, tokenIds = [], condition
   const ids = [...new Set((tokenIds || []).filter(Boolean).map(String))];
   if (!client || ids.length === 0) return [];
   const versionTask = resolveClobOrderVersion(client);
-  // Gamma already gives Helpme the condition id. One getClobMarketInfo call
+  // Gamma already provides the condition id. One getClobMarketInfo call
   // populates tick/neg-risk/fee metadata for both outcomes, avoiding two token
   // resolution requests. Concurrent lifecycle calls share the same promise.
   let conditionInfo = null;

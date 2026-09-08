@@ -15,7 +15,7 @@
 import crypto from "node:crypto";
 import { config } from "../config/config.js";
 
-const COOKIE_NAME = process.env.WEB_SESSION_COOKIE || "helpme_session";
+const COOKIE_NAME = process.env.WEB_SESSION_COOKIE || "wallet3048_session";
 const COOKIE_MAX_AGE = 24 * 60 * 60;            // 1 day
 const DEFAULT_PASSWORD = "changeme";
 const PASSWORD = process.env.WEB_PASSWORD || DEFAULT_PASSWORD;

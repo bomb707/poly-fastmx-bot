@@ -18,7 +18,7 @@ test("restart recovery settles a persisted simulation row using its booked fees"
     status: "pending",
     winSide: null,
     sim: { upShares: 7.0943, downShares: 0, cost: 3.71, fee: 0.1239, merged: 0, nFills: 1,
-      pnl: null, cfg: { strategy: "helpme", latencyMs: 520 } },
+      pnl: null, cfg: { strategy: "wallet3048", latencyMs: 520 } },
   };
   const won = resolvePendingSessionDoc(pending, "Up", 999);
   assert.equal(won.status, "resolved");
@@ -26,7 +26,7 @@ test("restart recovery settles a persisted simulation row using its booked fees"
   assert.equal(won.ts, 999);
   assert.equal(won.sim.winSh, 7.0943);
   assert.equal(won.sim.pnl, 3.2604);
-  assert.deepEqual(won.sim.cfg, { strategy: "helpme", latencyMs: 520 });
+  assert.deepEqual(won.sim.cfg, { strategy: "wallet3048", latencyMs: 520 });
 
   const lost = resolvePendingSessionDoc(pending, "Down", 1000);
   assert.equal(lost.sim.winSh, 0);

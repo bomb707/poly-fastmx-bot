@@ -434,14 +434,6 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       if (raw && setShadowParams) {
         try {
           const p = JSON.parse(raw);
-          if (!("H_BINANCE_TREND_LOOKBACK_SEC" in p)) p.H_BINANCE_TREND_LOOKBACK_SEC = 30;
-          delete p.H_BINANCE_TREND_LOOKBACK_MIN;
-          if (!("H_BINANCE_COUNTERTREND_LOOKBACK_SEC" in p)
-            || !("H_BINANCE_COUNTERTREND_MIN_PCT" in p)) {
-            p.H_BINANCE_TREND_MIN_PCT = 0.05;
-            p.H_BINANCE_COUNTERTREND_LOOKBACK_SEC = 60;
-            p.H_BINANCE_COUNTERTREND_MIN_PCT = 0.075;
-          }
           setShadowParams(p);
           patchConfigStore({ shadowParams: getShadowParams ? getShadowParams() : p });
         } catch (error) {

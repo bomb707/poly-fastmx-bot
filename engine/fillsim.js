@@ -61,7 +61,7 @@ export function latencyFillPrice(sideAsk, limitPx) {
 /**
  * Walk the visible ask ladder for a marketable BUY, never paying above the signed limit.
  * This is shared by live-shadow and historical replay so partial fills and VWAP are identical.
- * A best-ask fallback is retained only for legacy/manual callers; Helpme backviews disable it
+ * A best-ask fallback is retained only for legacy/manual callers; full-depth replays disable it
  * because inventing infinite liquidity from BBA would invalidate the strategy's depth gate.
  */
 export function walkVisibleAsks(book, requested, cap, { allowBbaFallback = true } = {}) {

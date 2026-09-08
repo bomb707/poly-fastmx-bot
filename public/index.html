@@ -755,40 +755,8 @@
         <span class="pcfg-hint" id="pcfgHint"></span>
       </div>
       <div class="scfg-section">
-        <span class="scfg-grp" title="STRATEGY — which trading strategy the bot runs (backtest + live). Selectable while the bot is STOPPED; the config below belongs to the selected strategy. Add more in engine/strategies/.">strategy</span>
-        <label class="cfgsel" title="Select the strategy used by live simulation, backview, and backtest."><select id="strategySelect" class="momsel"><option value="helpme">FastMX</option><option value="wallet3048">Target wallet 3048</option><option value="paircomp">Pair completion</option></select></label>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">FastMX uses dual momentum. Target wallet 3048 uses the report's Binance-led cross-and-rest, FIFO-pair, and bounded-inventory reconstruction.</span>
-      </div>
-      <div class="scfg-section" id="walletStrategyInfo" style="display:none">
-        <span class="scfg-grp">target wallet policy</span>
+        <span class="scfg-grp">strategy · target wallet 3048</span>
         <span style="font-size:10px;color:var(--txt2);line-height:1.45">T+4–&lt;270s · causal 0.5s Binance signal · 50/150-share $0.01–$0.99 GTC rungs · 250ms release cadence · lot-aware pair/loss-cap repair · economic cancel/reprice.</span>
-      </div>
-      <div class="scfg-section helpme-only">
-        <span class="scfg-grp" title="MOMENTUM — CLOB and Binance are direction sources; at least one must remain enabled. Binance trend is the poly-mom regime filter and requires Binance momentum.">momentum</span>
-        <label class="cfgtgl" title="Use Up-token CLOB midpoint velocity as a signal. At least one momentum toggle must stay on."><input type="checkbox" id="sigClobMidOn" checked><span class="tgl-track"></span><span class="tgl-lbl">CLOB mid</span></label>
-        <label class="cfgnum" title="CLOB MIDPOINT LOOKBACK — required causal lookback for midpoint velocity; default 3000 ms.">CLOB lookback ms<input id="sigMidVelocityLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
-        <label class="cfgnum" title="MID VELOCITY MIN — minimum absolute 3-second midpoint change required to select Up (positive) or Down (negative).">mid velocity $<input id="sigMidVelocityMinInput" type="number" min="0" max="1" step="0.005" value="0.02"></label>
-        <label class="cfgtgl" title="Use raw-dollar Binance gap velocity as a signal. At least one momentum toggle must stay on."><input type="checkbox" id="sigBinanceGapOn" checked><span class="tgl-track"></span><span class="tgl-lbl">Binance gap</span></label>
-        <label class="cfgnum" title="BINANCE GAP LOOKBACK — causal lookback for (price − open) velocity; default 3000 ms.">Binance lookback ms<input id="sigBinanceGapLookbackInput" type="number" min="1000" max="30000" step="500" value="3000" required></label>
-        <label class="cfgnum" title="BINANCE GAP VELOCITY MIN — minimum absolute raw-dollar move over the lookback. Gap velocity equals price(now) − price(prior) because the opening price cancels.">Binance velocity $<input id="sigBinanceGapMinInput" type="number" min="0" max="1000" step="0.5" value="5"></label>
-        <label class="cfgtgl" title="BINANCE TREND REGIME — poly-mom behavior: normal and trend-following Binance signals pass unchanged; a signal opposing a strong trend needs sustained countertrend confirmation."><input type="checkbox" id="sigBinanceTrendOn" checked><span class="tgl-track"></span><span class="tgl-lbl">Binance trend regime</span></label>
-        <label class="cfgnum" title="BINANCE TREND LOOKBACK — compare current Binance spot with Binance spot this many seconds earlier.">trend lookback s<input id="sigBinanceTrendLookbackSecInput" type="number" min="1" max="300" step="1" value="30" required></label>
-        <label class="cfgnum" title="STRONG TREND — minimum absolute trailing open-to-open move that activates the poly-mom countertrend rule.">strong trend %<input id="sigBinanceTrendMinInput" type="number" min="0.001" max="10" step="0.001" value="0.05"></label>
-        <label class="cfgnum" title="COUNTERTREND LOOKBACK — sustained Binance confirmation window used only when the fast signal opposes a strong trend.">countertrend s<input id="sigBinanceCountertrendLookbackInput" type="number" min="1" max="60" step="1" value="60"></label>
-        <label class="cfgnum" title="COUNTERTREND MIN — both fast and sustained opposing Binance moves must meet this percentage, matching poly-mom.">countertrend min %<input id="sigBinanceCountertrendMinInput" type="number" min="0.001" max="10" step="0.001" value="0.075"></label>
-        <label class="cfgtgl" title="BINANCE GAP AGREE — optional poly-mom rule: the selected direction must also match Binance spot versus this five-minute window's Binance open."><input type="checkbox" id="sigBinanceGapAgreeOn"><span class="tgl-track"></span><span class="tgl-lbl">Binance gap agree</span></label>
-        <label class="cfgnum" title="ACTIVE FROM — ignore entries before this many seconds into the five-minute market.">active from s<input id="sigStartInput" type="number" min="0" max="300" step="5" value="0"></label>
-        <label class="cfgnum" title="STOP AT — do not create new orders after this many seconds into the five-minute market.">stop at s<input id="sigStopInput" type="number" min="0" max="300" step="5" value="285"></label>
-      </div>
-      <div class="scfg-section helpme-only">
-        <span class="scfg-grp" title="ENTRY — aligned qualifying signals create entries; opposing signals follow the independent hedge/reversal controls below.">entry</span>
-        <label class="cfgsel" title="LIVE ORDER TYPE — GTC crosses immediately, then the bot cancels any unfilled remainder; FAK fills available liquidity and atomically cancels the rest. This affects real-live automatic orders only; simulation/backtest remains fixed-USD FAK.">live order type
-          <select id="sigLiveOrderTypeInput" class="momsel"><option value="GTC">GTC + cancel remainder</option><option value="FAK">FAK</option></select>
-        </label>
-        <label class="cfgnum" title="BASE ORDER — minimum shares signed at the limit cap. The actual BUY amount is the equivalent fixed USDC budget.">base shares<input id="sigBaseOrderInput" type="number" min="1" max="100" step="1" value="7"></label>
-        <label class="cfgnum" title="COOLDOWN — minimum time between entry releases in the same five-minute market. This is the only release throttle.">cooldown ms<input id="sigReleaseCooldownInput" type="number" min="0" max="30000" step="500" value="1000"></label>
-        <label class="cfgtgl" title="PARTIAL HEDGE — an opposing qualified signal may buy the underweight side, but the previous inventory leader must retain more shares. Defaults off because it failed the paired train/holdout replay."><input type="checkbox" id="sigHedgeOn"><span class="tgl-track"></span><span class="tgl-lbl">partial hedge</span></label>
-        <label class="cfgtgl" title="REVERSAL — cross inventory only when CLOB momentum, Binance momentum, a strong Binance trend, and Binance spot versus the window open all confirm the new side. Defaults off because its improvement did not generalize across splits."><input type="checkbox" id="sigReversalOn"><span class="tgl-track"></span><span class="tgl-lbl">strong reversal</span></label>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="RISK — session-level emergency circuit breaker.">risk</span>
@@ -1283,7 +1251,7 @@
 // server (POST /api/set-market). These globals mirror the current selection so slugs,
 // the countdown window length (WIN), and the brand all follow the live market.
 let MARKET_PREFIX="btc-updown-5m";   // "<asset>-updown-<interval>" — drives every slug
-const FIXED_WALLET="0x75cc3b63a2f2423085e10706c78b494017b93ce1";   // public target used for reconstruction
+const FIXED_WALLET="0x3048d65321be3497164cdfc2996f94f98a2e7537";   // public target used for reconstruction
 let TRACK_WALLET=FIXED_WALLET;       // the wallet being tracked (fixed)
 // Load the EXACT strategy/sim modules the live shadow uses (same decide()/decideLadder + fillsim).
 // Dynamic import keeps this a classic script so inline handlers (dismissPop) still work.
@@ -1305,7 +1273,7 @@ const MOM_LB=5;        // default lookback for non-strategy diagnostic momentum 
 const MOM_EMA_SPAN=10, MOM_WIN=20;
 const MOM_META={
   gap:    {label:"binance − open (level)",            unit:"$"},
-  vel_bz: {label:"Binance gap velocity (strategy)", unit:"$"},
+  vel_bz: {label:"Binance velocity (wallet3048 diagnostic)", unit:"$"},
   roc_bz: {label:"binance ROC % 5s",                  unit:"%"},
   log_bz: {label:"binance log-return 5s ×100",        unit:""},
   ema_bz: {label:"binance EMA-gap (span10)",          unit:"$"},
@@ -1377,61 +1345,14 @@ let showResultBanner=(localStorage.getItem("showResultBanner")!=="0");   // show
 let SHADOW_MAX_SESSION_LOSS=(()=>{ const v=parseFloat(localStorage.getItem("shadowMaxSessLoss")); return Number.isFinite(v)&&v>=0?v:0; })();
 let SHADOW_LATENCY_MS=(()=>{ const v=parseFloat(localStorage.getItem("shadowLatencyMs")); return Number.isFinite(v)&&v>=0?v:520; })();
 const realLatByOid={};   // LIVE real fill latency (ms) by shadow order oid — from shadow_real events → shown in the property menu
-// Parameters sent to every FastMX execution path. Signal controls are shared by
-// live simulation, recorded:false backview, and the Backtest modal.
+// Framework parameters sent to the sole wallet3048 strategy.
 function shadowParams(){
   const nv=(id,def)=>{ const el=document.getElementById(id); const v=el?parseFloat(el.value):NaN; return Number.isFinite(v)?v:def; };   // preserves a legit 0 (unlike `||def`)
-  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-  const rawStrategy=document.getElementById("strategySelect")?.value;
-  const selectedStrategy=(rawStrategy==="wallet3048"||rawStrategy==="paircomp")?rawStrategy:"helpme";
-  // Strategies with their own parameter block take only the framework knobs from this panel; their own
-  // defaults come from engine/strategies/<name>.js STRAT and can be overridden per-run from research scripts.
-  if(selectedStrategy!=="helpme") return {
-    STRATEGY:selectedStrategy,
+  return {
+    STRATEGY:"wallet3048",
+    W3048_SPEC_VERSION:2,
     WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
     LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),
-    MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
-  };
-  const hStart=clamp(nv("sigStartInput",0),0,300);
-  const hStop=clamp(Math.max(hStart,nv("sigStopInput",285)),0,300);
-  const liveOrderType=document.getElementById("sigLiveOrderTypeInput")?.value==="FAK"?"FAK":"GTC";
-  const clobToggle=document.getElementById("sigClobMidOn"), binanceToggle=document.getElementById("sigBinanceGapOn"), trendToggle=document.getElementById("sigBinanceTrendOn");
-  let clobMidOn=clobToggle?.checked!==false, binanceGapOn=binanceToggle?.checked!==false, binanceTrendOn=trendToggle?.checked!==false;
-  // Defensive normalization for stale/programmatic config. Interactive changes
-  // are rejected below. Trend is a Binance regime, not a standalone direction.
-  if(!clobMidOn&&!binanceGapOn){ binanceGapOn=true; if(binanceToggle)binanceToggle.checked=true; }
-  if(binanceTrendOn&&!binanceGapOn){ binanceGapOn=true; if(binanceToggle)binanceToggle.checked=true; }
-  return {
-    STRATEGY:selectedStrategy,
-    SIZE:7, LIMIT:0.98, TICK:0.01,
-    LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),     // SIM/backtest taker fill latency (ms). No effect on real live.
-    WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
-    // CLOB/Binance are the direction sources. Trend is poly-mom's optional
-    // countertrend-confirmation regime on the Binance source.
-    H_ON:true, H_START_S:hStart, H_STOP_S:hStop,
-    H_CLOB_MID_VELOCITY_ON:clobMidOn,
-    H_MID_VELOCITY_LOOKBACK_MS:Math.round(clamp(nv("sigMidVelocityLookbackInput",3000),1000,30000)),
-    H_MID_VELOCITY_MIN:clamp(nv("sigMidVelocityMinInput",0.02),0,1),
-    H_BINANCE_GAP_MOMENTUM_ON:binanceGapOn,
-    H_BINANCE_GAP_VELOCITY_LOOKBACK_MS:Math.round(clamp(nv("sigBinanceGapLookbackInput",3000),1000,30000)),
-    H_BINANCE_GAP_VELOCITY_MIN:clamp(nv("sigBinanceGapMinInput",5),0,1000),
-    H_BINANCE_TREND_ON:binanceTrendOn,
-    H_BINANCE_TREND_LOOKBACK_SEC:Math.round(clamp(nv("sigBinanceTrendLookbackSecInput",30),1,300)),
-    H_BINANCE_TREND_MIN_PCT:clamp(nv("sigBinanceTrendMinInput",0.05),0.001,10),
-    H_BINANCE_COUNTERTREND_LOOKBACK_SEC:Math.round(clamp(nv("sigBinanceCountertrendLookbackInput",60),1,60)),
-    H_BINANCE_COUNTERTREND_MIN_PCT:clamp(nv("sigBinanceCountertrendMinInput",0.075),0.001,10),
-    H_BINANCE_GAP_AGREE_ON:document.getElementById("sigBinanceGapAgreeOn")?.checked===true,
-    H_HEDGE_ON:document.getElementById("sigHedgeOn")?.checked===true,
-    H_HEDGE_RETAIN_SH:1,
-    H_REVERSAL_ON:document.getElementById("sigReversalOn")?.checked===true,
-    H_REVERSAL_RESIDUAL_SH:10,
-    H_REVERSAL_MAX_IMBALANCE_SH:25,
-    H_MIN_ASK:0.05, H_MAX_ASK:0.98,
-    H_CAP_HEADROOM:0.01, H_MIN_DEPTH_SH:4,
-    H_LIVE_ORDER_TYPE:liveOrderType,
-    H_BASE_ORDER_SH:clamp(nv("sigBaseOrderInput",7),1,100),
-    H_MIN_ORDER_SH:4,
-    H_COOLDOWN_MS:Math.round(clamp(nv("sigReleaseCooldownInput",1000),0,30000)),
     MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
   };
 }
@@ -2107,14 +2028,10 @@ function createGroup(rootEl, kind){
     const base=(useMid?midSrc:bzSrc)||[];
     const arr=base.map(s=>({t:s.t,v:(useMid?s.m:s.bz)})).filter(p=>p.v!=null);
     if(arr.length<2) return [];
-    // The two strategy velocity views use their own configured causal lookbacks;
-    // unrelated diagnostic views retain their five-second horizon.
+    // wallet3048 uses a fixed 0.5-second Binance lookback. The CLOB midpoint
+    // view remains a three-second diagnostic and is not a strategy gate.
     const open=state.openBz;
-    const L=type==="vel_mid"
-      ?Math.max(1,(parseFloat(document.getElementById("sigMidVelocityLookbackInput")?.value)||3000)/1000)
-      :type==="vel_bz"
-        ?Math.max(1,(parseFloat(document.getElementById("sigBinanceGapLookbackInput")?.value)||3000)/1000)
-      :MOM_LB;
+    const L=type==="vel_mid" ? 3 : type==="vel_bz" ? 0.5 : MOM_LB;
     const valAt=t=>{let v=null;for(const p of arr){if(p.t<=t)v=p.v;else break;}return v;};
     const ema=[]; {const a=2/(MOM_EMA_SPAN+1);let e=arr[0].v;for(let i=0;i<arr.length;i++){e=arr[i].v*a+e*(1-a);ema.push(e);}}
     const out=[];
@@ -2177,11 +2094,7 @@ function createGroup(rootEl, kind){
     lg.setAttribute("id","gapgrad"+sid);lg.setAttribute("gradientUnits","userSpaceOnUse");lg.setAttribute("x1","0");lg.setAttribute("y1",String(P.t));lg.setAttribute("x2","0");lg.setAttribute("y2",String(h-P.b));
     for(const[o,c,op]of[["0%","#19e3a0",".40"],["49%","#19e3a0","0"],["51%","#ff5d7a","0"],["100%","#ff5d7a",".40"]]){const s=document.createElementNS(NS,"stop");s.setAttribute("offset",o);s.setAttribute("stop-color",c);s.setAttribute("stop-opacity",op);lg.appendChild(s);} dfs.appendChild(lg);
     const X=t=>P.l+(Math.max(0,Math.min(WIN,t))/WIN)*(w-P.l-P.r);
-    const threshold=type==="vel_mid"
-      ?Math.max(0,parseFloat(document.getElementById("sigMidVelocityMinInput")?.value)||0)
-      :type==="vel_bz"
-        ?Math.max(0,parseFloat(document.getElementById("sigBinanceGapMinInput")?.value)||0)
-        :0;
+    const threshold=0;
     const maxAbs=Math.max(...ser.map(p=>Math.abs(p.v)),threshold*1.15,1e-9); state.lastMomMax=maxAbs;
     const Y=v=>mid-Math.max(-1,Math.min(1,v/maxAbs))*((h-P.t-P.b)/2);
     if(threshold>0){
@@ -2196,9 +2109,7 @@ function createGroup(rootEl, kind){
     mk(svg,"text",{x:4,y:P.t+8,fill:"rgba(191,224,255,.45)","font-size":9,"font-family":"var(--mono)"}).textContent="+"+fv(maxAbs);
     mk(svg,"text",{x:4,y:h-P.b+2,fill:"rgba(191,224,255,.45)","font-size":9,"font-family":"var(--mono)"}).textContent="−"+fv(maxAbs);
     const gn=$("gapNow"); gn.textContent=(lp.v>=0?"+":"")+fv(lp.v)+(meta.unit?" "+meta.unit:""); gn.style.color=lp.v>=0?"var(--up)":"var(--dn)";
-    const lookbackMs=type==="vel_mid"
-      ?Math.max(1,parseFloat(document.getElementById("sigMidVelocityLookbackInput")?.value)||3000)
-      :Math.max(1,parseFloat(document.getElementById("sigBinanceGapLookbackInput")?.value)||3000);
+    const lookbackMs=type==="vel_mid" ? 3000 : 500;
     const thresholdText=meta.unit==="$"?`$${fv(threshold)}`:`${fv(threshold)}${meta.unit||""}`;
     $("gapSub").textContent=meta.label+` · ${lookbackMs/1000}s · min ±${thresholdText} · green=Up / red=Down`;
     if(state.cursorT!=null){ let cv=null; for(const p of ser){ if(p.t<=state.cursorT) cv=p.v; else break; }
@@ -3087,18 +2998,19 @@ function updateTopBar(t){
   renderBinHealth(t.binHealth, t.bzAgeMs);
   renderStratChips(t.strat);
 }
-// Live FastMX gate plus provisional-open warning.
+// Live wallet3048 gate plus provisional-open warning.
 const GATE_LABELS={
-  "disabled":["○ off","dim"], "cooldown":["◷ cooldown","dim"], "live-pending":["◆ live…","warn"],
-  "wait-open":["◷ wait start","dim"], "signal-toggle-required":["⚠ enable momentum","warn"],
-  "clob-mid-warmup":["◷ CLOB-mid warmup","dim"], "clob-mid-velocity":["○ CLOB-mid quiet","dim"],
-  "binance-gap-warmup":["◷ Binance-gap warmup","dim"], "binance-gap-velocity":["○ Binance-gap quiet","dim"],
-  "velocity-disagreement":["○ velocities disagree","warn"],
-  "binance-gap-agree-warmup":["◷ Binance open warmup","dim"],
-  "binance-gap-disagreement":["○ Binance gap disagrees","warn"],
-  "signal-already-entered":["✓ signal entered","dim"],
-  "ask-range":["○ ask outside range","dim"], "depth":["○ depth thin","dim"],
-  "end-cutoff":["✕ end cutoff","dim"], "fired":["▲ entry fired","go"] };
+  "w3048-off":["○ off","dim"], "w3048-no-book":["◷ book warmup","dim"],
+  "w3048-time":["○ outside active time","dim"], "w3048-action-cap":["○ action cap","warn"],
+  "w3048-no-bba":["◷ BBA warmup","dim"], "w3048-stale-depth":["○ stale depth","warn"],
+  "w3048-features":["◷ feature warmup","dim"], "w3048-cooldown":["◷ cooldown","dim"],
+  "w3048-pending-cap":["◆ orders pending","warn"],
+  "w3048-wait-fast-binance":["○ Binance quiet","dim"],
+  "w3048-no-economic-candidate":["○ no economic candidate","dim"],
+  "w3048-initial-release":["▲ initial release","go"],
+  "w3048-pair-completion":["▲ pair completion","go"],
+  "w3048-loss-cap-repair":["▲ risk repair","go"],
+  "w3048-directional-reinforcement":["▲ reinforcement","go"] };
 // STRATEGY STATUS — the bot's live decision, as PLAIN inline text at the right of each livebar (not a badge).
 function renderStratChips(strat){
   const els=document.querySelectorAll(".sb-strat"); if(!els.length) return;   // right end of each chart's livebar
@@ -3391,39 +3303,9 @@ function setSessFrom(v){
   if(sel){ try{ const sv=localStorage.getItem("sessFromSel"); if(sv) sel.value=sv; }catch{}
     sel.addEventListener("change",()=>setSessFrom(sel.value)); } }
 
-// ── FastMX controls: normalize, persist, and push strategy parameters on Apply ──
+// ── wallet3048 controls: persist and push framework parameters on Apply ──
 { const lat=document.getElementById("sigLatencyInput");
   if(lat) lat.value=String(SHADOW_LATENCY_MS);
-  const clobToggle=document.getElementById("sigClobMidOn"), binanceToggle=document.getElementById("sigBinanceGapOn"), trendToggle=document.getElementById("sigBinanceTrendOn");
-  const keepOneFastSignal=(changed)=>{
-    if(clobToggle&&!clobToggle.checked&&binanceToggle&&!binanceToggle.checked){
-      changed.checked=true;
-      changed.setCustomValidity("At least one fast momentum source must stay enabled.");
-      changed.reportValidity();
-      setTimeout(()=>changed.setCustomValidity(""),1200);
-    }
-  };
-  clobToggle?.addEventListener("change",()=>keepOneFastSignal(clobToggle));
-  binanceToggle?.addEventListener("change",()=>{
-    if(!binanceToggle.checked&&trendToggle?.checked){
-      binanceToggle.checked=true;
-      binanceToggle.setCustomValidity("The Binance trend regime requires Binance momentum.");
-      binanceToggle.reportValidity();
-      setTimeout(()=>binanceToggle.setCustomValidity(""),1200);
-    }
-    keepOneFastSignal(binanceToggle);
-  });
-  trendToggle?.addEventListener("change",()=>{
-    if(trendToggle.checked&&binanceToggle) binanceToggle.checked=true;
-  });
-  const syncStrategySections=()=>{
-    const sel=document.getElementById("strategySelect")?.value;
-    const other=(sel==="wallet3048"||sel==="paircomp");
-    document.querySelectorAll(".helpme-only").forEach(el=>{el.style.display=other?"none":"";});
-    const info=document.getElementById("walletStrategyInfo"); if(info)info.style.display=(sel==="wallet3048")?"":"none";
-  };
-  window.syncStrategySections=syncStrategySections;
-  syncStrategySections();
   const pushLive=()=>{ try{ return fetch("/api/shadow-params?p="+encodeURIComponent(JSON.stringify(shadowParams()))).catch(()=>null); }catch{ return Promise.resolve(null); } };
   function commitConfig(opts){
     const ss=document.getElementById("sigSessStopInput");
@@ -3438,29 +3320,6 @@ function setSessFrom(v){
       try{ localStorage.setItem("shadowLatencyMs",String(SHADOW_LATENCY_MS)); }catch{}
     }
     const P=shadowParams();
-    const normalized=P.STRATEGY==="helpme"?{
-      sigClobMidOn:P.H_CLOB_MID_VELOCITY_ON,
-      sigMidVelocityLookbackInput:P.H_MID_VELOCITY_LOOKBACK_MS,
-      sigMidVelocityMinInput:P.H_MID_VELOCITY_MIN,
-      sigBinanceGapOn:P.H_BINANCE_GAP_MOMENTUM_ON,
-      sigBinanceGapLookbackInput:P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS,
-      sigBinanceGapMinInput:P.H_BINANCE_GAP_VELOCITY_MIN,
-      sigBinanceTrendOn:P.H_BINANCE_TREND_ON,
-      sigBinanceTrendLookbackSecInput:P.H_BINANCE_TREND_LOOKBACK_SEC,
-      sigBinanceTrendMinInput:P.H_BINANCE_TREND_MIN_PCT,
-      sigBinanceCountertrendLookbackInput:P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC,
-      sigBinanceCountertrendMinInput:P.H_BINANCE_COUNTERTREND_MIN_PCT,
-      sigBinanceGapAgreeOn:P.H_BINANCE_GAP_AGREE_ON,
-      sigHedgeOn:P.H_HEDGE_ON,
-      sigReversalOn:P.H_REVERSAL_ON,
-      sigStartInput:P.H_START_S,
-      sigStopInput:P.H_STOP_S,
-      sigLiveOrderTypeInput:P.H_LIVE_ORDER_TYPE,
-      sigBaseOrderInput:P.H_BASE_ORDER_SH,
-      sigReleaseCooldownInput:P.H_COOLDOWN_MS,
-    }:{};
-    for(const [id,value] of Object.entries(normalized)){ const el=document.getElementById(id); if(!el)continue;
-      if(el.type==="checkbox")el.checked=!!value; else el.value=String(value); }
     if(opts&&opts.silent) return Promise.resolve(P);
     if(typeof window.persistUiConfig==="function") window.persistUiConfig();
     const applied=pushLive();
@@ -3472,14 +3331,12 @@ function setSessFrom(v){
   const startBtn=document.getElementById("startBtn"), stopBtn=document.getElementById("stopBtn"), botStateEl=document.getElementById("botState");
   const trackBtn=document.getElementById("trackBtn");
   const marketSel=document.getElementById("marketSelect");
-  const strSel=document.getElementById("strategySelect");
   function setBotUI(running){
     const modifying=(typeof window.primaryLocked==="function") && !window.primaryLocked();
     if(startBtn) startBtn.disabled=running||modifying;   // no Start while running OR mid primary-edit
     if(stopBtn) stopBtn.disabled=!running;
     if(trackBtn){ trackBtn.disabled=running; trackBtn.title=running?"stop the bot to change the tracked market":"track the selected market (Start also tracks)"; }
     if(marketSel){ marketSel.disabled=running; marketSel.title=running?"stop the bot to change the market":"switch market — applies + reloads immediately (config stays; re-tune per asset)"; }   // dropdown greyed while running
-    if(strSel){ strSel.disabled=running; strSel.title=running?"stop the bot to change the strategy":"the strategy the bot runs (change only while stopped)"; }   // strategy greyed while running
     if(botStateEl){ botStateEl.textContent=running?"● RUNNING":"○ stopped"; botStateEl.className="bot-state "+(running?"on":"off"); }
   }
   // Track = switch the tracked market NOW (only while stopped). Starting the bot also tracks.
@@ -3487,7 +3344,6 @@ function setSessFrom(v){
   // AUTO-APPLY: changing the dropdown (only enabled while stopped) switches + reloads the market immediately — no Track click.
   if(marketSel) marketSel.addEventListener("change",async()=>{ if(marketSel.disabled) return; marketSel.disabled=true; if(trackBtn) trackBtn.disabled=true;
     try{ await trackMarket(); }catch{} finally{ marketSel.disabled=false; if(trackBtn) trackBtn.disabled=false; } });
-  if(strSel) strSel.addEventListener("change",()=>{ window.syncStrategySections?.(); if(!strSel.disabled) commitConfig(); });
   async function startBot(){
     if((typeof window.primaryLocked==="function") && !window.primaryLocked()){ return; }   // must Apply primary config first
     await commitConfig();                             // persist the selected live transport before trading can start
@@ -3513,32 +3369,12 @@ function setSessFrom(v){
     const o=applyBtn.textContent; applyBtn.textContent="applied ✓"; setTimeout(()=>{applyBtn.textContent=o;},800);
   });
   fetch("/api/bot/status").then(r=>r.json()).then(s=>setBotUI(!!s.running)).catch(()=>{});   // reflect state on load
-  // "default" — reset the reconstructed signal, timing, simulation, risk, and diagnostics controls.
+  // "default" — reset the framework simulation, risk, and diagnostics controls.
   const calBtn=document.getElementById("momDefaultBtn");
   if(calBtn) calBtn.addEventListener("click",()=>{
     const V=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=String(v); };
-    const C=(id,v)=>{ const el=document.getElementById(id); if(el) el.checked=!!v; };
     V("sigSessStopInput",25);
     V("sigLatencyInput",520);
-    C("sigClobMidOn",true);
-    V("sigMidVelocityLookbackInput",3000);
-    V("sigMidVelocityMinInput",0.02);
-    C("sigBinanceGapOn",true);
-    V("sigBinanceGapLookbackInput",3000);
-    V("sigBinanceGapMinInput",5);
-    C("sigBinanceTrendOn",true);
-    V("sigBinanceTrendLookbackSecInput",30);
-    V("sigBinanceTrendMinInput",0.05);
-    V("sigBinanceCountertrendLookbackInput",60);
-    V("sigBinanceCountertrendMinInput",0.075);
-    C("sigBinanceGapAgreeOn",false);
-    C("sigHedgeOn",false);
-    C("sigReversalOn",false);
-    V("sigStartInput",0);
-    V("sigStopInput",285);
-    V("sigLiveOrderTypeInput","GTC");
-    V("sigBaseOrderInput",7);
-    V("sigReleaseCooldownInput",1000);
     const verbose=document.getElementById("verboseInput"); if(verbose) verbose.checked=false;
     document.getElementById("verboseInput")?.dispatchEvent(new Event("change"));
     commitConfig();
@@ -3690,38 +3526,14 @@ refreshExecBadge();
 }
 { // ── DURABLE CONFIG round-trip — every Apply saves the sidebar's control values server-side (data/runtime-config.json);
   //   on load we restore them so the dashboard reflects the persisted config (server file = source of truth). ──
-  const CFG_IDS=["btVersionInput","strategySelect","sigSessStopInput","sigLatencyInput","sigLiveOrderTypeInput",
-    "sigClobMidOn","sigMidVelocityLookbackInput","sigMidVelocityMinInput",
-    "sigBinanceGapOn","sigBinanceGapLookbackInput","sigBinanceGapMinInput",
-    "sigBinanceTrendOn","sigBinanceTrendLookbackSecInput","sigBinanceTrendMinInput",
-    "sigBinanceCountertrendLookbackInput","sigBinanceCountertrendMinInput","sigBinanceGapAgreeOn",
-    "sigHedgeOn","sigReversalOn",
-    "sigStartInput","sigStopInput","sigBaseOrderInput","sigReleaseCooldownInput","verboseInput"];
+  const CFG_IDS=["btVersionInput","sigSessStopInput","sigLatencyInput","verboseInput"];
   const gather=()=>{ const o={}; for(const id of CFG_IDS){ const el=document.getElementById(id); if(!el) continue; o[id]=(el.type==="checkbox")?!!el.checked:el.value; } return o; };
   window.persistUiConfig=()=>{ try{ fetch("/api/ui-config?ui="+encodeURIComponent(JSON.stringify(gather()))).catch(()=>{}); }catch{} };
   (async()=>{   // restore on load — apply saved values then commit so they flow into the live holders
     let cfg=null; try{ cfg=await fetch("/api/config").then(r=>r.json()); }catch{}
     const ui=cfg&&cfg.ui; if(!ui||typeof ui!=="object") return;
-    const legacyMomentum=!('sigClobMidOn' in ui)&&!('sigBinanceGapOn' in ui);
-    const missingTrend=!('sigBinanceTrendLookbackSecInput' in ui)
-      ||!('sigBinanceCountertrendLookbackInput' in ui)
-      ||!('sigBinanceCountertrendMinInput' in ui);
     for(const id of CFG_IDS){ if(!(id in ui)) continue; const el=document.getElementById(id); if(!el) continue;
       if(el.type==="checkbox") el.checked=!!ui[id]; else el.value=String(ui[id]); }
-    if(legacyMomentum){
-      const migrated={sigClobMidOn:true,sigBinanceGapOn:true,
-        sigMidVelocityMinInput:0.02,
-        sigBinanceGapLookbackInput:3000,sigBinanceGapMinInput:5,sigBinanceGapAgreeOn:false};
-      for(const [id,value] of Object.entries(migrated)){const el=document.getElementById(id);if(!el)continue;
-        if(el.type==="checkbox")el.checked=!!value;else el.value=String(value);}
-    }
-    if(missingTrend){
-      const migrated={sigBinanceTrendOn:true,sigBinanceTrendLookbackSecInput:30,sigBinanceTrendMinInput:0.05,
-        sigBinanceCountertrendLookbackInput:60,sigBinanceCountertrendMinInput:0.075};
-      for(const [id,value] of Object.entries(migrated)){const el=document.getElementById(id);if(!el)continue;
-        if(el.type==="checkbox")el.checked=!!value;else el.value=String(value);}
-    }
-    try{ window.syncStrategySections&&window.syncStrategySections(); }catch{}
     document.getElementById("btVersionInput")?.dispatchEvent(new Event("change"));
     try{ window.applyBacktestVersion&&window.applyBacktestVersion(); }catch{}
     try{ window.commitConfig&&window.commitConfig(); }catch{}
@@ -4117,20 +3929,15 @@ function sessCfgSummary(r){
   return `config · market <b>${mkt}</b>${dur}${ver}${wl} · initial <b>${init}</b> · `
     +`<b>${r.windowsUsed}</b>/${r.windowsRequested} windows resolved · ${r.method||"bot real on-chain fills, fee-inclusive"}`;
 }
-// FastMX parameters the simulation/live strategy ran on.
+// wallet3048 parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
-  return `<span style="color:#cdb8ff">shadow · fastmx · aligned signal → ${P.H_BASE_ORDER_SH??7}sh entry @ ≤${P.H_MAX_ASK??0.98}`
-    +` · CLOB mid ${P.H_CLOB_MID_VELOCITY_ON!==false?"ON":"OFF"} ${((P.H_MID_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(1)}s ≥${P.H_MID_VELOCITY_MIN??0.02}`
-    +` · Binance gap ${P.H_BINANCE_GAP_MOMENTUM_ON!==false?"ON":"OFF"} ${((P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(1)}s ≥$${P.H_BINANCE_GAP_VELOCITY_MIN??5}`
-    +` · Binance trend regime ${P.H_BINANCE_TREND_ON!==false?"ON":"OFF"} ${P.H_BINANCE_TREND_LOOKBACK_SEC??30}s ≥${P.H_BINANCE_TREND_MIN_PCT??0.05}%`
-    +` · countertrend ${P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC??60}s ≥${P.H_BINANCE_COUNTERTREND_MIN_PCT??0.075}%`
-    +` · enabled fast signals agree`
-    +` · Binance window-gap agree ${P.H_BINANCE_GAP_AGREE_ON===true?"ON":"OFF"}`
-    +` · partial hedge ${P.H_HEDGE_ON===true?"ON":"OFF"}`
-    +` · strong reversal ${P.H_REVERSAL_ON===true?"ON":"OFF"}`
-    +` · depth ≥${P.H_MIN_DEPTH_SH??4}sh`
-    +` · cooldown ${P.H_COOLDOWN_MS??1000}ms`
-    +` · simulation fixed-USD FAK · live ${(P.H_LIVE_ORDER_TYPE||"GTC")} · cap ask+${P.H_CAP_HEADROOM??0.01} · latency ${P.LATENCY_MS||0}ms</span>`; }
+  return `<span style="color:#cdb8ff">shadow · wallet3048 v${P.W3048_SPEC_VERSION??2}`
+    +` · ${P.W3048_SMALL_SIZE??50}/${P.W3048_LARGE_SIZE??150}sh GTC parents`
+    +` · active t+${P.W3048_START_S??4}–${P.W3048_STOP_S??270}s`
+    +` · Binance ${((P.W3048_MOMENTUM_LOOKBACK_MS??500)/1000).toFixed(1)}s`
+    +` · price ${Number(P.W3048_MIN_PRICE??0.01).toFixed(2)}–${Number(P.W3048_MAX_PRICE??0.99).toFixed(2)}`
+    +` · pair target ${Number(P.W3048_PAIR_PROFIT_TARGET??0.06).toFixed(3)}`
+    +` · cooldown ${P.W3048_COOLDOWN_MS??250}ms · latency ${P.LATENCY_MS||0}ms</span>`; }
 function smoney(v){ return (v>=0?"+$":"−$")+Math.abs(v).toFixed(2); }
 function sessCard(title,cls,g){
   const row=(k,v)=>`<div class="sess-row"><span class="k">${k}</span><span class="v">${v}</span></div>`;

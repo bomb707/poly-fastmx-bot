@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "FastMX — simulation-only BTC 5m CLOB/Binance velocity strategy with the poly-mom Binance trend regime. Dashboard on :4520.",
+  "description": "FastMX — simulation-only BTC 5m reconstruction of Polymarket wallet 3048. Dashboard on :4520.",
   "engines": {
     "node": ">=18"
   },
@@ -12,7 +12,7 @@
     "test": "node --test engine/*.test.mjs engine/strategies/*.test.mjs src/execution/*.test.mjs src/feeds/*.test.mjs src/lib/*.test.mjs src/server/*.test.mjs src/sources/*.test.mjs src/util/*.test.mjs",
     "test:resolution": "node --test src/execution/resolution.test.mjs",
     "test:rtds": "node --test src/feeds/rtdsChainlinkWs.test.mjs",
-    "test:strategy": "node --test engine/strategies/helpme.test.mjs",
+    "test:strategy": "node --test engine/strategies/wallet3048.test.mjs",
     "test:depth": "node src/feeds/marketDepthBook.test.mjs",
     "probe:execution": "node scripts/live-execution-probe.mjs",
     "backtest:gap-v4": "node research/gap-predictor-v4-orderbook.mjs",

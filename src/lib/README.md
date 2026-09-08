@@ -32,7 +32,7 @@ Pure, dependency-free functions that are the **canonical, unit-tested** source o
 
 Verified: 13/13 unit tests (`engine/fillsim.test.mjs`). Browser still loads `/engine/strategy.js`, `/engine/simrun.js`, `/engine/fillsim.js` (all HTTP 200).
 
-Currently wired into: `engine/simrun.js` (`futureAsks` + `stampLatencyDisplay`) and `src/execution/shadow.js` (`latencyFillPrice`). `makerTouchFill` is preserved for research, but Helpme is taker-only.
+Currently wired into: `engine/simrun.js` (`futureAsks` + `stampLatencyDisplay`) and `src/execution/shadow.js` (`latencyFillPrice`). `makerTouchFill` is preserved for research.
 
 ## `orderstatus.js` — the order-status protocol (canonical stage vocabulary)
 The **single source** of the 11 lifecycle stage names + their meaning/payload contract:

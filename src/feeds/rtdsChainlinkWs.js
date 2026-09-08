@@ -6,7 +6,7 @@ import { config, assetFromChainlinkSymbol } from "../config/config.js";
  *
  * `state.chainlink` is intentionally the TWAP-60 series consumed by the live engine,
  * recorder, dashboard, and provisional Chainlink window-open fallback. Binance @aggTrade remains
- * the Helpme confirmation signal; this is the settlement-aligned Chainlink comparison series.
+ * the short-horizon confirmation signal; this is the settlement-aligned Chainlink comparison series.
  */
 const TOPIC_TWAP = "crypto_prices_twap_sixty";
 const RECONNECT_BASE_MS = 2_500;

@@ -121,7 +121,7 @@ const journalDir = path.resolve(".state/execution-probes");
 fs.mkdirSync(journalDir, { recursive: true, mode: 0o700 });
 const journalPath = path.join(journalDir, `${mode}-${Date.now()}.json`);
 const journal = {
-  schema: "helpme-live-execution-probe-v1",
+  schema: "wallet3048-live-execution-probe-v1",
   phase: "preflight",
   createdAtMs: Date.now(),
   mode,

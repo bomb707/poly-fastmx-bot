@@ -5,7 +5,7 @@ import axios from "axios";
 // A dedicated pool for CLOB traffic. It is deliberately scoped to registered
 // CLOB origins so unrelated HTTP clients in this process keep their own agents.
 const CONNECTION_META = Symbol("clobHttpConnectionMeta");
-const TRACE_KEY = "__helpmeClobConnectionTrace";
+const TRACE_KEY = "__wallet3048ClobConnectionTrace";
 
 function boundedNumber(value, fallback, min, max) {
   const n = Number(value);

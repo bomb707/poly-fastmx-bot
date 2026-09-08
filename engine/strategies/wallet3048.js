@@ -170,6 +170,7 @@ function init(state, P = STRAT) {
   state.orders ||= [];
   state.seq ||= 0;
   if (!state.wallet3048) {
+    const recovery = state.wallet3048Recovery;
     const prices = [];
     for (let px = Number(P.W3048_MIN_PRICE); px <= Number(P.W3048_MAX_PRICE) + EPS;
       px += Number(P.W3048_TICK)) prices.push(+px.toFixed(2));
@@ -183,10 +184,10 @@ function init(state, P = STRAT) {
       bookTrace: { Up: [], Down: [] },
       askRun: { Up: null, Down: null },
       fillCursor: 0,
-      lastActionMs: -Infinity,
+      lastActionMs: Number.isFinite(recovery?.lastActionMs) ? recovery.lastActionMs : -Infinity,
       lastFiredSide: null,
       lastFired: { Up: null, Down: null },
-      actions: 0,
+      actions: Number.isFinite(recovery?.actions) ? recovery.actions : 0,
       pending: new Map(),
       // Simulation representation of the T-90 signed menu. The live platform
       // remains code-locked to simulation, so no private signature is created.
@@ -194,6 +195,7 @@ function init(state, P = STRAT) {
         sizes: [Number(P.W3048_SMALL_SIZE), Number(P.W3048_LARGE_SIZE)],
         prices, orderType: "GTC", postOnly: false },
     };
+    delete state.wallet3048Recovery;
   }
   syncRecordedFills(state, state.wallet3048);
   return state.wallet3048;

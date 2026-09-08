@@ -1,4 +1,4 @@
-// Live Helpme simulation harness. Runs the reconstructed strategy on the same
+// Live wallet3048 simulation harness. Runs the reconstructed strategy on the same
 // Binance, RTDS, and Polymarket CLOB data displayed by the dashboard.
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +18,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   const windows = new Map();
   let liveParams = {};             // UI overrides merged over STRAT (set by setParams; defaults until then)
   let curStrat = getStrategy(DEFAULT_STRATEGY);
-  let mergedP = { ...curStrat.STRAT, LIVE_FILLS: false };      // Helpme is permanently shadow-only.
+  let mergedP = { ...curStrat.STRAT, LIVE_FILLS: false };      // The reconstruction is permanently shadow-only.
                                    //   config-object spread on EVERY book update). Read-only in the hot path.
   const circuitBreaker = createSessionCircuitBreaker(
     () => (mergedP && mergedP.MAX_SESSION_LOSS != null) ? (+mergedP.MAX_SESSION_LOSS || 0) : (config.maxSessionLoss || 0),
@@ -34,7 +34,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       w = { slug, windowStart, openBinance, winSide: null, upShares: 0, downShares: 0, cost: 0, fee: 0,
             upCost: 0, downCost: 0, mergedRealized: 0, mergedUsd: 0, fills: [], settled: false,
             breakerGeneration: circuitBreaker.stamp(),
-            // strategy state (self-initialized by Helpme on the first tick)
+            // strategy state (self-initialized by wallet3048 on the first tick)
             orders: [], seq: 0, lastTickMs: null,
             // Per-window cadence and gate diagnostics.
             vDiag: { open: false, tickN: 0, dtSum: 0, dtMax: 0, gate: {} } };
@@ -73,20 +73,17 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       w.seq = Math.max(w.seq, +event.oid || 0);
     }
     if (decisions.size) {
-      const model = w.helpme = { history: [], historyHead: 0, lastSignalKey: null,
-        lastOrderMs: -Infinity, orderCount: decisions.size };
+      let lastDecisionMs = -Infinity;
       for (const event of decisions.values()) {
         const ask = Number(event.decPx), explicitCap = Number(event.limitPx);
         const cap = Number.isFinite(explicitCap) && explicitCap > 0 ? explicitCap
-          : Number.isFinite(ask) && ask > 0
-            ? Math.min(+mergedP.LIMIT || .99,
-              Math.ceil((ask + Math.max(0, +mergedP.H_CAP_HEADROOM || 0) - 1e-9) * 100) / 100)
-            : null;
+          : Number.isFinite(ask) && ask > 0 ? ask : null;
         w.orders.push({ oid: event.oid, side: event.side, limit: cap, kind: event.leg || "entry",
           budgetUsd: event.budgetUsd ?? null, filledUsd: 0, placedT: event.tInto ?? null });
         const eventMs = Number(event.ts);
-        if (Number.isFinite(eventMs)) model.lastOrderMs = Math.max(model.lastOrderMs, eventMs);
+        if (Number.isFinite(eventMs)) lastDecisionMs = Math.max(lastDecisionMs, eventMs);
       }
+      w.wallet3048Recovery = { actions: decisions.size, lastActionMs: lastDecisionMs };
     }
     w.hydrated = true;
     if (w.fills.length || decisions.size) console.log(`[shadow hydrate] ${String(slug).split("-").pop()}: restored ${w.fills.length} fills / ${decisions.size} decisions`);
@@ -144,31 +141,15 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     return {
       strategy: curStrat.NAME,
       latencyMs: P.LATENCY_MS || 0,
-      baseOrderShares: P.H_BASE_ORDER_SH,
-      cooldownMs: P.H_COOLDOWN_MS,
-      activeFromS: P.H_START_S,
-      stopAtS: P.H_STOP_S,
-      clobMidVelocityOn: P.H_CLOB_MID_VELOCITY_ON,
-      midVelocityLookbackMs: P.H_MID_VELOCITY_LOOKBACK_MS,
-      midVelocityMin: P.H_MID_VELOCITY_MIN,
-      binanceGapMomentumOn: P.H_BINANCE_GAP_MOMENTUM_ON,
-      binanceGapVelocityLookbackMs: P.H_BINANCE_GAP_VELOCITY_LOOKBACK_MS,
-      binanceGapVelocityMin: P.H_BINANCE_GAP_VELOCITY_MIN,
-      binanceTrendOn: P.H_BINANCE_TREND_ON,
-      binanceTrendLookbackSec: P.H_BINANCE_TREND_LOOKBACK_SEC,
-      binanceTrendMinPct: P.H_BINANCE_TREND_MIN_PCT,
-      binanceCountertrendLookbackSec: P.H_BINANCE_COUNTERTREND_LOOKBACK_SEC,
-      binanceCountertrendMinPct: P.H_BINANCE_COUNTERTREND_MIN_PCT,
-      binanceGapAgreeOn: P.H_BINANCE_GAP_AGREE_ON,
-      hedgeOn: P.H_HEDGE_ON,
-      hedgeRetainShares: P.H_HEDGE_RETAIN_SH,
-      reversalOn: P.H_REVERSAL_ON,
-      reversalResidualShares: P.H_REVERSAL_RESIDUAL_SH,
-      reversalMaxImbalanceShares: P.H_REVERSAL_MAX_IMBALANCE_SH,
-      priceMin: P.H_MIN_ASK,
-      priceMax: P.H_MAX_ASK,
-      capHeadroom: P.H_CAP_HEADROOM,
-      liveOrderType: P.H_LIVE_ORDER_TYPE || config.liveTakerOrderType,
+      baseOrderShares: P.W3048_SMALL_SIZE,
+      largeOrderShares: P.W3048_LARGE_SIZE,
+      cooldownMs: P.W3048_COOLDOWN_MS,
+      activeFromS: P.W3048_START_S,
+      stopAtS: P.W3048_STOP_S,
+      binanceMomentumLookbackMs: P.W3048_MOMENTUM_LOOKBACK_MS,
+      priceMin: P.W3048_MIN_PRICE,
+      priceMax: P.W3048_MAX_PRICE,
+      liveOrderType: "GTC",
       limit: P.LIMIT,
       apiVer: config.backtestApiVersion,
       mode: config.executionMode,
@@ -190,7 +171,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, tInto, bz: bzPrice, cl: clPrice, nowMs };   // latest book (for MANUAL buys)
     activeSlug = slug;
 
-    // STRATEGY + FILL — the entry-only strategy returns decisions for this tick.
+    // STRATEGY + FILL — wallet3048 returns order decisions for this tick.
     const bzGap = (bzPrice != null && w.openBinance != null) ? bzPrice - w.openBinance : null;   // for @-fill stamps + seed trigger
     const bzGapPct = (bzGap != null && w.openBinance) ? (bzGap / w.openBinance) * 100 : null;
     const clGap = (clPrice != null && openChainlink != null) ? clPrice - openChainlink : null;
@@ -517,14 +498,6 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     w.recTicks = null;
     w.pendingFills = [];
     w.lastAsk = null;
-    if (w.helpme) {
-      w.helpme.history = [];
-      w.helpme.historyHead = 0;
-      w.helpme.binanceHistory = [];
-      w.helpme.binanceHistoryHead = 0;
-      w.helpme.cells?.clear?.();
-      w.helpme.execSide?.clear?.();
-    }
     if (w.wallet3048) {
       w.wallet3048.history = [];
       w.wallet3048.bookTrace = { Up: [], Down: [] };
@@ -667,11 +640,10 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     } catch {}
   }
 
-  // Live Helpme decision status for the dashboard header.
+  // Live wallet3048 decision status for the dashboard header.
   function liveStatus() {
     const w = activeSlug ? windows.get(activeSlug) : null;
     if (!w || w.settled) return null;
-    if (w.helpmeStatus && curStrat.NAME === "helpme") return { strategy: curStrat.NAME, ...w.helpmeStatus };
     return { strategy: curStrat.NAME, gate: w.gateReason || null };
   }
   return { tick, settle, prune, recordPending, hydrateWindow, windows, setParams, getParams,

@@ -27,7 +27,7 @@ export function hasCompleteV2Coverage(data, windowSec = config.windowSec || 300)
   return Number.isFinite(lastT) && lastT >= windowSec - V2_REPLAY_END_TOLERANCE_SEC;
 }
 
-// ── Helpme backtest source ──────────────────────────────────────────────────────────────────────────
+// ── Full-depth backtest source ──────────────────────────────────────────────────────────────────────
 // /snapshot-ticks supplies authoritative window metadata; /orderbooks supplies coherent 50 ms full-L2 frames.
 // The strategy needs actual visible depth, so a BBA-only replay is deliberately not accepted. We retain the last
 // observed frame in each 120 ms live-sampler bucket, preserving causality and matching the dashboard cadence.

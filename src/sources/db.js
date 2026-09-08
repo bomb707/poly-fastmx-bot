@@ -6,13 +6,13 @@
 //   shadow_sessions_sim/ shadow_sessions_real — one doc per resolved window (the A/B ledger: sim/real/bot PnL)
 //
 // Writes are fire-and-forget (never block or throw into the hot strategy loop). Reads are awaited.
-// Connection: MONGO_URI (default local shared with the other bots), DB: MONGO_DB (default poly_helpme — this
+// Connection: MONGO_URI (default local shared with the other bots), DB: MONGO_DB (default poly_wallet3048 — this
 //   bot's OWN database, kept separate from other projects' data even though they share the mongod instance).
 import { MongoClient } from "mongodb";
 import { isLive } from "../lib/executor.js";
 
 const URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017";
-const DB_NAME = process.env.MONGO_DB || "poly_helpme";
+const DB_NAME = process.env.MONGO_DB || "poly_wallet3048";
 
 let client = null, db = null, connecting = null;
 

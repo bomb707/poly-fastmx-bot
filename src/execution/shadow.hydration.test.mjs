@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createShadow } from "./shadow.js";
 
-test("mid-window hydration restores fills and the cooldown clock", () => {
+test("mid-window hydration restores fills, orders, and the wallet action clock", () => {
   const shadow = createShadow();
   const slug = "btc-updown-5m-100";
   const w = shadow.hydrateWindow({ slug, windowStart: 100,
@@ -22,11 +22,9 @@ test("mid-window hydration restores fills and the cooldown clock", () => {
   assert.ok(w.fee > 0);
   assert.equal(w.fills.length, 1);
   assert.equal(w.seq, 2);
-  assert.equal(w.helpme.orderCount, 2);
-  assert.equal(w.helpme.lastSignalKey, null);
-  assert.equal("cells" in w.helpme, false);
-  assert.equal("execSide" in w.helpme, false);
-  assert.equal(w.helpme.lastOrderMs, 122_000);
+  assert.equal(w.orders.length, 2);
+  assert.equal(w.wallet3048Recovery.actions, 2);
+  assert.equal(w.wallet3048Recovery.lastActionMs, 122_000);
 
   // A second Start in the same process is idempotent.
   shadow.hydrateWindow({ slug, windowStart: 100, fills: w.fills, orderStatus: [] });
@@ -34,7 +32,7 @@ test("mid-window hydration restores fills and the cooldown clock", () => {
   assert.equal(w.cost, 5.68);
 });
 
-test("runtime strategy selection switches parameter schemas without leaking overrides", () => {
+test("unknown strategy names fall back to wallet3048 without leaking overrides", () => {
   const shadow = createShadow();
   shadow.setParams({ STRATEGY: "wallet3048", LATENCY_MS: 250 });
   const wallet = shadow.getParams();
@@ -44,12 +42,12 @@ test("runtime strategy selection switches parameter schemas without leaking over
   assert.equal(wallet.LATENCY_MS, 250);
   assert.equal("H_BASE_ORDER_SH" in wallet, false);
 
-  shadow.setParams({ STRATEGY: "helpme" });
-  const helpme = shadow.getParams();
-  assert.equal(helpme.STRATEGY, "helpme");
-  assert.equal(helpme.H_BASE_ORDER_SH, 7);
-  assert.equal(helpme.LATENCY_MS, 520);
-  assert.equal("W3048_SMALL_SIZE" in helpme, false);
+  shadow.setParams({ STRATEGY: "removed-strategy", LATENCY_MS: 300, H_BASE_ORDER_SH: 7 });
+  const fallback = shadow.getParams();
+  assert.equal(fallback.STRATEGY, "wallet3048");
+  assert.equal(fallback.W3048_SMALL_SIZE, 50);
+  assert.equal(fallback.LATENCY_MS, 300);
+  assert.equal("H_BASE_ORDER_SH" in fallback, false);
 });
 
 test("an older persisted wallet snapshot cannot pin superseded strategy defaults", () => {

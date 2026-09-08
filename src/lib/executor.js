@@ -265,8 +265,8 @@ export async function placeBuy({
     if (!tokenMeta) throw new Error(`CLOB metadata unavailable for token ${tokenId}`);
     const tick = Number(tokenMeta.tickSize);
     if (!(tick > 0 && tick < 1)) throw new Error(`invalid live tick size ${tokenMeta.tickSize}`);
-    // A BUY ceiling must never round upward. Dynamic book metadata replaces
-    // Helpme's former hard-coded cent grid (BTC markets can move to finer ticks).
+    // A BUY ceiling must never round upward. Dynamic book metadata supports
+    // BTC markets that move to finer ticks.
     const tickSteps = Math.max(1, Math.floor(Math.min(1 - tick, rawPrice) / tick + 1e-9));
     const px = +(tickSteps * tick).toFixed(6);
     const minShares = Number(tokenMeta.minOrderSize) > 0 ? Number(tokenMeta.minOrderSize) : 0;
