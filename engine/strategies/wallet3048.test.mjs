@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { STRAT, buildFeatures, fairProbability, step, injectRealFill, clearLivePending,
   shouldCancelResting, evaluateRiskScenarios, economicCaps, realizedVol } from "./wallet3048.js";
-import { normalizeReplayTimestamp, simulateFills } from "../simrun.js";
+import { normalizeReplayTimestamp, positionFromFills, simulateFills } from "../simrun.js";
 
 const levels = (rows) => rows.map(([price, size]) => [price, size]);
 function side(ask, depth = 300) {
@@ -225,6 +225,116 @@ test("pending complements reserve confirmed FIFO-matchable inventory once", () =
   assert.equal(caps.pairCap, null);
 });
 
+test("pending FIFO reservations leave the next complement on the next lot", () => {
+  const model = { up: 100, down: 0, cost: 50, fees: 0,
+    lots: { Up: [
+      { lotId: "up-1", shares: 50, effectivePrice: 0.20 },
+      { lotId: "up-2", shares: 50, effectivePrice: 0.80 },
+    ], Down: [] } };
+  const state = { pendingFills: [{ phase: "resting", remaining: 50,
+    rec: { oid: 8, side: "Down", shares: 50, requestedShares: 50, limitPx: 0.5,
+      pairReservation: [{ lotId: "up-1", shares: 50, effectivePrice: 0.20 }] } }] };
+  const book = { ask: 0.10, bid: 0.09, asks: [{ price: 0.10, size: 200 }],
+    bids: [{ price: 0.09, size: 200 }] };
+  const caps = economicCaps(model, state, "Down", book, 0.9, 50, signalP, 0);
+  assert.equal(caps.matchedShares, 50);
+  assert.equal(caps.oppositeCost, 0.80);
+  assert.deepEqual(caps.pairReservation.map(({ lotId, shares }) => ({ lotId, shares })),
+    [{ lotId: "up-2", shares: 50 }]);
+  state.pendingFills = [];
+  const afterCancel = economicCaps(model, state, "Down", book, 0.9, 50, signalP, 0);
+  assert.equal(afterCancel.oppositeCost, 0.20, "cancellation releases the reserved FIFO head");
+});
+
+test("resting reevaluation retains its own slices while excluding other reservations", () => {
+  const model = { up: 100, down: 0, cost: 50, fees: 0,
+    lots: { Up: [
+      { lotId: "up-1", shares: 50, effectivePrice: 0.20 },
+      { lotId: "up-2", shares: 50, effectivePrice: 0.80 },
+    ], Down: [] } };
+  const own = { phase: "resting", remaining: 25,
+    reservationRemaining: [{ lotId: "up-1", shares: 25, effectivePrice: 0.20 }],
+    rec: { oid: 8, side: "Down", shares: 50, requestedShares: 50, limitPx: 0.5 } };
+  const other = { phase: "resting", remaining: 50,
+    reservationRemaining: [{ lotId: "up-2", shares: 50, effectivePrice: 0.80 }],
+    rec: { oid: 9, side: "Down", shares: 50, requestedShares: 50, limitPx: 0.1 } };
+  const book = { ask: 0.10, bid: 0.09, asks: [{ price: 0.10, size: 200 }],
+    bids: [{ price: 0.09, size: 200 }] };
+  const caps = economicCaps(model, { pendingFills: [own, other] }, "Down", book,
+    0.9, own.remaining, signalP, 0, { excludeOid: own.rec.oid,
+      preferredReservation: own.reservationRemaining });
+  assert.equal(caps.matchedShares, 25, "only the resting remainder is reevaluated");
+  assert.equal(caps.oppositeCost, 0.20, "the order keeps its own reserved FIFO identity");
+  assert.deepEqual(caps.pairReservation.map(({ lotId, shares }) => ({ lotId, shares })),
+    [{ lotId: "up-1", shares: 25 }]);
+});
+
+test("recorded fill amounts reconcile exactly into strategy and settlement ledgers", () => {
+  const fill = { fillId: "1:1", oid: 1, side: "Up", shares: 10, effPx: 0.5,
+    usdc: 4.9999, fee: 0.20001, maker: false, leg: "entry",
+    levels: [{ price: 0.49, shares: 5, usdc: 2.45, fee: 0.08747 },
+      { price: 0.50998, shares: 5, usdc: 2.5499, fee: 0.11254 }] };
+  const state = { fills: [fill] };
+  step(state, tick(0), signalP, 120, 0);
+  assert.equal(state.wallet3048.up, 10);
+  assert.equal(state.wallet3048.cost, fill.usdc);
+  assert.equal(state.wallet3048.fees, fill.fee);
+  assert.equal(state.wallet3048.lots.Up.reduce((sum, lot) => sum + lot.shares, 0), 10);
+  assert.ok(Math.abs(state.wallet3048.lots.Up.reduce((sum, lot) =>
+    sum + lot.shares * lot.effectivePrice, 0) - (fill.usdc + fill.fee)) < 1e-12);
+});
+
+test("rounding-sensitive partial fills reconcile after every execution record", () => {
+  const state = { fills: [] };
+  const records = [
+    { fillId: "11:1", oid: 11, side: "Up", shares: 7.3333, effPx: 0.40173,
+      usdc: 2.946011, fee: 0.036719, maker: false, leg: "entry",
+      levels: [{ price: 0.40, shares: 3.1111, usdc: 1.24444, fee: 0.014001 },
+        { price: 0.403, shares: 4.2222, usdc: 1.701571, fee: 0.022718 }] },
+    { fillId: "11:2", oid: 11, side: "Up", shares: 4.1111, effPx: 0.407,
+      usdc: 1.673018, fee: 0.019003, maker: false, leg: "entry", status: "partial",
+      levels: [{ price: 0.405, shares: 2.0555 }, { price: 0.409, shares: 2.0556 }] },
+  ];
+  for (const record of records) {
+    state.fills.push(record);
+    step(state, tick(0), signalP, 120, 0);
+    const expectedShares = state.fills.reduce((sum, fill) => sum + fill.shares, 0);
+    const expectedCost = state.fills.reduce((sum, fill) => sum + fill.usdc, 0);
+    const expectedFee = state.fills.reduce((sum, fill) => sum + fill.fee, 0);
+    assert.equal(state.wallet3048.up, expectedShares);
+    assert.equal(state.wallet3048.cost, expectedCost);
+    assert.equal(state.wallet3048.fees, expectedFee);
+    const settlement = positionFromFills(state.fills, "Up");
+    assert.equal(settlement.upShares, state.wallet3048.up);
+    assert.equal(settlement.totalCost, state.wallet3048.cost);
+    assert.equal(settlement.fee, state.wallet3048.fees);
+    assert.equal(settlement.realizedPnl,
+      state.wallet3048.up - state.wallet3048.cost - state.wallet3048.fees);
+  }
+  const lots = state.wallet3048.lots.Up;
+  assert.ok(lots.length >= 4, "execution levels remain separately attributable in FIFO inventory");
+  assert.ok(Math.abs(lots.reduce((sum, lot) => sum + lot.shares * lot.effectivePrice, 0)
+    - (state.wallet3048.cost + state.wallet3048.fees)) < 1e-12);
+});
+
+test("a partial complement consumes its named lot instead of the FIFO head", () => {
+  const state = { fills: [
+    { fillId: "up-cheap", oid: 1, side: "Up", shares: 50, effPx: 0.2,
+      usdc: 10, fee: 0, maker: true, leg: "entry" },
+    { fillId: "up-expensive", oid: 2, side: "Up", shares: 50, effPx: 0.8,
+      usdc: 40, fee: 0, maker: true, leg: "entry" },
+  ] };
+  step(state, tick(0), signalP, 120, 0);
+  const [cheap, expensive] = state.wallet3048.lots.Up;
+  state.fills.push({ fillId: "down-partial", oid: 3, side: "Down", shares: 20,
+    effPx: 0.1, usdc: 2, fee: 0, maker: true, leg: "hedge",
+    pairReservation: [{ lotId: expensive.lotId, shares: 20,
+      effectivePrice: expensive.effectivePrice }] });
+  step(state, tick(0), signalP, 120, 0);
+  assert.equal(state.wallet3048.lots.Up.find((lot) => lot.lotId === cheap.lotId)?.shares, 50);
+  assert.equal(state.wallet3048.lots.Up.find((lot) => lot.lotId === expensive.lotId)?.shares, 30);
+});
+
 test("parent economics use size-dependent executable VWAP", () => {
   const model = { up: 0, down: 0, cost: 0, fees: 0, lots: { Up: [], Down: [] } };
   const book = { ask: 0.4, bid: 0.39,
@@ -320,6 +430,7 @@ test("backtest gives no time-at-bid maker credit unless optimistic touch mode is
   assert.equal(optimistic.length, 2);
   assert.equal(optimistic[0].status, "partial");
   assert.ok(optimistic.slice(1).every((fill) => fill.maker === true && fill.exec === "resting"));
+  assert.ok(optimistic.slice(1).every((fill) => fill.fillEvidence === "optimistic-touch"));
   assert.equal(new Set(optimistic.map((fill) => fill.oid)).size, 1);
 });
 
@@ -337,6 +448,47 @@ test("a resting execution implied by the update wins a same-update cancel race",
   });
   assert.equal(fills.reduce((sum, fill) => sum + fill.shares, 0), 50);
   assert.equal(fills.at(-1).maker, true);
+  assert.equal(fills.at(-1).fillEvidence, "book-cross-inference");
+  assert.equal(fills.at(-1).fillEvidenceVerified, false);
+});
+
+test("an unchanged depth event cannot replenish liquidity between replay phases", () => {
+  const historical = (t, upAsk, upDepth, bz, depthEventId) => {
+    const up = { ...side(upAsk, upDepth), asks: [[upAsk, upDepth]], depthEventId };
+    const down = { ...side(1.01 - upAsk, 300), depthEventId: `down-${depthEventId}` };
+    return { t, ms: t * 1000, upAsk: up.bestAsk, upBid: up.bestBid,
+      dnAsk: down.bestAsk, dnBid: down.bestBid, up, down, bz, cl: 100,
+      binanceAtMs: t * 1000, chainlinkAtMs: t * 1000 };
+  };
+  const fills = simulateFills({ openBinance: 100, openPrice: 100, windowStart: 0,
+    ticks: [historical(4.5, 0.4, 100, 100, "u0"), historical(5, 0.4, 10, 101, "u1"),
+      historical(6, 0.39, 20, 102, "u2"), historical(6.1, 0.39, 20, 102, "u2")] }, {
+    ...signalP, W3048_REQUIRE_SOURCE_TIMESTAMPS: true, LATENCY_MS: 0,
+    W3048_COOLDOWN_MS: 0, W3048_SAME_SIDE_RETRY_MS: 0,
+    W3048_CROSS_HEADROOM_TICKS: 0, W3048_MAKER_FILL_ASSUMPTION: "zero",
+  });
+  const eventShares = fills.filter((fill) => fill.tInto >= 6 && fill.tInto <= 6.1)
+    .reduce((sum, fill) => sum + fill.shares, 0);
+  assert.ok(eventShares <= 20, `one external depth event supplied only 20 shares, got ${eventShares}`);
+});
+
+test("resting fills after timeout or final cutoff are prohibited", () => {
+  const historical = (t, upAsk, upDepth, bz) => {
+    const up = side(upAsk, upDepth), down = side(1.01 - upAsk, 300);
+    return { t, ms: t * 1000, upAsk: up.bestAsk, upBid: up.bestBid,
+      dnAsk: down.bestAsk, dnBid: down.bestBid, up, down, bz, cl: 100 };
+  };
+  const common = { ...signalP, W3048_COOLDOWN_MS: 10_000,
+    W3048_CROSS_HEADROOM_TICKS: 0, W3048_MAKER_FILL_ASSUMPTION: "zero" };
+  const expired = simulateFills({ openBinance: 100, openPrice: 100, windowStart: 0,
+    ticks: [historical(4.5, 0.4, 100, 100), historical(5, 0.4, 10, 101),
+      historical(6, 0.39, 100, 101)] }, { ...common, W3048_REST_TIMEOUT_MS: 500 });
+  assert.equal(expired.reduce((sum, fill) => sum + fill.shares, 0), 10);
+
+  const cutoff = simulateFills({ openBinance: 100, openPrice: 100, windowStart: 0,
+    ticks: [historical(268.5, 0.4, 100, 100), historical(269, 0.4, 10, 101),
+      historical(270.1, 0.39, 100, 101)] }, common);
+  assert.equal(cutoff.reduce((sum, fill) => sum + fill.shares, 0), 10);
 });
 
 test("resting orders are canceled when their economic cap moves below the signed rung", () => {

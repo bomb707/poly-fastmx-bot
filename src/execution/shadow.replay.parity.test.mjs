@@ -1,0 +1,119 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { simulateFills } from "../../engine/simrun.js";
+import { createShadow } from "./shadow.js";
+import { setRunning } from "./botState.js";
+import { validateRecorderWindow } from "../../research/wallet-3048/validate-recorder-cohort.mjs";
+
+const windowStart = 1_800_000_000;
+const slug = `btc-updown-5m-${windowStart}`;
+const side = (ask, depth, depthEventId, depthTs) => ({ bestAsk: ask,
+  bestBid: +(ask - 0.01).toFixed(2), depthEventId, depthTs, depthReceivedAtMs: depthTs,
+  quoteSourceAtMs: depthTs, quoteReceivedAtMs: depthTs,
+  asks: [[ask, depth], [+(ask + 0.01).toFixed(2), depth], [+(ask + 0.02).toFixed(2), depth]],
+  bids: [[+(ask - 0.01).toFixed(2), depth], [+(ask - 0.02).toFixed(2), depth],
+    [+(ask - 0.03).toFixed(2), depth]] });
+
+function fixtureTick(t, bz, upAsk, upDepth, event) {
+  const nowMs = windowStart * 1000 + t * 1000;
+  const up = side(upAsk, upDepth, `up-${event}`, nowMs);
+  const down = side(1.01 - upAsk, 300, `down-${event}`, nowMs);
+  return { t, ms: nowMs, bz, cl: 100, binanceAtMs: nowMs, chainlinkAtMs: nowMs,
+    upAsk: up.bestAsk, upBid: up.bestBid, dnAsk: down.bestAsk, dnBid: down.bestBid,
+    up, down };
+}
+
+const params = { STRATEGY: "wallet3048", W3048_SPEC_VERSION: 3,
+  LATENCY_MS: 100, W3048_REQUIRE_SOURCE_TIMESTAMPS: true,
+  W3048_RELEASE_GATE: false, W3048_COOLDOWN_MS: 0,
+  W3048_SAME_SIDE_RETRY_MS: 0, W3048_MAX_ACTIONS: 2,
+  W3048_BETA_MARKET_LOGIT: 0, W3048_BETA_MOMENTUM: 1,
+  W3048_BETA_LATEST_UPDATE: 0, W3048_BETA_RELATIVE_LEAD: 0,
+  W3048_BETA_CHAINLINK_DISTANCE: 0, W3048_BETA_CLOB: 0,
+  W3048_BETA_TIME_CHAINLINK: 0, W3048_EDGE_BUFFER: 0,
+  W3048_MIN_EXPECTED_EDGE_START: 0, W3048_MIN_EXPECTED_EDGE_END: 0,
+  W3048_LARGE_EDGE: 1, W3048_CROSS_HEADROOM_TICKS: 1,
+  W3048_MAKER_FILL_ASSUMPTION: "zero" };
+
+test("shadow and replay use the same last-known book when arrival falls between updates", () => {
+  const ticks = [fixtureTick(4.5, 100, 0.40, 100, 1),
+    fixtureTick(5, 101, 0.40, 100, 2), fixtureTick(5.2, 101, 0.42, 100, 3),
+    fixtureTick(5.4, 101, 0.43, 100, 4)];
+  const replay = simulateFills({ windowStart, openBinance: 100, openPrice: 100, ticks }, params);
+  const shadow = createShadow(() => {}, () => false);
+  shadow.setParams(params);
+  setRunning(true);
+  try {
+    for (const tick of ticks) shadow.tick({ slug, windowStart, openBinance: 100,
+      openChainlink: 100, tInto: tick.t, bzPrice: tick.bz, clPrice: tick.cl,
+      binanceAtMs: tick.binanceAtMs, binanceReceivedAtMs: tick.ms,
+      chainlinkAtMs: tick.chainlinkAtMs, chainlinkReceivedAtMs: tick.ms,
+      nowMs: tick.ms, up: tick.up, down: tick.down });
+  } finally {
+    setRunning(false);
+  }
+  const window = shadow.windows.get(slug);
+  const live = window.fills;
+  const project = (fills) => fills.map((fill) => ({ oid: fill.oid, side: fill.side,
+    shares: fill.shares, usdc: fill.usdc, fee: fill.fee, effPx: fill.effPx,
+    decidedT: fill.decidedT, tInto: fill.tInto, ts: fill.ts, reason: fill.reason }));
+  assert.deepEqual(project(live), project(replay));
+  assert.equal(live[0].tInto, 5.1);
+  assert.equal(live[0].effPx, 0.4);
+  assert.equal(live[1].reason, "w3048-directional-reinforcement",
+    "the post-arrival inventory decision also remains identical");
+  const recorderReport = validateRecorderWindow({ schema: 2, slug, windowStart,
+    openBinance: 100, openPrice: 100, winSide: "Up", cfg: { params },
+    ticks: window.recTicks, decisions: window.recDecisions, fills: window.fills });
+  assert.equal(recorderReport.completeness.readyForExactParity, true);
+  assert.equal(recorderReport.parity.exact, true);
+});
+
+test("shadow and replay cancel a resting remainder before a sparse later update", () => {
+  const expiryParams = { ...params, LATENCY_MS: 0, W3048_MAX_ACTIONS: 1,
+    W3048_COOLDOWN_MS: 10_000, W3048_CROSS_HEADROOM_TICKS: 0,
+    W3048_REST_TIMEOUT_MS: 500 };
+  const ticks = [fixtureTick(4.5, 100, 0.40, 100, "expiry-1"),
+    fixtureTick(5, 101, 0.40, 10, "expiry-2"),
+    fixtureTick(6, 101, 0.39, 100, "expiry-3")];
+  const replay = simulateFills({ windowStart, openBinance: 100, openPrice: 100, ticks }, expiryParams);
+  const shadow = createShadow(() => {}, () => false);
+  shadow.setParams(expiryParams);
+  setRunning(true);
+  try {
+    for (const tick of ticks) shadow.tick({ slug, windowStart, openBinance: 100,
+      openChainlink: 100, tInto: tick.t, bzPrice: tick.bz, clPrice: tick.cl,
+      binanceAtMs: tick.binanceAtMs, binanceReceivedAtMs: tick.ms,
+      chainlinkAtMs: tick.chainlinkAtMs, chainlinkReceivedAtMs: tick.ms,
+      nowMs: tick.ms, up: tick.up, down: tick.down });
+  } finally {
+    setRunning(false);
+  }
+  const live = shadow.windows.get(slug).fills;
+  assert.deepEqual(live.map((fill) => [fill.side, fill.shares, fill.tInto]),
+    replay.map((fill) => [fill.side, fill.shares, fill.tInto]));
+  assert.equal(live.reduce((sum, fill) => sum + fill.shares, 0), 10);
+});
+
+test("window close does not turn an unarrived intent into a fill", () => {
+  const closeParams = { ...params, LATENCY_MS: 1000, W3048_MAX_ACTIONS: 1 };
+  const ticks = [fixtureTick(4.5, 100, 0.40, 100, "close-1"),
+    fixtureTick(5, 101, 0.40, 100, "close-2")];
+  const replay = simulateFills({ windowStart, openBinance: 100, openPrice: 100, ticks }, closeParams);
+  const shadow = createShadow(() => {}, () => false);
+  shadow.setParams(closeParams);
+  setRunning(true);
+  try {
+    for (const tick of ticks) shadow.tick({ slug, windowStart, openBinance: 100,
+      openChainlink: 100, tInto: tick.t, bzPrice: tick.bz, clPrice: tick.cl,
+      binanceAtMs: tick.binanceAtMs, binanceReceivedAtMs: tick.ms,
+      chainlinkAtMs: tick.chainlinkAtMs, chainlinkReceivedAtMs: tick.ms,
+      nowMs: tick.ms, up: tick.up, down: tick.down });
+    shadow.recordPending(slug);
+  } finally {
+    setRunning(false);
+  }
+  assert.equal(replay.length, 0);
+  assert.equal(shadow.windows.get(slug).fills.length, 0);
+});

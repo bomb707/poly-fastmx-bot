@@ -97,6 +97,33 @@ export function createAskPool(book) {
   return { ...book, asks };
 }
 
+export function depthEventId(book, fallback = null) {
+  const value = book?.depthEventId ?? book?.eventId
+    ?? (book?.depthTs != null ? `depth:${book.depthTs}` : fallback);
+  return value == null ? null : String(value);
+}
+
+/**
+ * Liquidity belongs to an identified external depth event. Reprocessing that
+ * event, including a second lifecycle phase, returns the already-consumed pool.
+ * Only a new depth event identity replenishes visible liquidity.
+ */
+export function createExecutionEvidenceLedger() {
+  const askPools = new Map();
+  const makerFlow = new Map();
+  return {
+    askPools,
+    makerFlow,
+    poolFor(side, book, fallback = null) {
+      const eventId = depthEventId(book, fallback);
+      if (eventId == null) return null;
+      const key = `${side}:${eventId}`;
+      if (!askPools.has(key)) askPools.set(key, createAskPool(book));
+      return askPools.get(key);
+    },
+  };
+}
+
 /** Walk and consume a per-update ask pool. */
 export function consumeVisibleAsks(pool, requested, cap) {
   const match = walkVisibleAsks(pool, requested, cap, { allowBbaFallback: false });
@@ -116,13 +143,62 @@ export function consumeVisibleAsks(pool, requested, cap) {
  * `zero`, which gives no fill merely for spending time at the public bid.
  */
 export function makerFillFromEvidence({ book, limit, remaining, assumption = "zero",
+  queueAssumption = "none", evidenceLedger = null, evidenceScope = "",
+  restingSinceMs = -Infinity, throughMs = Infinity,
   dtMs = 0, touchMs = 1000, fillPct = 0, previouslyCredited = 0, target = remaining }) {
-  const observed = Number(book?.sellFlowAtOrBelow ?? book?.makerSellShares ?? 0);
-  if (Number.isFinite(observed) && observed > 0) return Math.min(Math.max(0, remaining), observed);
-  if (assumption !== "touch") return 0;
+  const none = { shares: 0, evidenceType: "none", verified: false,
+    queueAssumption: String(queueAssumption || "none"), evidenceIds: [] };
+  if (assumption === "observed-flow" && queueAssumption === "front-of-queue"
+    && evidenceLedger instanceof Map) {
+    let available = Math.max(0, Number(remaining) || 0);
+    let shares = 0;
+    const evidenceIds = [];
+    for (const event of Array.isArray(book?.makerEvidence) ? book.makerEvidence : []) {
+      const id = event?.id == null ? null : String(event.id);
+      const ts = Number(event?.ts), price = Number(event?.price), quantity = Number(event?.shares);
+      const aggressorSide = String(event?.aggressorSide ?? event?.takerSide ?? "").toLowerCase();
+      if (!id || !Number.isFinite(ts) || !Number.isFinite(price) || !(quantity > 0)) continue;
+      if (aggressorSide !== "sell") continue;
+      if (ts < Number(restingSinceMs) || ts > Number(throughMs)) continue;
+      if (price > Number(limit) + EPS) continue;
+      const key = `${evidenceScope}:${id}`;
+      if (!evidenceLedger.has(key)) evidenceLedger.set(key, quantity);
+      const take = Math.min(available, Math.max(0, Number(evidenceLedger.get(key)) || 0));
+      if (!(take > EPS)) continue;
+      evidenceLedger.set(key, Number(evidenceLedger.get(key)) - take);
+      shares += take;
+      available -= take;
+      evidenceIds.push(id);
+      if (available <= EPS) break;
+    }
+    if (shares > EPS) return { shares, evidenceType: "observed-flow-estimate",
+      verified: false, queueAssumption, evidenceIds };
+  }
+  if (assumption !== "touch") return none;
   const cumulative = makerTouchFill({ askNow: limit, limit, filled: previouslyCredited,
     target, dtMs, touchMs, fillPct });
-  return Math.min(Math.max(0, remaining), Math.max(0, cumulative - previouslyCredited));
+  return { shares: Math.min(Math.max(0, remaining), Math.max(0, cumulative - previouslyCredited)),
+    evidenceType: "optimistic-touch", verified: false, queueAssumption: "time-at-bid",
+    evidenceIds: [] };
+}
+
+/** Remove up to `shares` from ordered reservation slices, mutating the remainder. */
+export function takeReservationSlices(reservation, shares) {
+  let left = Math.max(0, Number(shares) || 0);
+  const taken = [];
+  for (const slice of Array.isArray(reservation) ? reservation : []) {
+    if (left <= EPS) break;
+    const available = Math.max(0, Number(slice.shares) || 0);
+    const take = Math.min(left, available);
+    if (!(take > EPS)) continue;
+    taken.push({ ...slice, shares: take });
+    slice.shares = available - take;
+    left -= take;
+  }
+  for (let i = (reservation?.length || 0) - 1; i >= 0; i--) {
+    if (!(Number(reservation[i]?.shares) > EPS)) reservation.splice(i, 1);
+  }
+  return taken;
 }
 
 /**

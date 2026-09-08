@@ -24,6 +24,11 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
   let lastDataMs = Date.now();   // last actual market payload (used by the trading freshness guard)
   let lastHeartbeatMs = Date.now();
   const heartbeatTimeoutMs = () => Math.max(30000, config.clobStaleReconnectMs);
+  const sourceTimeMs = (message) => {
+    const value = Number(message?.timestamp ?? message?.ts);
+    if (!Number.isFinite(value)) return null;
+    return value >= 1e12 ? value : value >= 1e9 ? value * 1000 : null;
+  };
 
   const connect = () => {
     if (stopped) return;
@@ -34,17 +39,18 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
       if (!book) { book = new MarketDepthBook(); depthBooks.set(id, book); }
       return book;
     };
-    const publishDepth = (assetId, ts) => {
+    const publishDepth = (assetId, sourceTs, recvTs) => {
       const id = String(assetId || "");
       if (!id) return;
       const snapshot = depthBook(id).snapshot(12);
       if (!snapshot.synchronized) return;
-      recordDepth(state, id, snapshot.asks, snapshot.bids, ts);
+      const depth = recordDepth(state, id, snapshot.asks, snapshot.bids, { sourceTs, recvTs });
       const bestBid = snapshot.bids[0]?.[0] ?? null;
       const bestAsk = snapshot.asks[0]?.[0] ?? null;
-      state.bbaByToken.set(id, { bestBid, bestAsk, recvTs: ts });
-      recordBook(state, id, bestBid, bestAsk, ts);
-      if (onBook) { try { onBook(id, bestBid, bestAsk, ts); } catch {} }
+      state.bbaByToken.set(id, { bestBid, bestAsk, sourceTs, recvTs,
+        depthEventId: depth.eventId });
+      recordBook(state, id, bestBid, bestAsk, recvTs);
+      if (onBook) { try { onBook(id, bestBid, bestAsk, recvTs); } catch {} }
     };
     ws = new WebSocket(config.polyClobWsUrl);
     ws.on("open", () => {
@@ -87,7 +93,8 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
           const id = String(m.asset_id ?? "");
           if (!id) continue;
           depthBook(id).replace({ bids: m.bids, asks: m.asks });
-          publishDepth(id, Date.now());
+          const recvTs = Date.now();
+          publishDepth(id, sourceTimeMs(m), recvTs);
           continue;
         }
         if (m?.event_type === "price_change" && Array.isArray(m.price_changes)) {
@@ -96,8 +103,8 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
             const id = String(change?.asset_id ?? "");
             if (id && depthBook(id).apply(change)) changed.add(id);
           }
-          const ts = Date.now();
-          for (const id of changed) publishDepth(id, ts);
+          const recvTs = Date.now(), sourceTs = sourceTimeMs(m);
+          for (const id of changed) publishDepth(id, sourceTs, recvTs);
           continue;
         }
         // A tick-size change does not invalidate the current aggregated book.
@@ -110,10 +117,10 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
         if (!Number.isFinite(bb) && !Number.isFinite(ba)) continue;
         const bestBid = Number.isFinite(bb) ? bb : null;
         const bestAsk = Number.isFinite(ba) ? ba : null;
-        const ts = Date.now();
-        state.bbaByToken.set(assetId, { bestBid, bestAsk, recvTs: ts });
-        recordBook(state, assetId, bestBid, bestAsk, ts);
-        if (onBook) { try { onBook(assetId, bestBid, bestAsk, ts); } catch {} }
+        const recvTs = Date.now(), sourceTs = sourceTimeMs(m);
+        state.bbaByToken.set(assetId, { bestBid, bestAsk, sourceTs, recvTs });
+        recordBook(state, assetId, bestBid, bestAsk, recvTs);
+        if (onBook) { try { onBook(assetId, bestBid, bestAsk, recvTs); } catch {} }
       }
     });
     ws.on("close", () => {

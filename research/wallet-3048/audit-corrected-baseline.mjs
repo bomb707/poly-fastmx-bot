@@ -197,5 +197,7 @@ const comparisons = {
 console.log(JSON.stringify({ schema: 2, manifest: path.relative(root, manifestPath),
   dataDir, strategySpec: STRAT.W3048_SPEC_VERSION,
   warning: "Sensitivity audit only. This cohort cannot establish out-of-sample profitability.",
+  splitWarning: "The historical development/validation/holdout labels are diagnostic only; all 14 windows have already been inspected and none is a sealed final test.",
+  attributionWarning: "Fill-purpose attribution is descriptive and cannot establish the counterfactual profitability effect of removing repairs or hedges.",
   modelWarning: "Brier scores use filled orders only and are descriptive. No residual model was fitted.",
   results, comparisons }, null, 2));

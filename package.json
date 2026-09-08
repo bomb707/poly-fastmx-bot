@@ -80,6 +80,8 @@
     "research:wallet3048:participation": "node research/wallet-3048/backtest-participation-floor.mjs",
     "research:wallet3048:participation-screen": "node research/wallet-3048/screen-participation-residual.mjs",
     "research:wallet3048:correctness-audit": "node research/wallet-3048/audit-corrected-baseline.mjs",
+    "research:wallet3048:correctness-audit:original": "node research/wallet-3048/audit-original-reference.mjs",
+    "research:wallet3048:validate-recorder": "node research/wallet-3048/validate-recorder-cohort.mjs",
     "research:maker:v17:pdf": "node research/generate-v17-window-audit-pdf.mjs"
   },
   "dependencies": {

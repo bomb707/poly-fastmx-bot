@@ -6,7 +6,7 @@
 // threshold is an explicit parameter below so forward tests remain auditable.
 
 import { fillFee } from "../fees.js";
-import { walkVisibleAsks } from "../fillsim.js";
+import { walkVisibleAsks, takeReservationSlices } from "../fillsim.js";
 
 export const NAME = "wallet3048";
 export const LABEL = "Target wallet 3048 · latency-aware inventory";
@@ -42,6 +42,7 @@ export const STRAT = {
   W3048_IMPULSE_TTL_MS: 750,
   W3048_REQUIRE_SOURCE_TIMESTAMPS: true,
   W3048_MAKER_FILL_ASSUMPTION: "zero",
+  W3048_MAKER_QUEUE_ALLOCATION: "none",
   W3048_REST_TIMEOUT_MS: 10000,
   W3048_SIM_TOUCH_MS: 1000,
   W3048_SIM_TOUCH_FILL_PCT: 30,
@@ -204,6 +205,7 @@ function init(state, P = STRAT) {
       cost: 0,
       fees: 0,
       lots: { Up: [], Down: [] },
+      nextLotSeq: 0,
       history: [],
       bookTrace: { Up: [], Down: [] },
       askRun: { Up: null, Down: null },
@@ -225,24 +227,100 @@ function init(state, P = STRAT) {
   return state.wallet3048;
 }
 
-function applyFill(model, side, shares, price, taker = true) {
-  const qty = Number(shares);
-  const px = Number(price);
-  if (!(qty > EPS) || !finite(px)) return;
-  const other = opposite(side);
+function allocateAmount(rows, total, key, fallback) {
+  const weights = rows.map((row) => finite(row?.[key]) ? Number(row[key]) : fallback(row));
+  const weightTotal = weights.reduce((sum, value) => sum + Math.max(0, value), 0);
+  let used = 0;
+  return rows.map((_, index) => {
+    const value = index === rows.length - 1 ? Number(total) - used
+      : Number(total) * Math.max(0, weights[index]) / Math.max(EPS, weightTotal);
+    used += value;
+    return value;
+  });
+}
+
+function recordedSegments(fill, qty, usdc, fee) {
   let left = qty;
-  while (left > EPS && model.lots[other].length) {
-    const lot = model.lots[other][0];
-    const take = Math.min(left, lot.shares);
-    left -= take;
-    lot.shares -= take;
-    if (lot.shares <= EPS) model.lots[other].shift();
+  const rows = [];
+  for (const level of Array.isArray(fill?.levels) ? fill.levels : []) {
+    const shares = Math.min(left, Math.max(0, Number(level?.shares) || 0));
+    if (!(shares > EPS)) continue;
+    rows.push({ ...level, shares, price: finite(level?.price) ? Number(level.price) : Number(fill.effPx) });
+    left -= shares;
+    if (left <= EPS) break;
   }
-  const feePerShare = taker ? fillFee(px, 1, true) : 0;
-  if (left > EPS) model.lots[side].push({ shares: left, effectivePrice: px + feePerShare });
+  if (left > EPS) rows.push({ shares: left, price: Number(fill.effPx) });
+  const costs = allocateAmount(rows, usdc, "usdc", (row) => row.price * row.shares);
+  const fees = allocateAmount(rows, fee, "fee", (row) => fillFee(row.price, row.shares, fill.maker !== true));
+  return rows.map((row, index) => ({ ...row, usdc: costs[index], fee: fees[index] }));
+}
+
+function consumeLot(lots, lotId, shares) {
+  const lot = lots.find((candidate) => String(candidate.lotId) === String(lotId));
+  if (!lot) return 0;
+  const take = Math.min(Math.max(0, Number(shares) || 0), lot.shares);
+  lot.shares -= take;
+  if (lot.shares <= EPS) lots.splice(lots.indexOf(lot), 1);
+  return take;
+}
+
+function consumeFifo(lots, shares) {
+  let left = Math.max(0, Number(shares) || 0), used = 0;
+  while (left > EPS && lots.length) {
+    const take = Math.min(left, lots[0].shares);
+    lots[0].shares -= take;
+    left -= take;
+    used += take;
+    if (lots[0].shares <= EPS) lots.shift();
+  }
+  return used;
+}
+
+function discardSegmentShares(segments, shares) {
+  let left = Math.max(0, Number(shares) || 0);
+  while (left > EPS && segments.length) {
+    const row = segments[0];
+    const take = Math.min(left, row.shares);
+    const ratio = take / row.shares;
+    row.shares -= take;
+    row.usdc *= 1 - ratio;
+    row.fee *= 1 - ratio;
+    left -= take;
+    if (row.shares <= EPS) segments.shift();
+  }
+}
+
+function applyFill(model, fill) {
+  const side = fill?.side;
+  const qty = Number(fill?.shares);
+  const px = Number(fill?.effPx);
+  if (!(qty > EPS) || !finite(px) || !["Up", "Down"].includes(side)) return;
+  const usdc = finite(fill.usdc) ? Number(fill.usdc) : qty * px;
+  const fee = finite(fill.fee) ? Number(fill.fee) : fillFee(px, qty, fill.maker !== true);
+  const segments = recordedSegments(fill, qty, usdc, fee);
+  const otherLots = model.lots[opposite(side)];
+  let paired = 0;
+  if (Array.isArray(fill.pairReservation)) {
+    for (const slice of fill.pairReservation) {
+      const need = Math.min(qty - paired, Math.max(0, Number(slice?.shares) || 0));
+      if (!(need > EPS)) break;
+      paired += consumeLot(otherLots, slice.lotId, need);
+    }
+  } else {
+    paired = consumeFifo(otherLots, qty);
+  }
+  discardSegmentShares(segments, paired);
+  const baseId = String(fill.fillId ?? `${fill.oid ?? "fill"}:${model.fillCursor}`);
+  for (let index = 0; index < segments.length; index++) {
+    const segment = segments[index];
+    if (!(segment.shares > EPS)) continue;
+    model.lots[side].push({ lotId: `${baseId}:${index}:${++model.nextLotSeq}`,
+      shares: segment.shares, effectivePrice: (segment.usdc + segment.fee) / segment.shares,
+      sourceFillId: fill.fillId ?? null });
+  }
   if (side === "Up") model.up += qty; else model.down += qty;
-  model.cost += qty * px;
-  model.fees += qty * feePerShare;
+  model.cost += usdc;
+  model.fees += fee;
 }
 
 function syncRecordedFills(state, model) {
@@ -251,12 +329,12 @@ function syncRecordedFills(state, model) {
   // skipping inventory if the cursor is no longer valid.
   if (model.fillCursor > fills.length) {
     model.up = 0; model.down = 0; model.cost = 0; model.fees = 0;
-    model.lots = { Up: [], Down: [] }; model.fillCursor = 0;
+    model.lots = { Up: [], Down: [] }; model.fillCursor = 0; model.nextLotSeq = 0;
   }
   while (model.fillCursor < fills.length) {
     const fill = fills[model.fillCursor++];
     if (fill?.leg === "merge" || !["Up", "Down"].includes(fill?.side)) continue;
-    applyFill(model, fill.side, Number(fill.shares), Number(fill.effPx), fill.maker !== true);
+    applyFill(model, fill);
   }
 }
 
@@ -268,6 +346,44 @@ function firstLotCost(lots, shares) {
     if (left <= EPS) break;
   }
   return used >= Number(shares) - EPS && used > EPS ? cost / used : null;
+}
+
+function reserveFromLots(lots, shares, reserved, preferred = null) {
+  let left = Math.max(0, Number(shares) || 0);
+  const slices = [];
+  const takeLot = (lot, requested) => {
+    const already = reserved.get(String(lot.lotId)) || 0;
+    const available = Math.max(0, lot.shares - already);
+    const take = Math.min(left, available, Math.max(0, Number(requested) || 0));
+    if (!(take > EPS)) return;
+    slices.push({ lotId: lot.lotId, shares: take, effectivePrice: lot.effectivePrice });
+    reserved.set(String(lot.lotId), already + take);
+    left -= take;
+  };
+  for (const wanted of Array.isArray(preferred) ? preferred : []) {
+    const lot = lots.find((candidate) => String(candidate.lotId) === String(wanted.lotId));
+    if (lot) takeLot(lot, wanted.shares);
+  }
+  for (const lot of lots) {
+    if (left <= EPS) break;
+    takeLot(lot, left);
+  }
+  return slices;
+}
+
+function candidateLotReservation(model, state, side, shares, options = {}) {
+  const lots = model.lots[opposite(side)] || [];
+  const reserved = new Map();
+  for (const pending of state.pendingFills || []) {
+    const rec = pending?.intent || pending?.rec;
+    if (!rec || rec.side !== side || String(rec.oid) === String(options.excludeOid)) continue;
+    const quantity = pending.phase === "resting" ? Number(pending.remaining)
+      : Number(rec.requestedShares ?? rec.shares);
+    if (!(quantity > EPS)) continue;
+    const preferred = pending.reservationRemaining ?? rec.pairReservation;
+    reserveFromLots(lots, quantity, reserved, preferred);
+  }
+  return reserveFromLots(lots, shares, reserved, options.preferredReservation);
 }
 
 function traceAt(trace, targetMs) {
@@ -471,15 +587,15 @@ export function evaluateRiskScenarios(model, state, side, size, cap, P, progress
 
 const riskCheck = evaluateRiskScenarios;
 
-export function economicCaps(model, state, side, book, fair, size, P, progress) {
+export function economicCaps(model, state, side, book, fair, size, P, progress, options = {}) {
   const imbalance = model.up - model.down;
   const oriented = imbalance * sideSign(side);
   const isComplement = oriented < -EPS;
-  const reservations = pendingReservations(state);
   const confirmedMatchable = isComplement ? Math.abs(imbalance) : 0;
-  const reservedMatchable = isComplement ? reservations[side] : 0;
-  const availableMatch = Math.max(0, confirmedMatchable - reservedMatchable);
-  const matchedShares = Math.min(size, availableMatch);
+  const requestedMatch = Math.min(size, confirmedMatchable);
+  const pairReservation = isComplement
+    ? candidateLotReservation(model, state, side, requestedMatch, options) : [];
+  const matchedShares = pairReservation.reduce((sum, slice) => sum + slice.shares, 0);
   const directionalShares = size - matchedShares;
   const feeAtAsk = fillFee(book.ask, 1, true);
   const leanScale = Math.max(1, interpolate(P.W3048_MAX_LEAN_START, P.W3048_MAX_LEAN_END, progress));
@@ -491,7 +607,7 @@ export function economicCaps(model, state, side, book, fair, size, P, progress) 
   let pairCapMaker = null;
   let oppositeCost = null;
   if (isComplement && matchedShares > EPS) {
-    oppositeCost = firstLotCost(model.lots[opposite(side)], matchedShares);
+    oppositeCost = firstLotCost(pairReservation, matchedShares);
     if (oppositeCost != null) {
       pairCapMaker = 1 - oppositeCost - Number(P.W3048_PAIR_PROFIT_TARGET);
     }
@@ -523,7 +639,7 @@ export function economicCaps(model, state, side, book, fair, size, P, progress) 
   return { imbalance, oriented, isComplement, inventoryPenalty, signalCap, pairCap,
     signalCapMaker, signalCapTaker, pairCapMaker, pairCapTaker,
     oppositeCost, pairingIntended, economicCap, cap, marketable, expectedPx, feePerShare,
-    matchedShares, directionalShares, immediateShares, restingShares,
+    pairReservation, matchedShares, directionalShares, immediateShares, restingShares,
     immediateVwap: execution.avgPx, immediateCost: execution.cost, immediateFees };
 }
 
@@ -624,7 +740,7 @@ function candidateFor(model, state, side, book, release, fair, P, progress, cloc
 // used for new orders. This models the report's keep/cancel/reprice rule; it
 // deliberately does not infer unavailable historical CLOB cancellation data.
 export function shouldCancelResting(state, rec, tk, P = STRAT,
-  clockMs = Number(tk?.t) * 1000) {
+  clockMs = Number(tk?.t) * 1000, options = {}) {
   if (!rec || !["Up", "Down"].includes(rec.side)) return { cancel: false };
   if (Number(tk?.t) >= Number(P.W3048_STOP_S)) return { cancel: true, reason: "final-30s-cutoff" };
   const model = init(state, P);
@@ -645,8 +761,10 @@ export function shouldCancelResting(state, rec, tk, P = STRAT,
   const fair = rec.side === "Up" ? fairUp : 1 - fairUp;
   const progress = clamp((Number(tk.t) - Number(P.W3048_START_S))
     / Math.max(1, Number(P.W3048_STOP_S) - Number(P.W3048_START_S)), 0, 1);
-  const size = Math.max(EPS, Number(rec.requestedShares ?? rec.shares));
-  const caps = economicCaps(model, state, rec.side, sideBook, fair, size, P, progress);
+  const size = Math.max(EPS, Number(options.remainingShares ?? rec.requestedShares ?? rec.shares));
+  const caps = economicCaps(model, state, rec.side, sideBook, fair, size, P, progress,
+    { excludeOid: options.excludeOid ?? rec.oid,
+      preferredReservation: options.pairReservation ?? rec.pairReservation });
   const slack = Number(P.W3048_CANCEL_CAP_SLACK_TICKS) * Number(P.W3048_TICK);
   const orderPx = Number(rec.limitPx);
   const cancel = !finite(caps.cap) || caps.cap < Number(P.W3048_MIN_PRICE) - EPS
@@ -674,8 +792,15 @@ export function validateParams(P = STRAT) {
   if (!Number.isFinite(Number(P.W3048_IMPULSE_TTL_MS)) || Number(P.W3048_IMPULSE_TTL_MS) < 0) {
     throw new Error("wallet3048 impulse TTL must be non-negative");
   }
-  if (!["zero", "touch"].includes(String(P.W3048_MAKER_FILL_ASSUMPTION))) {
-    throw new Error("wallet3048 maker fill assumption must be zero or touch");
+  if (!["zero", "touch", "observed-flow"].includes(String(P.W3048_MAKER_FILL_ASSUMPTION))) {
+    throw new Error("wallet3048 maker fill assumption must be zero, touch, or observed-flow");
+  }
+  if (!["none", "front-of-queue"].includes(String(P.W3048_MAKER_QUEUE_ALLOCATION))) {
+    throw new Error("wallet3048 maker queue allocation must be none or front-of-queue");
+  }
+  if (String(P.W3048_MAKER_FILL_ASSUMPTION) === "observed-flow"
+    && String(P.W3048_MAKER_QUEUE_ALLOCATION) !== "front-of-queue") {
+    throw new Error("wallet3048 observed-flow maker estimates require an explicit front-of-queue assumption");
   }
   if (!["fixed", "incremental"].includes(String(P.W3048_SIZE_MODE))) {
     throw new Error("wallet3048 size mode must be fixed or incremental");
@@ -768,6 +893,7 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = Number(tk?.t) 
     postOnly: false,
     prepared: true,
     preparedLeadMs: model.preparedMenu.leadMs,
+    pairReservation: chosen.pairReservation.map((slice) => ({ ...slice })),
     signal: {
       fairUp: +fairUp.toFixed(6),
       fairSide: +chosen.fair.toFixed(6),
@@ -816,7 +942,8 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = Number(tk?.t) 
   model.lastFiredSide = chosen.side;
   model.lastFired[chosen.side] = { ms: clockMs, ask: chosen.ask };
   model.actions++;
-  if (P.LIVE_FILLS) model.pending.set(oid, { requested: chosen.size, filled: 0 });
+  if (P.LIVE_FILLS) model.pending.set(oid, { requested: chosen.size, filled: 0,
+    reservationRemaining: chosen.pairReservation.map((slice) => ({ ...slice })) });
   state.orders.push({ oid, side: chosen.side, limit: chosen.cap, kind: leg,
     budgetUsd: +(chosen.cap * chosen.size).toFixed(4), filledUsd: 0, placedT: Number(tk.t) });
   state.placedThisTick.push({ oid, side: chosen.side, limit: chosen.cap, shares: chosen.size,
@@ -829,8 +956,13 @@ export function injectRealFill(state, fill) {
   const model = init(state);
   const shares = Number(fill?.shares);
   if (!(shares > EPS) || !finite(fill?.px) || !["Up", "Down"].includes(fill?.side)) return;
-  applyFill(model, fill.side, shares, Number(fill.px), fill.maker !== true);
   const pending = model.pending.get(fill.oid);
+  const pairReservation = pending
+    ? takeReservationSlices(pending.reservationRemaining, shares) : undefined;
+  applyFill(model, { ...fill, effPx: Number(fill.px), usdc: finite(fill.usdc)
+    ? Number(fill.usdc) : shares * Number(fill.px),
+    fee: finite(fill.fee) ? Number(fill.fee) : fillFee(Number(fill.px), shares, fill.maker !== true),
+    pairReservation });
   if (pending) {
     pending.filled += shares;
     if (pending.filled >= pending.requested - EPS) model.pending.delete(fill.oid);
@@ -843,7 +975,8 @@ export function clearLivePending(state, oid) {
 
 export function applyManualHedge(state, side, shares, price) {
   const model = init(state);
-  applyFill(model, side, Number(shares), Number(price), true);
+  applyFill(model, { side, shares: Number(shares), effPx: Number(price),
+    usdc: Number(shares) * Number(price), fee: fillFee(Number(price), Number(shares), true) });
   return Number(shares) || 0;
 }
 

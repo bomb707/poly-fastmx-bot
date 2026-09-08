@@ -34,6 +34,7 @@ module.exports = {
       RUNTIME_CONFIG_FILE: "./data/fastmx-live/runtime-config.json",
       MONGO_DB: "poly_fastmx",
       RECORD_LIVE_TICKS: "1",
+      RECORD_LIVE_TICKS_KEEP: "10000",
       VERBOSE_LOG: "1",
     },
   }],

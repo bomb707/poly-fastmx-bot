@@ -2,7 +2,7 @@
 // Run: node src/lib/fillsim.test.mjs
 import { makerTouchFill, latencyFillPrice, futureAsks, stampLatencyDisplay, walkVisibleAsks,
   walkVisibleBudget, createAskPool, consumeVisibleAsks, consumeVisibleBudget,
-  makerFillFromEvidence } from "./fillsim.js";
+  makerFillFromEvidence, createExecutionEvidenceLedger, takeReservationSlices } from "./fillsim.js";
 let pass = 0, fail = 0; const ok = (n, c) => { c ? pass++ : fail++; console.log((c ? "✓" : "✗ FAIL") + " " + n); };
 
 // makerTouchFill — mirrors engine/strategy.js maker-touch block
@@ -28,14 +28,38 @@ const poolSecond = consumeVisibleAsks(pool, 7, 0.51);
 ok("orders share and consume one update's ask liquidity", poolFirst.shares === 7 && poolSecond.shares === 3);
 ok("time at bid earns no maker fill in the default model", makerFillFromEvidence({
   book: { bestBid: 0.5 }, limit: 0.5, remaining: 10, dtMs: 10_000, fillPct: 100,
-}) === 0);
-ok("observed sell flow can fill a resting maker", makerFillFromEvidence({
+}).shares === 0);
+ok("unidentified scalar sell flow is not executable maker evidence", makerFillFromEvidence({
   book: { sellFlowAtOrBelow: 4 }, limit: 0.5, remaining: 10,
-}) === 4);
+}).shares === 0);
 ok("touch maker credit is explicitly optimistic", makerFillFromEvidence({
   book: {}, limit: 0.5, remaining: 10, assumption: "touch", dtMs: 500,
   touchMs: 1000, fillPct: 100, target: 10,
-}) === 5);
+}).shares === 5);
+
+const evidence = createExecutionEvidenceLedger();
+const evidenceBook = { makerEvidence: [
+  { id: "trade-1", ts: 2000, price: 0.49, shares: 6, aggressorSide: "sell" },
+  { id: "buy-flow", ts: 2000, price: 0.49, shares: 10, aggressorSide: "buy" },
+  { id: "missing-time", price: 0.49, shares: 10, aggressorSide: "sell" },
+  { id: "too-early", ts: 999, price: 0.49, shares: 10, aggressorSide: "sell" },
+  { id: "too-expensive", ts: 2000, price: 0.51, shares: 10, aggressorSide: "sell" },
+] };
+const makerFirst = makerFillFromEvidence({ book: evidenceBook, limit: 0.5, remaining: 10,
+  assumption: "observed-flow", queueAssumption: "front-of-queue",
+  evidenceLedger: evidence.makerFlow, evidenceScope: "Up", restingSinceMs: 1000, throughMs: 2000 });
+const makerSecond = makerFillFromEvidence({ book: evidenceBook, limit: 0.5, remaining: 10,
+  assumption: "observed-flow", queueAssumption: "front-of-queue",
+  evidenceLedger: evidence.makerFlow, evidenceScope: "Up", restingSinceMs: 1000, throughMs: 2000 });
+ok("identified eligible maker flow is consumed once across orders", makerFirst.shares === 6
+  && makerFirst.evidenceType === "observed-flow-estimate" && makerFirst.verified === false
+  && makerSecond.shares === 0);
+
+const reservation = [{ lotId: "a", shares: 5 }, { lotId: "b", shares: 5 }];
+const takenReservation = takeReservationSlices(reservation, 7);
+ok("partial fills consume only their reserved FIFO slices", takenReservation[0].shares === 5
+  && takenReservation[1].shares === 2 && reservation.length === 1
+  && reservation[0].lotId === "b" && reservation[0].shares === 3);
 
 const budgetWalk = walkVisibleBudget({ asks: [[0.48, 5], [0.49, 10], [0.50, 10]] }, 4.9, 0.49, { allowBbaFallback: false });
 ok("fixed-USD walk receives price-improved shares", Math.abs(budgetWalk.cost - 4.9) < 1e-9 && budgetWalk.shares > 10 && budgetWalk.unspent === 0);

@@ -26,7 +26,10 @@ recordDepth(state, 'token', [[0.51, 4]], [[0.49, 3]], 1_000);
 recordDepth(state, 'token', [[0.52, 8]], [[0.50, 9]], 1_100);
 assert.equal(state.depthHistory.get('token').length, 1, 'historical depth remains throttled');
 assert.deepEqual(state.depthByToken.get('token'), {
+  eventId: 'token:2',
   ts: 1_100,
+  sourceTs: 1_100,
+  recvTs: 1_100,
   asks: [[0.52, 8]],
   bids: [[0.50, 9]],
 }, 'live strategy always sees the newest unthrottled L2 snapshot');

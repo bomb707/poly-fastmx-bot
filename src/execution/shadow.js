@@ -6,8 +6,8 @@ import { config } from "../config/config.js";
 import { executionFee, fillFee, isFeeFill } from "../../engine/fees.js";
 import { DEFAULT_STRATEGY, getStrategy } from "../../engine/strategies/index.js";
 import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim — apply a merge record to the live ledger
-import { createAskPool, consumeVisibleAsks, consumeVisibleBudget,
-  makerFillFromEvidence } from "../../engine/fillsim.js";
+import { consumeVisibleAsks, consumeVisibleBudget, createExecutionEvidenceLedger,
+  depthEventId, makerFillFromEvidence, takeReservationSlices } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
 import { isRunning } from "./botState.js";
 import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
@@ -37,6 +37,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
             breakerGeneration: circuitBreaker.stamp(),
             // strategy state (self-initialized by wallet3048 on the first tick)
             orders: [], seq: 0, lastTickMs: null,
+            executionEvidence: createExecutionEvidenceLedger(),
             // Per-window cadence and gate diagnostics.
             vDiag: { open: false, tickN: 0, dtSum: 0, dtMax: 0, gate: {} } };
       windows.set(slug, w);
@@ -163,29 +164,49 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   }
 
   function resolvePending(w, { strategyTick, up, down, nowMs, tInto, bzPrice,
-    bzGap, clPrice, clGap, openChainlink, P, pools }) {
+    bzGap, clPrice, clGap, openChainlink, P }) {
     if (!w.pendingFills?.length) return;
     const keep = [];
-    const immutableFill = (p, match, maker) => {
+    const context = { nowMs, tInto, bzPrice, bzGap, clPrice, clGap, openChainlink };
+    const rememberArrival = (p) => {
+      p.upBook = up;
+      p.downBook = down;
+      p.arrivalContext = { ...context };
+    };
+    const immutableFill = (p, match, maker, evidenceInfo = null) => {
       const intent = p.intent || p.rec;
+      const at = maker ? context : (p.arrivalContext || context);
       const fill = { ...intent, signal: intent.signal ? { ...intent.signal } : undefined,
         fillId: `${intent.oid}:${++p.fillSeq}`,
         decidedT: intent.tInto, placedT: intent.tInto,
-        tInto: maker ? tInto : p.dueTInto,
+        tInto: maker ? at.tInto : p.dueTInto,
         requestedShares: p.originalRequested,
         decisionExpectedPx: Number.isFinite(Number(intent.effPx)) ? Number(intent.effPx) : null,
         shares: +match.shares.toFixed(4), effPx: +match.avgPx.toFixed(4), usdc: +match.cost.toFixed(4),
         fee: executionFee(match, !maker),
+        levels: (match.levels || [{ price: match.avgPx, shares: match.shares }]).map((level) => ({
+          price: Number(level.price), shares: Number(level.shares),
+          usdc: Number(level.price) * Number(level.shares),
+          fee: maker ? 0 : fillFee(Number(level.price), Number(level.shares), true),
+        })),
+        pairReservation: takeReservationSlices(p.reservationRemaining, match.shares),
         status: match.shares + 1e-9 < p.originalRequested ? "partial" : "full",
         filledLate: true, maker, taker: !maker,
-        exec: maker ? "resting" : "marketable", kind: maker ? "maker" : "taker", ts: nowMs };
-      if (bzPrice != null) {
-        fill.bz = bzPrice;
-        if (bzGap != null) { fill.bzGap = bzGap; fill.bzGapPct = w.openBinance ? bzGap / w.openBinance * 100 : null; }
+        exec: maker ? "resting" : "marketable", kind: maker ? "maker" : "taker",
+        ts: maker ? at.nowMs : p.dueMs };
+      if (maker) {
+        fill.fillEvidence = evidenceInfo?.evidenceType || "unknown-maker-assumption";
+        fill.fillEvidenceVerified = evidenceInfo?.verified === true;
+        fill.queueAssumption = evidenceInfo?.queueAssumption || null;
+        fill.evidenceIds = evidenceInfo?.evidenceIds || [];
       }
-      if (clPrice != null) {
-        fill.cl = clPrice;
-        if (clGap != null) { fill.clGap = clGap; fill.clGapPct = openChainlink ? clGap / openChainlink * 100 : null; }
+      if (at.bzPrice != null) {
+        fill.bz = at.bzPrice;
+        if (at.bzGap != null) { fill.bzGap = at.bzGap; fill.bzGapPct = w.openBinance ? at.bzGap / w.openBinance * 100 : null; }
+      }
+      if (at.clPrice != null) {
+        fill.cl = at.clPrice;
+        if (at.clGap != null) { fill.clGap = at.clGap; fill.clGapPct = at.openChainlink ? at.clGap / at.openChainlink * 100 : null; }
       }
       bookFill(w, fill);
       return fill;
@@ -195,58 +216,75 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       const intent = p.intent || p.rec;
       if (p.phase === "resting") {
         if (!(p.remaining > 1e-9)) continue;
-        if (p.lastResolvedMs === nowMs) { keep.push(p); continue; }
-        p.lastResolvedMs = nowMs;
         const book = intent.side === "Up" ? up : down;
-        const pool = pools[intent.side];
+        const eventId = depthEventId(book, `${book?.depthTs ?? nowMs}:${intent.side}`);
+        const cancelEffectiveMs = Math.min(p.expiresMs,
+          w.windowStart * 1000 + Number(P.W3048_STOP_S) * 1000);
+        if (nowMs > cancelEffectiveMs) continue;
+        if (p.lastResolvedEventId === eventId) {
+          if (nowMs < cancelEffectiveMs) keep.push(p);
+          continue;
+        }
+        p.lastResolvedEventId = eventId;
+        const pool = w.executionEvidence.poolFor(intent.side, book, eventId);
         const dtMs = Math.max(0, nowMs - p.lastMs);
         p.lastMs = nowMs;
         let match = null;
+        let evidenceInfo = null;
         if (book?.bestAsk != null && book.bestAsk < intent.limitPx - 1e-9) {
           const crossed = consumeVisibleAsks(pool, p.remaining, intent.limitPx);
           if (crossed.shares > 1e-9) match = { shares: crossed.shares,
-            cost: crossed.shares * intent.limitPx, avgPx: intent.limitPx };
+            cost: crossed.shares * intent.limitPx, avgPx: intent.limitPx,
+            levels: [{ price: intent.limitPx, shares: crossed.shares }] };
+          evidenceInfo = { evidenceType: "book-cross-inference", verified: false,
+            queueAssumption: "crossed-resting-price", evidenceIds: [eventId] };
         } else if (book?.bestBid != null && intent.limitPx >= book.bestBid - 1e-9) {
-          const delta = makerFillFromEvidence({ book, limit: intent.limitPx, remaining: p.remaining,
-            assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"), dtMs,
+          evidenceInfo = makerFillFromEvidence({ book, limit: intent.limitPx, remaining: p.remaining,
+            assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"),
+            queueAssumption: String(P.W3048_MAKER_QUEUE_ALLOCATION || "none"),
+            evidenceLedger: w.executionEvidence.makerFlow, evidenceScope: intent.side,
+            restingSinceMs: p.dueMs, throughMs: nowMs, dtMs,
             touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
             fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
             previouslyCredited: p.touchFilled, target: p.touchTarget });
-          p.touchFilled += delta;
-          if (delta > 1e-9) match = { shares: delta, cost: delta * intent.limitPx, avgPx: intent.limitPx };
+          p.touchFilled += evidenceInfo.shares;
+          if (evidenceInfo.shares > 1e-9) match = { shares: evidenceInfo.shares,
+            cost: evidenceInfo.shares * intent.limitPx, avgPx: intent.limitPx,
+            levels: [{ price: intent.limitPx, shares: evidenceInfo.shares }] };
         }
         if (match) {
           p.remaining -= match.shares;
-          immutableFill(p, match, true);
+          immutableFill(p, match, true, evidenceInfo);
         }
         if (!(p.remaining > 1e-9)) continue;
-        const cancel = curStrat.shouldCancelResting?.(w, intent, strategyTick, P, nowMs);
-        if (cancel?.cancel || nowMs > p.expiresMs) {
+        const cancel = curStrat.shouldCancelResting?.(w, intent, strategyTick, P, nowMs,
+          { remainingShares: p.remaining, pairReservation: p.reservationRemaining,
+            excludeOid: intent.oid });
+        if (cancel?.cancel || nowMs >= cancelEffectiveMs) {
           try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED,
             key: `${w.windowStart}:${intent.oid}`, slug: w.slug, ws: w.windowStart,
             oid: intent.oid, side: intent.side, leg: intent.leg,
             note: cancel?.cancel ? `simulated GTC canceled: ${cancel.reason}`
-              : "simulated GTC remainder canceled after timeout", ts: nowMs }); } catch {}
+              : "simulated GTC remainder canceled after effective timeout", ts: nowMs }); } catch {}
           continue;
         }
         keep.push(p);
         continue;
       }
 
-      if (nowMs < p.dueMs) {
-        p.upBook = up;
-        p.downBook = down;
-        keep.push(p);
-        continue;
-      }
+      if (nowMs <= p.dueMs) rememberArrival(p);
+      if (nowMs < p.dueMs) { keep.push(p); continue; }
+      if (p.dueMs > w.windowStart * 1000 + Number(P.W3048_STOP_S) * 1000) continue;
       const book = intent.side === "Up" ? p.upBook : p.downBook;
+      const pool = w.executionEvidence.poolFor(intent.side, book,
+        depthEventId(book, `${book?.depthTs ?? p.dueMs}:${intent.side}`));
       const fixedUsd = intent.amountMode === "usd"
         || (intent.budgetUsd != null && Number.isFinite(+intent.budgetUsd));
       const requestedShares = intent.minimumShares ?? intent.shares;
       const requestedBudgetUsd = fixedUsd ? (+intent.budgetUsd || +intent.usdc || 0) : null;
       const match = fixedUsd
-        ? consumeVisibleBudget(pools[intent.side], requestedBudgetUsd, intent.limitPx)
-        : consumeVisibleAsks(pools[intent.side], requestedShares, intent.limitPx);
+        ? consumeVisibleBudget(pool, requestedBudgetUsd, intent.limitPx)
+        : consumeVisibleAsks(pool, requestedShares, intent.limitPx);
       if (match.shares > 1e-9) immutableFill(p, match, false);
       else {
         try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED,
@@ -280,7 +318,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
 
     const dtMs = w.lastTickMs != null ? Math.max(1, nowMs - w.lastTickMs) : 120;
     w.lastTickMs = nowMs;
-    w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, tInto, bz: bzPrice, cl: clPrice, nowMs };   // latest book (for MANUAL buys)
+    w.lastAsk = { up: up.bestAsk, dn: down.bestAsk, upBook: up, downBook: down,
+      tInto, bz: bzPrice, cl: clPrice, nowMs };   // latest book (for MANUAL buys)
     activeSlug = slug;
 
     // STRATEGY + FILL — wallet3048 returns order decisions for this tick.
@@ -298,38 +337,64 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     // Capture the exact CLOB BBA and spot values used by the live simulation.
     // Both Up quotes are required to reconstruct the midpoint-velocity signal.
     if (config.recordLiveTicks) {
-      const recTick = { t: +tInto.toFixed(2),
-        ua: r2(up.bestAsk), ub: r2(up.bestBid), da: r2(down.bestAsk), db: r2(down.bestBid),
-        cl: clPrice != null ? +clPrice.toFixed(2) : null,
-        bz: bzPrice != null ? +bzPrice.toFixed(2) : null,
+      const recTicks = w.recTicks = w.recTicks || [];
+      const recTick = { schema: 2, sequence: recTicks.length + 1,
+        t: Number(tInto), tMs: nowMs - windowStart * 1000, ms: nowMs,
+        receivedAtMs: nowMs,
+        ua: up.bestAsk == null ? null : Number(up.bestAsk),
+        ub: up.bestBid == null ? null : Number(up.bestBid),
+        da: down.bestAsk == null ? null : Number(down.bestAsk),
+        db: down.bestBid == null ? null : Number(down.bestBid),
+        upAsk: up.bestAsk == null ? null : Number(up.bestAsk),
+        upBid: up.bestBid == null ? null : Number(up.bestBid),
+        dnAsk: down.bestAsk == null ? null : Number(down.bestAsk),
+        dnBid: down.bestBid == null ? null : Number(down.bestBid),
+        cl: clPrice != null ? Number(clPrice) : null,
+        bz: bzPrice != null ? Number(bzPrice) : null,
         bzAtMs: binanceAtMs ?? null, bzReceivedAtMs: binanceReceivedAtMs ?? null,
         clAtMs: chainlinkAtMs ?? null, clReceivedAtMs: chainlinkReceivedAtMs ?? null,
+        binanceAtMs: binanceAtMs ?? null, binanceReceivedAtMs: binanceReceivedAtMs ?? null,
+        chainlinkAtMs: chainlinkAtMs ?? null,
+        chainlinkReceivedAtMs: chainlinkReceivedAtMs ?? null,
         upDepthAtMs: up.depthTs ?? null, downDepthAtMs: down.depthTs ?? null,
-        up: { bestAsk: r2(up.bestAsk), bestBid: r2(up.bestBid),
+        upDepthReceivedAtMs: up.depthReceivedAtMs ?? null,
+        downDepthReceivedAtMs: down.depthReceivedAtMs ?? null,
+        upQuoteAtMs: up.quoteSourceAtMs ?? null,
+        upQuoteReceivedAtMs: up.quoteReceivedAtMs ?? null,
+        downQuoteAtMs: down.quoteSourceAtMs ?? null,
+        downQuoteReceivedAtMs: down.quoteReceivedAtMs ?? null,
+        upDepthEventId: up.depthEventId ?? null, downDepthEventId: down.depthEventId ?? null,
+        up: { bestAsk: up.bestAsk == null ? null : Number(up.bestAsk),
+          bestBid: up.bestBid == null ? null : Number(up.bestBid),
           asks: (up.asks || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
           bids: (up.bids || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
-          depthKnown: Array.isArray(up.asks) && Array.isArray(up.bids), depthTs: up.depthTs ?? null },
-        down: { bestAsk: r2(down.bestAsk), bestBid: r2(down.bestBid),
+          depthKnown: Array.isArray(up.asks) && Array.isArray(up.bids),
+          depthTs: up.depthTs ?? null, depthReceivedAtMs: up.depthReceivedAtMs ?? null,
+          depthEventId: up.depthEventId ?? null,
+          quoteSourceAtMs: up.quoteSourceAtMs ?? null,
+          quoteReceivedAtMs: up.quoteReceivedAtMs ?? null,
+          makerEvidence: (up.makerEvidence || []).map((event) => ({ ...event })) },
+        down: { bestAsk: down.bestAsk == null ? null : Number(down.bestAsk),
+          bestBid: down.bestBid == null ? null : Number(down.bestBid),
           asks: (down.asks || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
           bids: (down.bids || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
-          depthKnown: Array.isArray(down.asks) && Array.isArray(down.bids), depthTs: down.depthTs ?? null } };
-      const recTicks = w.recTicks = w.recTicks || [], previous = recTicks.at(-1);
-      // The diagnostic series records values, not redundant depth-event
-      // heartbeats. Preserve every transition plus a one-second coverage mark.
-      if (!previous || previous.ua !== recTick.ua || previous.ub !== recTick.ub
-        || previous.da !== recTick.da || previous.db !== recTick.db
-        || previous.cl !== recTick.cl || previous.bz !== recTick.bz
-        || previous.bzAtMs !== recTick.bzAtMs || previous.clAtMs !== recTick.clAtMs
-        || previous.upDepthAtMs !== recTick.upDepthAtMs || previous.downDepthAtMs !== recTick.downDepthAtMs
-        || recTick.t - previous.t >= 1) recTicks.push(recTick);
+          depthKnown: Array.isArray(down.asks) && Array.isArray(down.bids),
+          depthTs: down.depthTs ?? null, depthReceivedAtMs: down.depthReceivedAtMs ?? null,
+          depthEventId: down.depthEventId ?? null,
+          quoteSourceAtMs: down.quoteSourceAtMs ?? null,
+          quoteReceivedAtMs: down.quoteReceivedAtMs ?? null,
+          makerEvidence: (down.makerEvidence || []).map((event) => ({ ...event })) } };
+      // Every strategy evaluation is retained. Dropping an unchanged-looking
+      // event can alter time-at-state features, cancellation races, or which
+      // order consumes an identified liquidity snapshot.
+      recTicks.push(recTick);
     }
     const clGapPct = (clGap != null && openChainlink) ? (clGap / openChainlink) * 100 : null;
     const strategyTick = { t: tInto, up, down, bzPrice, clPrice, openBinance: w.openBinance,
       binanceAtMs, chainlinkAtMs,
       openChainlink, bzGap, bzGapPct, clGap, clGapPct };
-    const pools = { Up: createAskPool(up), Down: createAskPool(down) };
     resolvePending(w, { strategyTick, up, down, nowMs, tInto, bzPrice, bzGap,
-      clPrice, clGap, openChainlink, P, pools });
+      clPrice, clGap, openChainlink, P });
     const got = curStrat.step(w, strategyTick, P, dtMs, nowMs);
     // Per-tick cadence and gate diagnostics. Guarded so it has no hot-path cost
     // when verbose logging is disabled.
@@ -348,6 +413,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const simLat = P.LATENCY_MS || 0;
     for (const rec of got) {
       rec.ts = nowMs;
+      (w.recDecisions = w.recDecisions || []).push({ ...rec,
+        signal: rec.signal ? { ...rec.signal } : undefined });
       // stamp spot price + gap @ fill (price − window-open) so the property menu's "market @ fill" shows it
       if (bzPrice != null) { rec.bz = bzPrice; if (bzGap != null) { rec.bzGap = bzGap; rec.bzGapPct = w.openBinance ? (bzGap / w.openBinance) * 100 : null; } }
       if (clPrice != null) { rec.cl = clPrice; if (clGap != null) { rec.clGap = clGap; rec.clGapPct = openChainlink ? (clGap / openChainlink) * 100 : null; } }
@@ -401,12 +468,13 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         (w.pendingFills = w.pendingFills || []).push({ rec: intent, intent,
           originalRequested: rec.minimumShares ?? rec.shares, fillSeq: 0,
           dueMs: nowMs + simLat, dueTInto: rec.tInto + simLat / 1000,
-          upBook: up, downBook: down, decPx0: rec.effPx });
+          upBook: up, downBook: down, decPx0: rec.effPx,
+          reservationRemaining: (rec.pairReservation || []).map((slice) => ({ ...slice })) });
       }
       else bookFill(w, rec);
     }
     resolvePending(w, { strategyTick, up, down, nowMs, tInto, bzPrice, bzGap,
-      clPrice, clGap, openChainlink, P, pools });
+      clPrice, clGap, openChainlink, P });
     // broadcast a live snapshot (open order + aggregate position) — THROTTLED: now event-driven (one tick
     // per book update), an un-throttled broadcast would flood every browser with JSON. Always emit on a
     // fill (got.length) so the position is never stale; otherwise at most every ~200ms.
@@ -461,11 +529,9 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
   function settle(slug, winSide, botSummary) {
     const w = windows.get(slug);
     if (!w || w.settled) return null;
-    // flush any still-deferred (latency) fills at their last price so they're counted in settlement
-    if (w.pendingFills && w.pendingFills.length) {
-      for (const p of w.pendingFills) if (p.phase !== "resting") bookFill(w, p.rec);
-      w.pendingFills = [];
-    }
+    // Settlement is an effective cancellation. Pending intents without causal
+    // execution evidence are discarded, never converted into synthetic fills.
+    w.pendingFills = [];
     w.winSide = winSide;
     w.settled = true;
     const winSh = winSide === "Up" ? w.upShares : w.downShares;
@@ -484,9 +550,15 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       try {
         const dir = path.join(config.dataDir, "live-ticks");
         fs.mkdirSync(dir, { recursive: true });
-        const payload = { slug, ws: w.windowStart, winSide, cfg: w.cfgAtOpen || cfgStamp(),
-          openBz: w.openBinance,
-          openCl: w.openChainlink ?? null, ticks: w.recTicks };
+        const payload = { schema: 2, recorder: "shadow-execution-evidence-v2",
+          slug, ws: w.windowStart, windowStart: w.windowStart, winSide,
+          settlement: { outcome: winSide, recordedAtMs: Date.now() },
+          openingReference: { binance: w.openBinance, chainlink: w.openChainlink ?? null },
+          cfg: w.cfgAtOpen || cfgStamp(), openBz: w.openBinance,
+          openBinance: w.openBinance, openCl: w.openChainlink ?? null,
+          openPrice: w.openChainlink ?? null,
+          decisions: (w.recDecisions || []).map((decision) => ({ ...decision })),
+          fills: w.fills.map((fill) => ({ ...fill })), ticks: w.recTicks };
         fs.writeFile(path.join(dir, `${slug}.json`), JSON.stringify(payload), () => {});
         fs.readdir(dir, (e, files) => { if (e) return;
           const epoch = (f) => +(f.replace(".json", "").split("-").pop()) || 0;   // sort by WINDOW EPOCH → correct across markets (btc/eth/…), not filename alpha
@@ -500,6 +572,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     // serialized above. Release high-cadence buffers now instead of retaining
     // them for the 30-minute UI/settlement grace period.
     w.recTicks = null;
+    w.recDecisions = null;
     w.pendingFills = [];
     w.lastAsk = null;
     if (w.wallet3048) {
@@ -540,16 +613,14 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
 
   // Record a just-CLOSED window as "pending" (before Polymarket resolves) so history shows it immediately with a
   // pending icon. Upserted by windowStart → settle() later overwrites it with the resolved winner/PnL. Only
-  // windows we actually traded; recorded once (w.pendingRecorded). Flushes any still-deferred latency fills first.
+  // windows we actually traded; recorded once (w.pendingRecorded).
   function recordPending(slug) {
     const w = windows.get(slug);
     if (!w || w.settled || w.pendingRecorded) return;
     // Record EVERY closed window as pending — including 0-fill windows — so the history shows a ⏳ pending row
     // the instant a window ends, then flips to the winner on settle (mirrors settle(), which records all windows).
-    if (w.pendingFills && w.pendingFills.length) {
-      for (const p of w.pendingFills) if (p.phase !== "resting") bookFill(w, p.rec);
-      w.pendingFills = [];
-    }
+    // Window close is an effective cancellation for unmatched simulation orders.
+    w.pendingFills = [];
     w.pendingRecorded = true;
     const ab = {
       slug, windowStart: w.windowStart, winSide: null, status: "pending", ts: Math.floor(Date.now() / 1000),
@@ -620,11 +691,18 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const px = Math.min(ask, lim), t = w.lastAsk.tInto;
     const rec = { tInto: t, decidedT: t, placedT: t, side: S, shares: sh, effPx: +px.toFixed(4), usdc: +(px * sh).toFixed(4),
       exec: "marketable", kind: "taker", leg: "entry", reason: "manual", manual: true, status: "full", limitPx: lim, oid: ++w.seq, ts: w.lastAsk.nowMs };
+    rec.fee = fillFee(rec.effPx, rec.shares, true);
+    rec.levels = [{ price: rec.effPx, shares: rec.shares, usdc: rec.usdc, fee: rec.fee }];
     if (w.lastAsk.bz != null) { rec.bz = w.lastAsk.bz; if (w.openBinance != null) { rec.bzGap = w.lastAsk.bz - w.openBinance; rec.bzGapPct = w.openBinance ? (rec.bzGap / w.openBinance) * 100 : null; } }
     if (w.lastAsk.cl != null) rec.cl = w.lastAsk.cl;
     const simLat = mergedP.LATENCY_MS || 0;
     if (simLat > 0) {   // fill at decision+LATENCY_MS, tracked forward — SAME latency model as strategy fills (property-menu latency row)
-      (w.pendingFills = w.pendingFills || []).push({ rec, dueMs: w.lastAsk.nowMs + simLat, dueTInto: t + simLat / 1000, upA: w.lastAsk.up, dnA: w.lastAsk.dn, decPx0: rec.effPx });
+      const intent = Object.freeze({ ...rec });
+      (w.pendingFills = w.pendingFills || []).push({ rec: intent, intent,
+        originalRequested: rec.shares, fillSeq: 0,
+        dueMs: w.lastAsk.nowMs + simLat, dueTInto: t + simLat / 1000,
+        upBook: w.lastAsk.upBook, downBook: w.lastAsk.downBook,
+        decPx0: rec.effPx, reservationRemaining: [] });
       return { ok: true, manual: true, pending: true, side: S, shares: sh, decidedT: +t.toFixed(2), latencyMs: simLat, slug: w.slug };
     }
     bookFill(w, rec);   // latency 0 → book immediately

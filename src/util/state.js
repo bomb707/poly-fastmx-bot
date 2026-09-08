@@ -33,9 +33,10 @@ export function createLiveState() {
     binanceHealth: emptyFeedHealth(),   // @aggTrade feed health — tracked by binanceSpotWs, surfaced in the UI
     chainlinkHealth: emptyFeedHealth(), // (parallel; RTDS chainlink feed can wire the same way)
     bbaByToken: new Map(), // tokenId -> { bestBid, bestAsk, recvTs }
-    depthByToken: new Map(), // tokenId -> { ts, asks:[[price,size]], bids:[[price,size]] } (latest, never throttled)
+    depthByToken: new Map(), // tokenId -> { eventId, ts:receive, sourceTs, recvTs, asks, bids } (latest)
     bookHistory: new Map(), // tokenId -> [{ ts, bestBid, bestAsk }]
     depthHistory: new Map(), // tokenId -> [{ ts, asks:[[price,size]], bids:[[price,size]] }] (full ladder)
+    depthEventSeq: 0,
   };
 }
 
@@ -54,14 +55,21 @@ export function pruneTokens(state, keepSet) {
 }
 
 /** Push a depth (ladder) snapshot, throttled to ~250ms and trimmed by age. */
-export function recordDepth(state, tokenId, asks, bids, ts) {
-  state.depthByToken.set(tokenId, { ts, asks, bids });
+export function recordDepth(state, tokenId, asks, bids, timestamp) {
+  const metadata = timestamp && typeof timestamp === "object" ? timestamp : {
+    sourceTs: timestamp, recvTs: timestamp,
+  };
+  const sourceTs = Number.isFinite(Number(metadata.sourceTs)) ? Number(metadata.sourceTs) : null;
+  const recvTs = Number.isFinite(Number(metadata.recvTs)) ? Number(metadata.recvTs) : Date.now();
+  const eventId = String(metadata.eventId ?? `${tokenId}:${++state.depthEventSeq}`);
+  const record = { eventId, ts: recvTs, sourceTs, recvTs, asks, bids };
+  state.depthByToken.set(tokenId, record);
   let buf = state.depthHistory.get(tokenId);
   if (!buf) { buf = []; state.depthHistory.set(tokenId, buf); }
-  if (buf.length && ts - buf[buf.length - 1].ts < 250) return; // throttle
-  buf.push({ ts, asks, bids });
-  const cutoff = ts - config.bookBufferMs;
-  while (buf.length && buf[0].ts < cutoff) buf.shift();
+  if (!buf.length || recvTs - buf[buf.length - 1].recvTs >= 250) buf.push(record);
+  const cutoff = recvTs - config.bookBufferMs;
+  while (buf.length && buf[0].recvTs < cutoff) buf.shift();
+  return record;
 }
 
 /** Depth snapshot at-or-before `ts` for a token (the ladder the order faced). */

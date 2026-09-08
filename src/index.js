@@ -521,8 +521,14 @@ function driveShadowForWindow(w, nowMs) {
     binanceReceivedAtMs: bzSlot?.recvTs ?? null,
     clPrice: cl, chainlinkAtMs: clSlot?.payloadTs ?? null,
     chainlinkReceivedAtMs: clSlot?.recvTs ?? null, nowMs,
-    up: upA ? { bestBid: upA.bestBid, bestAsk: upAsk, asks: upDepth?.asks || null, bids: upDepth?.bids || null, depthTs: upDepth?.ts || null } : null,
-    down: dnA ? { bestBid: dnA.bestBid, bestAsk: dnAsk, asks: dnDepth?.asks || null, bids: dnDepth?.bids || null, depthTs: dnDepth?.ts || null } : null,
+    up: upA ? { bestBid: upA.bestBid, bestAsk: upAsk, asks: upDepth?.asks || null,
+      bids: upDepth?.bids || null, depthTs: upDepth?.sourceTs ?? null,
+      depthReceivedAtMs: upDepth?.recvTs ?? null, depthEventId: upDepth?.eventId ?? null,
+      quoteSourceAtMs: upA?.sourceTs ?? null, quoteReceivedAtMs: upA?.recvTs ?? null } : null,
+    down: dnA ? { bestBid: dnA.bestBid, bestAsk: dnAsk, asks: dnDepth?.asks || null,
+      bids: dnDepth?.bids || null, depthTs: dnDepth?.sourceTs ?? null,
+      depthReceivedAtMs: dnDepth?.recvTs ?? null, depthEventId: dnDepth?.eventId ?? null,
+      quoteSourceAtMs: dnA?.sourceTs ?? null, quoteReceivedAtMs: dnA?.recvTs ?? null } : null,
   });
 }
 // Resolve + cache the live window for "now" (handles rollover + token prewarm). Shared by the book-update

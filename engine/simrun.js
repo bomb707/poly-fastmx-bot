@@ -2,8 +2,9 @@
 // Pure ESM.
 import { executionFee, fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
-import { walkVisibleAsks, createAskPool, consumeVisibleAsks, consumeVisibleBudget,
-  makerFillFromEvidence } from "./fillsim.js";
+import { walkVisibleAsks, consumeVisibleAsks, consumeVisibleBudget,
+  createExecutionEvidenceLedger, makerFillFromEvidence,
+  takeReservationSlices } from "./fillsim.js";
 
 // NOTE (browser-safe): this module is dynamically imported by the dashboard and
 // must not import Node-only modules.
@@ -39,7 +40,7 @@ export function normalizeReplayTimestamp(value, windowStartMs = null, windowSec 
 //                      or plain mean, stamped at the bucket's LAST tick time so NO extra latency is added. Cuts per-window
 //                      scatter ~3-12% vs keep-last but is PnL-neutral (within noise). Only use when the LIVE sampler
 //                      aggregates the same way — otherwise this reopens the live/backtest gap. Robust to 1-tick book spikes.
-export function simulateFills(d, params) {
+export function simulateFills(d, params, diagnostics = null) {
   const ticks = (d && d.ticks) || [];
   if (ticks.length < 2) return [];
   const strat = getStrategy((params || {}).STRATEGY);
@@ -70,6 +71,8 @@ export function simulateFills(d, params) {
   }
   const pending = [];
   state.pendingFills = pending;
+  const executionEvidence = createExecutionEvidenceLedger();
+  if (diagnostics && typeof diagnostics === "object") diagnostics.decisions = [];
 
   const levels = (rows, asc) => (Array.isArray(rows) ? rows : []).map((x) => [
     Number(Array.isArray(x) ? x[0] : x?.price), Number(Array.isArray(x) ? x[1] : x?.size),
@@ -80,12 +83,17 @@ export function simulateFills(d, params) {
     const asks = levels(nested?.asks, true), bids = levels(nested?.bids, false);
     const bestAsk = side === "Up" ? tk.upAsk : tk.dnAsk;
     const bidField = side === "Up" ? tk.upBid : tk.dnBid;
+    const depthTs = normalizeTimestamp(nested?.depthTs
+      ?? tk[side === "Up" ? "upDepthAtMs" : "downDepthAtMs"] ?? tk.ms);
+    const fallbackEventId = `${depthTs ?? normalizeTimestamp(tk.ms) ?? tk.t}:${side}`;
     return { bestAsk: nested?.bestAsk ?? bestAsk ?? asks[0]?.[0] ?? null,
       bestBid: nested?.bestBid ?? bidField ?? bids[0]?.[0] ?? null,
       asks, bids, depthKnown: asks.length > 0 && bids.length > 0,
-      depthTs: normalizeTimestamp(nested?.depthTs
-        ?? tk[side === "Up" ? "upDepthAtMs" : "downDepthAtMs"] ?? tk.ms),
-      sellFlowAtOrBelow: nested?.sellFlowAtOrBelow ?? null };
+      depthTs,
+      depthEventId: nested?.depthEventId
+        ?? tk[side === "Up" ? "upDepthEventId" : "downDepthEventId"] ?? fallbackEventId,
+      makerEvidence: (nested?.makerEvidence || []).map((event) => ({ ...event,
+        ts: normalizeTimestamp(event?.ts) })) };
   };
   const strategyTickAt = (tk) => {
     const up = bookAt(tk, "Up"), down = bookAt(tk, "Down");
@@ -108,7 +116,7 @@ export function simulateFills(d, params) {
     state.cost += f.usdc;
     (state.fills = state.fills || []).push(f);
   };
-  const emitMatch = (p, match, fillT, maker = false) => {
+  const emitMatch = (p, match, fillT, maker = false, evidenceInfo = null) => {
       const source = p.intent || p.rec;
       const f = { ...source, signal: source.signal ? { ...source.signal } : undefined };
       f.fillId = `${source.oid}:${p.fillSeq = (p.fillSeq || 0) + 1}`;
@@ -116,12 +124,25 @@ export function simulateFills(d, params) {
       f.decidedT = p.decisionT;
       f.placedT = p.decisionT;
       f.tInto = fillT;
+      f.ts = windowStartMs != null ? windowStartMs + fillT * 1000 : fillT * 1000;
       f.requestedShares = requested;
       f.decisionExpectedPx = Number.isFinite(Number(source.effPx)) ? Number(source.effPx) : null;
       f.shares = +match.shares.toFixed(4);
       f.effPx = +match.avgPx.toFixed(4);
       f.usdc = +match.cost.toFixed(4);
       f.fee = executionFee(match, !maker);
+      f.levels = (match.levels || [{ price: match.avgPx, shares: match.shares }]).map((level) => ({
+        price: Number(level.price), shares: Number(level.shares),
+        usdc: Number(level.price) * Number(level.shares),
+        fee: maker ? 0 : fillFee(Number(level.price), Number(level.shares), true),
+      }));
+      f.pairReservation = takeReservationSlices(p.reservationRemaining, f.shares);
+      if (maker) {
+        f.fillEvidence = evidenceInfo?.evidenceType || "unknown-maker-assumption";
+        f.fillEvidenceVerified = evidenceInfo?.verified === true;
+        f.queueAssumption = evidenceInfo?.queueAssumption || null;
+        f.evidenceIds = evidenceInfo?.evidenceIds || [];
+      }
       f.status = match.shares + 1e-9 < requested ? "partial" : "full";
       f.filledLate = fillT > p.decisionT + 1e-9;
       if (maker) { f.maker = true; f.taker = false; f.exec = "resting"; f.kind = "maker"; }
@@ -131,60 +152,74 @@ export function simulateFills(d, params) {
   };
   const resolveDue = (throughT, currentTick = null) => {
     const keep = [];
-    const poolCache = new Map();
-    const poolFor = (tick, side) => {
-      if (!tick) return null;
-      let pair = poolCache.get(tick);
-      if (!pair) {
-        pair = { Up: createAskPool(bookAt(tick, "Up")), Down: createAskPool(bookAt(tick, "Down")) };
-        poolCache.set(tick, pair);
-      }
-      return pair[side];
-    };
     for (const p of pending) {
       if (p.phase === "resting") {
         if (!currentTick || !(p.remaining > 1e-9)) continue;
         const atBook = bookAt(currentTick, p.rec.side);
+        const cancelEffectiveT = Math.min(p.expiresT, Number(P.W3048_STOP_S));
+        if (Number(currentTick.t) > cancelEffectiveT + 1e-9) continue;
+        if (p.lastResolvedEventId === atBook.depthEventId) {
+          if (throughT < cancelEffectiveT - 1e-9) keep.push(p);
+          continue;
+        }
+        p.lastResolvedEventId = atBook.depthEventId;
         const dtMs = Math.max(0, (throughT - p.lastT) * 1000);
         p.lastT = throughT;
         let match = null;
+        let evidenceInfo = null;
         if (atBook.bestAsk != null && atBook.bestAsk < p.rec.limitPx - 1e-9) {
-          const crossed = consumeVisibleAsks(poolFor(currentTick, p.rec.side), p.remaining, p.rec.limitPx);
+          const crossed = consumeVisibleAsks(executionEvidence.poolFor(p.rec.side, atBook),
+            p.remaining, p.rec.limitPx);
           // The order was already resting. A later sell that crosses it trades
           // at the resting maker's price, not at a newly observed lower ask.
           if (crossed.shares > 1e-9) match = { shares: crossed.shares,
-            cost: crossed.shares * p.rec.limitPx, avgPx: p.rec.limitPx };
+            cost: crossed.shares * p.rec.limitPx, avgPx: p.rec.limitPx,
+            levels: [{ price: p.rec.limitPx, shares: crossed.shares }] };
+          evidenceInfo = { evidenceType: "book-cross-inference", verified: false,
+            queueAssumption: "crossed-resting-price", evidenceIds: [atBook.depthEventId] };
         } else if (atBook.bestBid != null && p.rec.limitPx >= atBook.bestBid - 1e-9) {
-          const delta = makerFillFromEvidence({ book: atBook, limit: p.rec.limitPx,
+          evidenceInfo = makerFillFromEvidence({ book: atBook, limit: p.rec.limitPx,
             remaining: p.remaining, assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"),
+            queueAssumption: String(P.W3048_MAKER_QUEUE_ALLOCATION || "none"),
+            evidenceLedger: executionEvidence.makerFlow, evidenceScope: p.rec.side,
+            restingSinceMs: windowStartMs != null ? windowStartMs + p.dueT * 1000 : p.dueT * 1000,
+            throughMs: normalizeTimestamp(currentTick.ms) ?? (windowStartMs != null
+              ? windowStartMs + currentTick.t * 1000 : currentTick.t * 1000),
             dtMs, touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
             fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
             previouslyCredited: p.touchFilled, target: p.touchTarget });
-          p.touchFilled += delta;
-          if (delta > 1e-9) match = { shares: Math.min(delta, p.remaining),
-            cost: Math.min(delta, p.remaining) * p.rec.limitPx, avgPx: p.rec.limitPx };
+          p.touchFilled += evidenceInfo.shares;
+          if (evidenceInfo.shares > 1e-9) match = {
+            shares: Math.min(evidenceInfo.shares, p.remaining),
+            cost: Math.min(evidenceInfo.shares, p.remaining) * p.rec.limitPx,
+            avgPx: p.rec.limitPx,
+            levels: [{ price: p.rec.limitPx, shares: Math.min(evidenceInfo.shares, p.remaining) }],
+          };
         }
         if (match?.shares > 1e-9) {
           p.remaining -= match.shares;
-          emitMatch(p, match, throughT, true);
+          emitMatch(p, match, throughT, true, evidenceInfo);
         }
         if (!(p.remaining > 1e-9)) continue;
         const cancel = strat.shouldCancelResting?.(state, p.rec,
-          strategyTickAt(currentTick), P, currentTick.ms ?? ((d.windowStart || 0) * 1000 + currentTick.t * 1000));
-        if (cancel?.cancel || throughT > p.expiresT + 1e-9) continue;
+          strategyTickAt(currentTick), P, currentTick.ms ?? ((d.windowStart || 0) * 1000 + currentTick.t * 1000),
+          { remainingShares: p.remaining, pairReservation: p.reservationRemaining,
+            excludeOid: p.rec.oid });
+        if (cancel?.cancel || throughT >= cancelEffectiveT - 1e-9) continue;
         keep.push(p);
         continue;
       }
       if (p.dueT > throughT + 1e-9) { keep.push(p); continue; }
       const f = p.rec, at = p.arrivalTick;
       const arrivalBook = bookAt(at, f.side);
+      if (p.dueT > Number(P.W3048_STOP_S) + 1e-9) continue;
       const fixedUsd = f.amountMode === "usd"
         || (f.budgetUsd != null && Number.isFinite(+f.budgetUsd));
       const requestedShares = f.minimumShares ?? f.shares;
       const requestedBudgetUsd = fixedUsd ? (+f.budgetUsd || +f.usdc || 0) : null;
       const match = fixedUsd
-        ? consumeVisibleBudget(poolFor(at, f.side), requestedBudgetUsd, f.limitPx)
-        : consumeVisibleAsks(poolFor(at, f.side), requestedShares, f.limitPx);
+        ? consumeVisibleBudget(executionEvidence.poolFor(f.side, arrivalBook), requestedBudgetUsd, f.limitPx)
+        : consumeVisibleAsks(executionEvidence.poolFor(f.side, arrivalBook), requestedShares, f.limitPx);
       p.requestedShares = requestedShares;
       p.originalRequested = requestedShares;
       p.decisionT = f.tInto;
@@ -229,12 +264,20 @@ export function simulateFills(d, params) {
       ? windowStartMs + tk.t * 1000 : tk.t * 1000);
     const got = strat.step(state, strategyTickAt(tk), P, dtMs, clockMs);
     for (const f of got) {
+      if (diagnostics && typeof diagnostics === "object") {
+        diagnostics.decisions.push({ ...f, signal: f.signal ? { ...f.signal } : undefined,
+          ts: clockMs });
+      }
       const ai = arrivalIndex[i];
-      pending.push({ rec: f, dueT: tk.t + latSec, arrivalTick: bk[ai] });
+      pending.push({ rec: f, dueT: tk.t + latSec, arrivalTick: bk[ai],
+        reservationRemaining: (f.pairReservation || []).map((slice) => ({ ...slice })) });
     }
     resolveDue(tk.t, tk);   // latency=0 intents match on the decision frame
   }
-  resolveDue(Infinity);
+  // End-of-file/window-close is cancellation evidence, not a synthetic market
+  // update. Orders not processed by a recorded event remain unfilled.
+  pending.splice(0, pending.length);
+  if (diagnostics && typeof diagnostics === "object") diagnostics.finalState = state;
   return fills.sort((a, b) => a.tInto - b.tInto);
 }
 

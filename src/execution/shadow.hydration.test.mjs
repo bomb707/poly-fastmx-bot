@@ -109,18 +109,19 @@ test("shadow books due and maker partial fills before the next decision", () => 
     send(5, 101, side(0.4, 10));
     send(5.2, 101, side(0.4, 10));
     const w = shadow.windows.get("btc-updown-5m-0");
-    assert.equal(w.upShares, 20, "arrival fill enters the ledger before the strategy runs");
+    assert.equal(w.upShares, 40,
+      "arrival liquidity and the distinct post-arrival book-cross event are each consumed once");
     assert.equal(w.fee, 0.33733, "per-level taker fees enter the ledger exactly once");
     assert.equal(events.filter((event) => event.kind === "shadow_placed").length, 1,
       "the next decision sees confirmed inventory instead of firing a second initial order");
-    assert.equal(w.pendingFills[0].remaining, 30);
+    assert.equal(w.pendingFills[0].remaining, 10);
 
     send(6.2, 101, side(0.42, 100));
-    assert.equal(w.upShares, 20, "time at bid alone receives no maker credit");
+    assert.equal(w.upShares, 40, "time at bid alone receives no maker credit");
     send(6.3, 101, side(0.42, 100, { sellFlowAtOrBelow: 5 }));
-    assert.equal(w.upShares, 25, "observed maker flow is booked immediately");
+    assert.equal(w.upShares, 40, "unidentified scalar public flow receives no maker credit");
     assert.equal(w.fee, 0.33733, "the resting maker partial adds no taker fee");
-    assert.equal(w.pendingFills[0].remaining, 25);
+    assert.equal(w.pendingFills[0].remaining, 10);
   } finally {
     setRunning(false);
   }
