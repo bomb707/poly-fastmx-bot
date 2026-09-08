@@ -524,10 +524,12 @@ function driveShadowForWindow(w, nowMs) {
     up: upA ? { bestBid: upA.bestBid, bestAsk: upAsk, asks: upDepth?.asks || null,
       bids: upDepth?.bids || null, depthTs: upDepth?.sourceTs ?? null,
       depthReceivedAtMs: upDepth?.recvTs ?? null, depthEventId: upDepth?.eventId ?? null,
+      depthValid: upDepth?.valid === true,
       quoteSourceAtMs: upA?.sourceTs ?? null, quoteReceivedAtMs: upA?.recvTs ?? null } : null,
     down: dnA ? { bestBid: dnA.bestBid, bestAsk: dnAsk, asks: dnDepth?.asks || null,
       bids: dnDepth?.bids || null, depthTs: dnDepth?.sourceTs ?? null,
       depthReceivedAtMs: dnDepth?.recvTs ?? null, depthEventId: dnDepth?.eventId ?? null,
+      depthValid: dnDepth?.valid === true,
       quoteSourceAtMs: dnA?.sourceTs ?? null, quoteReceivedAtMs: dnA?.recvTs ?? null } : null,
   });
 }

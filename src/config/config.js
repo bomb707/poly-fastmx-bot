@@ -168,6 +168,7 @@ export const config = {
   // prices used by the live simulation. Both Up quotes reproduce its midpoint.
   recordLiveTicks: EBOOL("RECORD_LIVE_TICKS", true),
   recordLiveTicksKeep: ENUM("RECORD_LIVE_TICKS_KEEP", 10000),
+  recorderCohortManifest: E("RECORDER_COHORT_MANIFEST", ""),
 
   // MANUAL BUY MODE: when on, the dashboard shows the manual-order panel (place a sim buy into the shadow ledger —
   //   draws a circle, counts in PnL + live history). Off (default) hides the panel entirely.

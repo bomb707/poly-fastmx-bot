@@ -3,7 +3,7 @@
 Simulation-only reconstruction of Polymarket wallet
 `0x3048d65321be3497164cdfc2996f94f98a2e7537` on BTC five-minute Up/Down markets.
 
-- Dashboard: `https://poly.360-techgroup.com` or `http://localhost:4520`
+- Dashboard: `https://pair.360-techgroup.com` or `http://localhost:4520`
 - PM2 process: `poly-fastmx-simulation`
 - Sole strategy: `engine/strategies/wallet3048.js`
 - Execution: hard-locked to simulation
@@ -17,6 +17,11 @@ prebuilt 50/150-share GTC price rungs, FIFO lot accounting, economic
 cancel/reprice rules, and bounded inventory risk. It can accumulate both outcome
 legs below a profitable pair cap or retain a directional residual when the
 estimated edge supports it. New decisions stop before the final 30 seconds.
+
+The primary research execution policy is `strict-no-maker`: arrival-time taker
+partials remain valid, but resting remainders receive no simulated fills.
+`book-cross-inference`, `observed-flow-estimate`, and `optimistic-touch` are
+separate, explicitly unverified sensitivity policies.
 
 The coefficients are heuristic reconstruction parameters, not a calibrated
 settlement-probability model. The correctness findings and validation limits are

@@ -16,6 +16,24 @@
 
 const EPS = 1e-9;
 
+export const MAKER_EXECUTION_POLICIES = Object.freeze({
+  STRICT_NO_MAKER: "strict-no-maker",
+  BOOK_CROSS_INFERENCE: "book-cross-inference",
+  OBSERVED_FLOW_ESTIMATE: "observed-flow-estimate",
+  OPTIMISTIC_TOUCH: "optimistic-touch",
+});
+
+/** Translate old recorder snapshots without mislabeling their execution model. */
+export function normalizeMakerExecutionPolicy(policy, legacyAssumption = null) {
+  const explicit = String(policy || "").trim().toLowerCase();
+  if (Object.values(MAKER_EXECUTION_POLICIES).includes(explicit)) return explicit;
+  const legacy = String(legacyAssumption || "").trim().toLowerCase();
+  if (legacy === "zero") return MAKER_EXECUTION_POLICIES.BOOK_CROSS_INFERENCE;
+  if (legacy === "observed-flow") return MAKER_EXECUTION_POLICIES.OBSERVED_FLOW_ESTIMATE;
+  if (legacy === "touch") return MAKER_EXECUTION_POLICIES.OPTIMISTIC_TOUCH;
+  return MAKER_EXECUTION_POLICIES.STRICT_NO_MAKER;
+}
+
 /**
  * MAKER touch-fill accrual — how much of a resting GTC limit (below the ask, delta −δ) has filled this tick.
  *   askNow > limit           → no fill (the bid rests, waiting for price to come to it) → returns `filled` unchanged.
@@ -139,8 +157,8 @@ export function consumeVisibleAsks(pool, requested, cap) {
 
 /**
  * Credit a resting maker only from explicit sell-flow evidence. `touch` is an
- * intentionally optimistic sensitivity mode; the production/replay default is
- * `zero`, which gives no fill merely for spending time at the public bid.
+ * intentionally optimistic sensitivity primitive. Policy selection is handled
+ * by `restingMakerExecution`; this primitive gives no fill by default.
  */
 export function makerFillFromEvidence({ book, limit, remaining, assumption = "zero",
   queueAssumption = "none", evidenceLedger = null, evidenceScope = "",
@@ -180,6 +198,46 @@ export function makerFillFromEvidence({ book, limit, remaining, assumption = "ze
   return { shares: Math.min(Math.max(0, remaining), Math.max(0, cumulative - previouslyCredited)),
     evidenceType: "optimistic-touch", verified: false, queueAssumption: "time-at-bid",
     evidenceIds: [] };
+}
+
+/**
+ * Evaluate one resting BUY against an explicit simulation policy. Every
+ * non-strict result is an estimate and is permanently labeled unverified.
+ * More permissive policies retain through-book inference, matching the legacy
+ * observed-flow/touch sensitivities while keeping each credited fill labeled.
+ */
+export function restingMakerExecution({ policy, book, pool, limit, remaining,
+  queueAssumption = "none", evidenceLedger = null, evidenceScope = "",
+  restingSinceMs = -Infinity, throughMs = Infinity, dtMs = 0,
+  touchMs = 1000, fillPct = 0, previouslyCredited = 0, target = remaining }) {
+  const selected = normalizeMakerExecutionPolicy(policy);
+  const none = { match: null, evidence: { evidenceType: "none", verified: false,
+    queueAssumption: String(queueAssumption || "none"), evidenceIds: [],
+    executionPolicy: selected } };
+  if (selected === MAKER_EXECUTION_POLICIES.STRICT_NO_MAKER) return none;
+
+  if (book?.bestAsk != null && Number(book.bestAsk) < Number(limit) - EPS && pool) {
+    const crossed = consumeVisibleAsks(pool, remaining, limit);
+    if (crossed.shares > EPS) return {
+      match: { shares: crossed.shares, cost: crossed.shares * Number(limit),
+        avgPx: Number(limit), levels: [{ price: Number(limit), shares: crossed.shares }] },
+      evidence: { evidenceType: "book-cross-inference", verified: false,
+        queueAssumption: "crossed-resting-price", evidenceIds: [depthEventId(book)].filter(Boolean),
+        executionPolicy: selected },
+    };
+  }
+
+  if (book?.bestBid == null || Number(limit) < Number(book.bestBid) - EPS) return none;
+  const assumption = selected === MAKER_EXECUTION_POLICIES.OBSERVED_FLOW_ESTIMATE
+    ? "observed-flow" : selected === MAKER_EXECUTION_POLICIES.OPTIMISTIC_TOUCH ? "touch" : "zero";
+  const evidence = makerFillFromEvidence({ book, limit, remaining, assumption,
+    queueAssumption, evidenceLedger, evidenceScope, restingSinceMs, throughMs,
+    dtMs, touchMs, fillPct, previouslyCredited, target });
+  evidence.executionPolicy = selected;
+  if (!(evidence.shares > EPS)) return { match: null, evidence };
+  const shares = Math.min(Number(remaining), evidence.shares);
+  return { match: { shares, cost: shares * Number(limit), avgPx: Number(limit),
+    levels: [{ price: Number(limit), shares }] }, evidence };
 }
 
 /** Remove up to `shares` from ordered reservation slices, mutating the remainder. */

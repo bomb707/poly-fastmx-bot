@@ -164,32 +164,27 @@ function evaluate(name, overrides, includeRows = true) {
 }
 
 const results = [
-  evaluate("strict_causal_zero_unverified_maker", {}),
-  evaluate("timestamp_assumed_zero_unverified_maker", {
+  evaluate("strict_causal_strict_no_maker", {
+    W3048_MAKER_EXECUTION_POLICY: "strict-no-maker",
+  }),
+  evaluate("timestamp_assumed_strict_no_maker", {
     W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
-    W3048_MAKER_FILL_ASSUMPTION: "zero",
+    W3048_MAKER_EXECUTION_POLICY: "strict-no-maker",
+  }),
+  evaluate("historical_zero_setting_relabelled_book_cross_inference", {
+    W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
+    W3048_MAKER_EXECUTION_POLICY: "book-cross-inference",
   }),
   evaluate("timestamp_assumed_optimistic_touch", {
     W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
-    W3048_MAKER_FILL_ASSUMPTION: "touch",
+    W3048_MAKER_EXECUTION_POLICY: "optimistic-touch",
   }),
 ];
 
 const comparisons = {
-  sizing: [
-    evaluate("fixed_50_150", { W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
-      W3048_MAKER_FILL_ASSUMPTION: "zero" }, false),
-    evaluate("configurable_incremental_5_to_150", { W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
-      W3048_MAKER_FILL_ASSUMPTION: "zero", W3048_SIZE_MODE: "incremental" }, false),
-  ],
-  flatCandidateAblation: [
-    evaluate("direction_confirmed_side_only", { W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
-      W3048_MAKER_FILL_ASSUMPTION: "zero" }, false),
-    evaluate("evaluate_both_sides_while_flat", { W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
-      W3048_MAKER_FILL_ASSUMPTION: "zero", W3048_FLAT_BOTH_SIDES_ABLATION: true }, false),
-  ],
   latency: [0, 520, 1000].map((latencyMs) => evaluate(`latency_${latencyMs}ms`, {
-    W3048_REQUIRE_SOURCE_TIMESTAMPS: false, W3048_MAKER_FILL_ASSUMPTION: "zero",
+    W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
+    W3048_MAKER_EXECUTION_POLICY: "strict-no-maker",
     LATENCY_MS: latencyMs,
   }, false)),
 };
@@ -198,6 +193,7 @@ console.log(JSON.stringify({ schema: 2, manifest: path.relative(root, manifestPa
   dataDir, strategySpec: STRAT.W3048_SPEC_VERSION,
   warning: "Sensitivity audit only. This cohort cannot establish out-of-sample profitability.",
   splitWarning: "The historical development/validation/holdout labels are diagnostic only; all 14 windows have already been inspected and none is a sealed final test.",
+  executionWarning: "The former zero-maker label was inaccurate: that setting credited unverified book-cross inference. Strict no-maker is now a separate policy. Observed-flow is unavailable because this cohort has no identified public aggressor events or queue data.",
   attributionWarning: "Fill-purpose attribution is descriptive and cannot establish the counterfactual profitability effect of removing repairs or hedges.",
   modelWarning: "Brier scores use filled orders only and are descriptive. No residual model was fitted.",
   results, comparisons }, null, 2));

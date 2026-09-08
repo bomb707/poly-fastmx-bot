@@ -10,6 +10,8 @@ book.replace({
 });
 assert.deepEqual(book.snapshot(2), {
   synchronized: true,
+  valid: true,
+  invalidLevelCount: 0,
   bids: [[0.49, 3], [0.48, 5]],
   asks: [[0.51, 4], [0.52, 7]],
 });
@@ -17,9 +19,22 @@ assert.equal(book.apply({ side: 'SELL', price: '0.51', size: '0' }), true);
 assert.equal(book.apply({ side: 'BUY', price: '0.50', size: '9.5' }), true);
 assert.deepEqual(book.snapshot(2), {
   synchronized: true,
+  valid: true,
+  invalidLevelCount: 0,
   bids: [[0.5, 9.5], [0.49, 3]],
   asks: [[0.52, 7]],
 });
+book.replace({ bids: [[0.49, 3]], asks: [[null, 2], [0.51, 4]] });
+assert.deepEqual(book.snapshot(2), {
+  synchronized: true,
+  valid: false,
+  invalidLevelCount: 1,
+  bids: [[0.49, 3]],
+  asks: [[0.51, 4]],
+}, "an invalid source level is reported instead of silently becoming valid depth");
+book.replace({ bids: [[0.49, 3]] });
+assert.equal(book.snapshot(2).valid, false,
+  "a missing depth side is unavailable, not a valid empty ladder");
 
 const state = createLiveState();
 recordDepth(state, 'token', [[0.51, 4]], [[0.49, 3]], 1_000);
@@ -30,6 +45,8 @@ assert.deepEqual(state.depthByToken.get('token'), {
   ts: 1_100,
   sourceTs: 1_100,
   recvTs: 1_100,
+  valid: true,
+  invalidLevelCount: 0,
   asks: [[0.52, 8]],
   bids: [[0.50, 9]],
 }, 'live strategy always sees the newest unthrottled L2 snapshot');

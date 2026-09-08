@@ -591,7 +591,11 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       let out = { slug, ticks: [] };
       // CURRENT (unsettled) window → in-memory series (file not written until settle); else the persisted file.
       try { const mem = getLiveTicks && getLiveTicks(slug); if (mem && mem.ticks && mem.ticks.length) out = mem; } catch {}
-      if (!out.ticks.length) { try { out = JSON.parse(fs.readFileSync(path.join(config.dataDir, "live-ticks", `${slug}.json`), "utf8")); } catch { /* not recorded (yet) → empty */ } }
+      if (!out.ticks.length) {
+        const candidates = [path.join(config.dataDir, "live-ticks", "payloads", `${slug}.json`),
+          path.join(config.dataDir, "live-ticks", `${slug}.json`)];
+        for (const file of candidates) { try { out = JSON.parse(fs.readFileSync(file, "utf8")); break; } catch {} }
+      }
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
       res.end(JSON.stringify(out));
       return;

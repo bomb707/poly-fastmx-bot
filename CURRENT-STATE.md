@@ -3,7 +3,7 @@
 _Updated: 2026-09-08 UTC_
 
 - Runtime: `poly-fastmx-simulation` under PM2
-- Dashboard: `https://poly.360-techgroup.com`
+- Dashboard: `https://pair.360-techgroup.com`
 - Local port: `4520`
 - Execution: hard-locked simulation; no real orders
 - Target wallet: `0x3048d65321be3497164cdfc2996f94f98a2e7537`
@@ -13,6 +13,10 @@ The active reconstruction uses causal 0.5-second Binance momentum, a prebuilt
 one-cent GTC ladder with 50/150-share parents, FIFO lot caps, pair/loss-cap
 repair, economic cancellation and bounded inventory. The code-level defaults
 and current deployed strategy are versioned with `W3048_SPEC_VERSION=3`.
+
+The reviewed code defaults to strict no-maker execution. Book-cross inference,
+observed-flow estimates, and optimistic touch are separately labeled simulation
+sensitivities. This pass did not issue a PM2 restart or deployment command.
 
 Retired strategies, their dashboard options, tests, and dedicated research
 artifacts have been removed.

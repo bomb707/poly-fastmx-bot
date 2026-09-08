@@ -41,6 +41,9 @@ export const STRAT = {
   W3048_CHAINLINK_STALE_MS: 90000,
   W3048_IMPULSE_TTL_MS: 750,
   W3048_REQUIRE_SOURCE_TIMESTAMPS: true,
+  W3048_MAKER_EXECUTION_POLICY: "strict-no-maker",
+  // Legacy snapshots only. "zero" historically still credited book-cross
+  // inference, so loaders must never describe it as strict no-maker.
   W3048_MAKER_FILL_ASSUMPTION: "zero",
   W3048_MAKER_QUEUE_ALLOCATION: "none",
   W3048_REST_TIMEOUT_MS: 10000,
@@ -792,13 +795,14 @@ export function validateParams(P = STRAT) {
   if (!Number.isFinite(Number(P.W3048_IMPULSE_TTL_MS)) || Number(P.W3048_IMPULSE_TTL_MS) < 0) {
     throw new Error("wallet3048 impulse TTL must be non-negative");
   }
-  if (!["zero", "touch", "observed-flow"].includes(String(P.W3048_MAKER_FILL_ASSUMPTION))) {
-    throw new Error("wallet3048 maker fill assumption must be zero, touch, or observed-flow");
+  if (!["strict-no-maker", "book-cross-inference", "observed-flow-estimate", "optimistic-touch"]
+    .includes(String(P.W3048_MAKER_EXECUTION_POLICY))) {
+    throw new Error("wallet3048 maker execution policy is invalid");
   }
   if (!["none", "front-of-queue"].includes(String(P.W3048_MAKER_QUEUE_ALLOCATION))) {
     throw new Error("wallet3048 maker queue allocation must be none or front-of-queue");
   }
-  if (String(P.W3048_MAKER_FILL_ASSUMPTION) === "observed-flow"
+  if (String(P.W3048_MAKER_EXECUTION_POLICY) === "observed-flow-estimate"
     && String(P.W3048_MAKER_QUEUE_ALLOCATION) !== "front-of-queue") {
     throw new Error("wallet3048 observed-flow maker estimates require an explicit front-of-queue assumption");
   }

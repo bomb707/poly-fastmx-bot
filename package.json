@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test engine/*.test.mjs engine/strategies/*.test.mjs src/execution/*.test.mjs src/feeds/*.test.mjs src/lib/*.test.mjs src/server/*.test.mjs src/sources/*.test.mjs src/util/*.test.mjs",
+    "test": "node --test engine/*.test.mjs engine/strategies/*.test.mjs src/execution/*.test.mjs src/feeds/*.test.mjs src/lib/*.test.mjs src/server/*.test.mjs src/sources/*.test.mjs src/util/*.test.mjs research/wallet-3048/validate-recorder-cohort.test.mjs",
     "test:resolution": "node --test src/execution/resolution.test.mjs",
     "test:rtds": "node --test src/feeds/rtdsChainlinkWs.test.mjs",
     "test:strategy": "node --test engine/strategies/wallet3048.test.mjs",
@@ -82,6 +82,9 @@
     "research:wallet3048:correctness-audit": "node research/wallet-3048/audit-corrected-baseline.mjs",
     "research:wallet3048:correctness-audit:original": "node research/wallet-3048/audit-original-reference.mjs",
     "research:wallet3048:validate-recorder": "node research/wallet-3048/validate-recorder-cohort.mjs",
+    "research:wallet3048:build-recorder-manifest": "node research/wallet-3048/build-recorder-cohort-manifest.mjs",
+    "research:wallet3048:seal-final-test": "node research/wallet-3048/seal-recorder-final-test.mjs",
+    "research:wallet3048:evaluate-final-test": "node research/wallet-3048/evaluate-recorder-final-test.mjs",
     "research:maker:v17:pdf": "node research/generate-v17-window-audit-pdf.mjs"
   },
   "dependencies": {

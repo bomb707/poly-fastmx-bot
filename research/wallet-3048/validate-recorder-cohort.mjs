@@ -1,55 +1,43 @@
 #!/usr/bin/env node
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { simulateFills, positionFromFills } from "../../engine/simrun.js";
 import { STRAT } from "../../engine/strategies/wallet3048.js";
+import { normalizeMakerExecutionPolicy } from "../../engine/fillsim.js";
+import { assertOutcomeFreeInstrumentation, buildRecorderInstrumentation,
+  finiteNumber, validPositive, validProbabilityPrice, validTimestamp } from "../../engine/recorder-quality.js";
 
 const EPS = 1e-8;
-const finite = (value) => Number.isFinite(Number(value));
-const round = (value) => finite(value) ? +Number(value).toFixed(8) : null;
-const percentile = (values, fraction) => {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  return round(sorted[Math.min(sorted.length - 1, Math.floor(fraction * sorted.length))]);
-};
-
-function freshness(ticks, sourceKey, receiveKey, maximumMs) {
-  const ages = [];
-  let missingSource = 0, missingReceive = 0, invalidClockOrder = 0;
-  for (const tick of ticks) {
-    const source = tick[sourceKey], receive = tick[receiveKey] ?? tick.receivedAtMs ?? tick.ms;
-    if (!finite(source)) { missingSource++; continue; }
-    if (!finite(receive)) { missingReceive++; continue; }
-    const age = Number(receive) - Number(source);
-    if (age < -1) invalidClockOrder++;
-    else ages.push(Math.max(0, age));
-  }
-  return { observed: ages.length, missingSource, missingReceive, invalidClockOrder,
-    thresholdMs: Number(maximumMs), fresh: ages.filter((age) => age <= Number(maximumMs)).length,
-    p50AgeMs: percentile(ages, 0.5), p95AgeMs: percentile(ages, 0.95),
-    maxAgeMs: ages.length ? round(Math.max(...ages)) : null };
-}
+const reportNumber = (value) => finiteNumber(value) ? +Number(value).toFixed(8) : null;
+const canonicalNumber = (value) => finiteNumber(value) ? Number(value) : null;
+const digest = (buffer) => crypto.createHash("sha256").update(buffer).digest("hex");
 
 const comparableDecision = (record) => ({
   oid: record?.oid ?? null, side: record?.side ?? null, leg: record?.leg ?? null,
-  reason: record?.reason ?? null, tInto: round(record?.tInto), ts: round(record?.ts),
-  shares: round(record?.shares), limitPx: round(record?.limitPx),
+  reason: record?.reason ?? null, tInto: canonicalNumber(record?.tInto),
+  ts: canonicalNumber(record?.ts), shares: canonicalNumber(record?.shares),
+  limitPx: canonicalNumber(record?.limitPx),
   pairReservation: (record?.pairReservation || []).map((slice) => ({
-    lotId: String(slice?.lotId), shares: round(slice?.shares),
-    effectivePrice: round(slice?.effectivePrice),
+    lotId: String(slice?.lotId), shares: canonicalNumber(slice?.shares),
+    effectivePrice: canonicalNumber(slice?.effectivePrice),
   })),
 });
 
 const comparableFill = (record) => ({
   ...comparableDecision(record), fillId: record?.fillId ?? null,
-  decidedT: round(record?.decidedT), placedT: round(record?.placedT),
-  effPx: round(record?.effPx), usdc: round(record?.usdc), fee: round(record?.fee),
-  maker: record?.maker === true, fillEvidence: record?.fillEvidence ?? null,
+  decidedT: canonicalNumber(record?.decidedT), placedT: canonicalNumber(record?.placedT),
+  effPx: canonicalNumber(record?.effPx), usdc: canonicalNumber(record?.usdc),
+  fee: canonicalNumber(record?.fee), maker: record?.maker === true,
+  fillEvidence: record?.fillEvidence ?? null,
+  fillEvidenceVerified: record?.fillEvidenceVerified === true,
+  makerExecutionPolicy: record?.makerExecutionPolicy ?? null,
   queueAssumption: record?.queueAssumption ?? null,
-  levels: (record?.levels || []).map((level) => ({ price: round(level?.price),
-    shares: round(level?.shares), usdc: round(level?.usdc), fee: round(level?.fee) })),
+  levels: (record?.levels || []).map((level) => ({ price: canonicalNumber(level?.price),
+    shares: canonicalNumber(level?.shares), usdc: canonicalNumber(level?.usdc),
+    fee: canonicalNumber(level?.fee) })),
 });
 
 function compareRecords(expected, actual, project) {
@@ -68,80 +56,94 @@ function compareRecords(expected, actual, project) {
 }
 
 function ledger(fills, outcome) {
-  const position = positionFromFills(fills, outcome);
   const buys = fills.filter((fill) => fill?.leg !== "merge");
   const merges = fills.filter((fill) => fill?.leg === "merge");
-  const executionCost = buys.reduce((sum, fill) => sum + Number(fill.usdc || 0), 0);
-  const executionFees = buys.reduce((sum, fill) => sum + Number(fill.fee || 0), 0);
+  let invalidExecutionFields = 0, levelDiscrepancies = 0;
+  for (const fill of buys) {
+    if (!validPositive(fill?.shares) || !finiteNumber(fill?.usdc) || Number(fill.usdc) < 0
+      || !finiteNumber(fill?.fee) || Number(fill.fee) < 0
+      || !validProbabilityPrice(fill?.effPx) || !validTimestamp(fill?.ts)) invalidExecutionFields++;
+    if (Array.isArray(fill?.levels) && fill.levels.length) {
+      const validLevels = fill.levels.every((level) => validProbabilityPrice(level?.price)
+        && validPositive(level?.shares) && finiteNumber(level?.usdc) && Number(level.usdc) >= 0
+        && finiteNumber(level?.fee) && Number(level.fee) >= 0);
+      const levelShares = fill.levels.reduce((sum, level) => sum + Number(level?.shares), 0);
+      const levelCost = fill.levels.reduce((sum, level) => sum + Number(level?.usdc), 0);
+      const levelFees = fill.levels.reduce((sum, level) => sum + Number(level?.fee), 0);
+      if (!validLevels || Math.abs(levelShares - Number(fill.shares)) > EPS
+        || Math.abs(levelCost - Number(fill.usdc)) > EPS
+        || Math.abs(levelFees - Number(fill.fee)) > EPS) levelDiscrepancies++;
+    } else levelDiscrepancies++;
+  }
+  const executionCost = buys.reduce((sum, fill) => sum + Number(fill.usdc), 0);
+  const executionFees = buys.reduce((sum, fill) => sum + Number(fill.fee), 0);
   const removedCost = merges.reduce((sum, fill) => sum
     + Number(fill.mainUpCost || 0) + Number(fill.mainDnCost || 0), 0);
   const removedFees = merges.reduce((sum, fill) => sum + Number(fill.mainFee || 0), 0);
-  return { inventory: { up: round(position.upShares), down: round(position.downShares) },
-    executionCost: round(executionCost), executionFees: round(executionFees),
-    mergeRemovedCost: round(removedCost), mergeRemovedFees: round(removedFees),
-    settlementCost: round(position.totalCost), settlementFees: round(position.fee),
-    settlementPnl: round(position.realizedPnl),
-    exact: Math.abs(executionCost - removedCost - position.totalCost) <= EPS
+  const validOutcome = ["Up", "Down"].includes(outcome);
+  const position = positionFromFills(fills, validOutcome ? outcome : null);
+  return { inventory: { up: reportNumber(position.upShares), down: reportNumber(position.downShares) },
+    executionCost: reportNumber(executionCost), executionFees: reportNumber(executionFees),
+    mergeRemovedCost: reportNumber(removedCost), mergeRemovedFees: reportNumber(removedFees),
+    settlementCost: reportNumber(position.totalCost), settlementFees: reportNumber(position.fee),
+    settlementPnl: validOutcome ? reportNumber(position.realizedPnl) : null,
+    invalidExecutionFields, levelDiscrepancies,
+    exact: invalidExecutionFields === 0 && levelDiscrepancies === 0
+      && Math.abs(executionCost - removedCost - position.totalCost) <= EPS
       && Math.abs(executionFees - removedFees - position.fee) <= EPS };
 }
 
-export function validateRecorderWindow(data, filename = null) {
+export function validateRecorderWindow(data, filename = null, { allowPerformance = true } = {}) {
   const ticks = Array.isArray(data?.ticks) ? data.ticks : [];
-  const cfg = { ...STRAT, ...(data?.cfg?.params || data?.cfg || {}) };
-  const requiredCanonical = ticks.filter((tick) => finite(tick?.ms) && finite(tick?.t)
-    && finite(tick?.upAsk) && finite(tick?.dnAsk)).length;
-  const monotonic = ticks.every((tick, index) => index === 0
-    || Number(tick.ms) >= Number(ticks[index - 1].ms));
-  const sequenceComplete = ticks.every((tick, index) => Number(tick.sequence) === index + 1);
-  const depthIdentity = ticks.filter((tick) => tick?.upDepthEventId != null
-    && tick?.downDepthEventId != null).length;
-  const timestampComplete = ticks.filter((tick) => finite(tick?.receivedAtMs ?? tick?.ms)
-    && finite(tick?.binanceAtMs) && finite(tick?.binanceReceivedAtMs)
-    && finite(tick?.chainlinkAtMs) && finite(tick?.chainlinkReceivedAtMs)
-    && finite(tick?.upQuoteAtMs) && finite(tick?.upQuoteReceivedAtMs)
-    && finite(tick?.downQuoteAtMs) && finite(tick?.downQuoteReceivedAtMs)
-    && finite(tick?.upDepthAtMs) && finite(tick?.upDepthReceivedAtMs)
-    && finite(tick?.downDepthAtMs) && finite(tick?.downDepthReceivedAtMs)).length;
-  const fullDepth = ticks.filter((tick) => Array.isArray(tick?.up?.asks)
-    && Array.isArray(tick?.up?.bids) && Array.isArray(tick?.down?.asks)
-    && Array.isArray(tick?.down?.bids)).length;
+  const recordedCfg = data?.cfg?.params || data?.cfg || {};
+  const cfg = { ...STRAT, ...recordedCfg };
+  if (!Object.hasOwn(recordedCfg, "W3048_MAKER_EXECUTION_POLICY")
+    && Object.hasOwn(recordedCfg, "W3048_MAKER_FILL_ASSUMPTION")) {
+    cfg.W3048_MAKER_EXECUTION_POLICY = normalizeMakerExecutionPolicy(
+      null, recordedCfg.W3048_MAKER_FILL_ASSUMPTION);
+  }
+  const instrumentation = buildRecorderInstrumentation(data, cfg);
   const makerEvidence = ticks.flatMap((tick) => [tick?.up, tick?.down])
     .flatMap((book) => Array.isArray(book?.makerEvidence) ? book.makerEvidence : []);
-  const eligibleMakerEvidence = makerEvidence.filter((event) => event?.id != null
-    && finite(event?.ts) && finite(event?.price) && finite(event?.shares)
+  const eligibleMakerEvidence = makerEvidence.filter((event) => event?.id !== null
+    && event?.id !== undefined && String(event.id).trim() !== ""
+    && validTimestamp(event?.ts) && validProbabilityPrice(event?.price)
+    && validPositive(event?.shares)
     && String(event?.aggressorSide ?? event?.takerSide ?? "").toLowerCase() === "sell").length;
+  const outcome = allowPerformance ? data?.winSide ?? data?.settlement?.outcome : null;
+  const recordedDecisions = allowPerformance && Array.isArray(data?.decisions);
+  const recordedFills = allowPerformance && Array.isArray(data?.fills);
   const completeness = { schema: data?.schema ?? null, ticks: ticks.length,
-    canonicalTicks: requiredCanonical, monotonicReceiveClock: monotonic,
-    sequenceComplete, timestampCompleteTicks: timestampComplete,
-    depthIdentityTicks: depthIdentity, fullDepthTicks: fullDepth,
-    makerEvidenceEvents: makerEvidence.length,
-    eligibleMakerEvidenceEvents: eligibleMakerEvidence,
+    canonicalTicks: instrumentation.canonicalTicks,
+    monotonicReceiveClock: instrumentation.monotonicEvaluationClock,
+    sequenceComplete: instrumentation.sequenceGaps === 0,
+    sequenceGaps: instrumentation.sequenceGaps,
+    timestampCompleteTicks: instrumentation.timestampCompleteTicks,
+    depthIdentityTicks: instrumentation.depthIdentityTicks,
+    depthArraysPresentTicks: Math.min(instrumentation.depth.up.arraysPresent,
+      instrumentation.depth.down.arraysPresent),
+    usableDepthTicks: Math.min(instrumentation.depth.up.usable, instrumentation.depth.down.usable),
+    invalidDepthTicks: instrumentation.depth.up.invalid + instrumentation.depth.down.invalid,
+    makerEvidenceEvents: makerEvidence.length, eligibleMakerEvidenceEvents: eligibleMakerEvidence,
     observedFlowScenarioReady: eligibleMakerEvidence > 0,
-    openingBinance: finite(data?.openBinance ?? data?.openBz),
-    openingChainlink: finite(data?.openPrice ?? data?.openCl),
-    settlementOutcome: ["Up", "Down"].includes(data?.winSide ?? data?.settlement?.outcome),
-    recordedDecisions: Array.isArray(data?.decisions), recordedFills: Array.isArray(data?.fills) };
-  completeness.readyForExactParity = Number(data?.schema) >= 2 && ticks.length > 1
-    && requiredCanonical === ticks.length && monotonic && sequenceComplete
-    && timestampComplete === ticks.length && depthIdentity === ticks.length
-    && fullDepth === ticks.length
+    openingBinance: instrumentation.openingReferences.binance,
+    openingChainlink: instrumentation.openingReferences.chainlink,
+    settlementOutcome: allowPerformance && ["Up", "Down"].includes(outcome),
+    recordedDecisions, recordedFills };
+  completeness.readyForExactParity = allowPerformance && Number(data?.schema) >= 2 && ticks.length > 1
+    && instrumentation.canonicalTicks === ticks.length
+    && instrumentation.monotonicEvaluationClock && instrumentation.sequenceGaps === 0
+    && instrumentation.timestampCompleteTicks === ticks.length
+    && instrumentation.depthIdentityTicks === ticks.length
+    && completeness.usableDepthTicks === ticks.length
     && completeness.openingBinance && completeness.openingChainlink
-    && completeness.settlementOutcome && completeness.recordedDecisions && completeness.recordedFills;
+    && completeness.settlementOutcome && recordedDecisions && recordedFills;
 
-  const freshnessReport = {
-    binance: freshness(ticks, "binanceAtMs", "binanceReceivedAtMs", cfg.W3048_BINANCE_STALE_MS),
-    chainlink: freshness(ticks, "chainlinkAtMs", "chainlinkReceivedAtMs", cfg.W3048_CHAINLINK_STALE_MS),
-    upQuote: freshness(ticks, "upQuoteAtMs", "upQuoteReceivedAtMs", cfg.W3048_DEPTH_STALE_MS),
-    downQuote: freshness(ticks, "downQuoteAtMs", "downQuoteReceivedAtMs", cfg.W3048_DEPTH_STALE_MS),
-    upDepth: freshness(ticks, "upDepthAtMs", "upDepthReceivedAtMs", cfg.W3048_DEPTH_STALE_MS),
-    downDepth: freshness(ticks, "downDepthAtMs", "downDepthReceivedAtMs", cfg.W3048_DEPTH_STALE_MS),
-  };
-  let parity = { available: false, reason: "recorder schema is incomplete for exact parity" };
-  let reconciliation = { available: false, reason: "authoritative recorded fills are unavailable" };
-  if (completeness.recordedFills) {
-    reconciliation = { available: true,
-      recorded: ledger(data.fills, data.winSide ?? data.settlement?.outcome) };
-  }
+  let parity = { available: false, reason: allowPerformance
+    ? "recorder schema is incomplete for exact parity" : "performance fields are sealed" };
+  let reconciliation = { available: false, reason: allowPerformance
+    ? "authoritative recorded fills are unavailable" : "performance fields are sealed" };
+  if (recordedFills) reconciliation = { available: true, recorded: ledger(data.fills, outcome) };
   if (completeness.readyForExactParity) {
     const diagnostics = {};
     const replayFills = simulateFills({ ...data,
@@ -151,53 +153,173 @@ export function validateRecorderWindow(data, filename = null) {
     }, cfg, diagnostics);
     const decisionParity = compareRecords(data.decisions, diagnostics.decisions || [], comparableDecision);
     const fillParity = compareRecords(data.fills, replayFills, comparableFill);
-    const replayLedger = ledger(replayFills, data.winSide ?? data.settlement?.outcome);
+    const replayLedger = ledger(replayFills, outcome);
     reconciliation.replay = replayLedger;
     parity = { available: true, exact: decisionParity.exact && fillParity.exact
       && reconciliation.recorded.exact && replayLedger.exact,
     decisions: decisionParity, fills: fillParity,
-    settlementPnlDelta: round(replayLedger.settlementPnl - reconciliation.recorded.settlementPnl) };
+    settlementPnlDelta: reportNumber(replayLedger.settlementPnl
+      - reconciliation.recorded.settlementPnl) };
   }
-  return { file: filename, slug: data?.slug ?? null, windowStart: data?.windowStart ?? data?.ws ?? null,
-    completeness, freshness: freshnessReport, reconciliation, parity };
+  return { file: filename, slug: data?.slug ?? null,
+    windowStart: data?.windowStart ?? data?.ws ?? null,
+    completeness, freshness: instrumentation.freshness,
+    instrumentation, reconciliation, parity };
 }
 
-export function validateRecorderCohort(directory) {
-  const files = fs.existsSync(directory) ? fs.readdirSync(directory)
-    .filter((name) => name.endsWith(".json")).sort() : [];
-  const windows = [];
-  const unavailable = [];
-  for (const name of files) {
-    try {
-      const data = JSON.parse(fs.readFileSync(path.join(directory, name), "utf8"));
-      windows.push(validateRecorderWindow(data, name));
-    } catch (error) {
-      unavailable.push({ file: name, reason: error.message });
+export function readRecorderManifest(input) {
+  const manifest = typeof input === "string"
+    ? JSON.parse(fs.readFileSync(path.resolve(input), "utf8")) : input;
+  if (!manifest || !Array.isArray(manifest.members)) {
+    throw new Error("an explicit recorder cohort manifest with a members array is required");
+  }
+  const allowed = new Set(["burn-in", "development", "validation", "final-test"]);
+  for (const member of manifest.members) {
+    if (!allowed.has(member?.split) || !(member?.payload || member?.name)) {
+      throw new Error("every cohort member requires payload/name and an explicit split");
     }
   }
-  return { schema: 1, generatedAt: new Date().toISOString(), directory,
-    diagnosticOnly: true,
-    finalTestStatus: "sealed; this command does not label or summarize final-test performance",
-    summary: { files: files.length, parsedWindows: windows.length,
-      parityReady: windows.filter((row) => row.completeness.readyForExactParity).length,
-      exactParity: windows.filter((row) => row.parity.exact === true).length,
-      reconciled: windows.filter((row) => row.reconciliation.recorded?.exact === true).length,
-      parityUnavailable: windows.filter((row) => row.parity.available !== true).length,
-      reconciliationUnavailable: windows.filter((row) => row.reconciliation.available !== true).length,
-      observedFlowUnavailable: windows.filter((row) =>
-        row.completeness.observedFlowScenarioReady !== true).length,
-      unavailable: unavailable.length },
-    windows, unavailable: files.length ? unavailable
-      : [{ file: null, reason: "no recorder JSON files are available in the requested directory" }] };
+  const declaredSealed = new Set((manifest.finalTest?.memberWindowStarts || []).map(String));
+  const sealedRoot = String(manifest.finalTest?.payloadRoot || "").replace(/^\/+|\/+$/g, "");
+  for (const member of manifest.members) {
+    const payload = String(member.payload || member.name).replace(/\\/g, "/");
+    const structurallySealed = declaredSealed.has(String(member.windowStart))
+      || (sealedRoot && (payload === sealedRoot || payload.startsWith(`${sealedRoot}/`)));
+    if ((member.split === "final-test") !== Boolean(structurallySealed)) {
+      throw new Error("final-test split, protected membership, and sealed payload root must agree");
+    }
+  }
+  return manifest;
+}
+
+export function isSealedFinalMember(manifest, member) {
+  const declaredSealed = new Set((manifest.finalTest?.memberWindowStarts || []).map(String));
+  const sealedRoot = String(manifest.finalTest?.payloadRoot || "").replace(/^\/+|\/+$/g, "");
+  const payload = String(member.payload || member.name).replace(/\\/g, "/");
+  return declaredSealed.has(String(member.windowStart))
+    || Boolean(sealedRoot && (payload === sealedRoot || payload.startsWith(`${sealedRoot}/`)));
+}
+
+export function readVerifiedRecorderJson(file, expectedHash = null) {
+  const bytes = fs.readFileSync(file);
+  if (expectedHash && digest(bytes) !== expectedHash) throw new Error("manifest checksum mismatch");
+  return JSON.parse(bytes.toString("utf8"));
+}
+
+export function validateRecorderCohort({ recorderRoot, manifest: manifestInput, splits = null }) {
+  const manifest = readRecorderManifest(manifestInput);
+  const root = path.resolve(recorderRoot);
+  const selectedSplits = splits == null ? null : new Set(Array.isArray(splits) ? splits : [splits]);
+  const members = selectedSplits
+    ? manifest.members.filter((member) => selectedSplits.has(member.split)) : manifest.members;
+  const windows = [], unavailable = [];
+  const sealedFinalTest = { expectedWindows: 0, payloadsPresent: 0,
+    instrumentationFiles: 0, validInstrumentationFiles: 0,
+    sourceClockIssues: 0, staleAtEvaluation: 0, sequenceGaps: 0,
+    unusableDepthSides: 0 };
+  let payloadsPresent = 0, diskUsageBytes = 0;
+  for (const member of members) {
+    const payloadRelative = member.payload || member.name;
+    const payloadFile = path.resolve(root, payloadRelative);
+    if (!payloadFile.startsWith(`${root}${path.sep}`)) throw new Error("manifest payload escapes recorder root");
+    let payloadPresent = false;
+    try { const stat = fs.statSync(payloadFile); payloadPresent = stat.isFile();
+      if (payloadPresent) { payloadsPresent++; diskUsageBytes += stat.size; } } catch {}
+    if (isSealedFinalMember(manifest, member)) {
+      sealedFinalTest.expectedWindows++;
+      if (payloadPresent) sealedFinalTest.payloadsPresent++;
+      const metadataRelative = member.instrumentation;
+      if (!metadataRelative) continue;
+      const metadataFile = path.resolve(root, metadataRelative);
+      if (!metadataFile.startsWith(`${root}${path.sep}`)) throw new Error("manifest instrumentation escapes recorder root");
+      try {
+        const stat = fs.statSync(metadataFile); diskUsageBytes += stat.size;
+        const metadata = readVerifiedRecorderJson(metadataFile, member.instrumentationSha256);
+        sealedFinalTest.instrumentationFiles++;
+        assertOutcomeFreeInstrumentation(metadata);
+        sealedFinalTest.validInstrumentationFiles++;
+        sealedFinalTest.sourceClockIssues += Number(metadata.sourceClockIssues || 0);
+        sealedFinalTest.staleAtEvaluation += Number(metadata.staleAtEvaluation || 0);
+        sealedFinalTest.sequenceGaps += Number(metadata.sequenceGaps || 0);
+        sealedFinalTest.unusableDepthSides += [metadata.depth?.up, metadata.depth?.down]
+          .filter((side) => Number(side?.usable) < Number(metadata.ticks)).length;
+      } catch (error) {
+        unavailable.push({ split: "final-test", file: null,
+          reason: `sealed instrumentation unavailable: ${error.message}` });
+      }
+      continue;
+    }
+    if (!payloadPresent) {
+      unavailable.push({ split: member.split, file: payloadRelative, reason: "payload is unavailable" });
+      continue;
+    }
+    try {
+      const data = readVerifiedRecorderJson(payloadFile, member.sha256);
+      windows.push({ split: member.split,
+        ...validateRecorderWindow(data, payloadRelative, { allowPerformance: true }) });
+    } catch (error) {
+      unavailable.push({ split: member.split, file: payloadRelative, reason: error.message });
+    }
+  }
+  const summary = { expectedWindows: members.length, payloadsPresent,
+    analyzedWindows: windows.length, sealedFinalTestWindows: sealedFinalTest.expectedWindows,
+    parityReady: windows.filter((row) => row.completeness.readyForExactParity).length,
+    exactParity: windows.filter((row) => row.parity.exact === true).length,
+    reconciled: windows.filter((row) => row.reconciliation.recorded?.exact === true).length,
+    parityUnavailable: windows.filter((row) => row.parity.available !== true).length,
+    ledgerDiscrepancies: windows.filter((row) => row.reconciliation.recorded?.exact === false
+      || row.reconciliation.replay?.exact === false).length,
+    shadowReplayMismatches: windows.filter((row) => row.parity.available && !row.parity.exact).length,
+    sequenceGaps: windows.reduce((sum, row) => sum + row.completeness.sequenceGaps, 0),
+    missingOrInvalidSourceFields: windows.reduce((sum, row) => sum
+      + row.instrumentation.sourceClockIssues, 0),
+    staleAtEvaluation: windows.reduce((sum, row) => sum
+      + row.instrumentation.staleAtEvaluation, 0),
+    observedFlowUnavailable: windows.filter((row) =>
+      row.completeness.observedFlowScenarioReady !== true).length,
+    unavailable: unavailable.length, diskUsageBytes };
+  return { schema: 2, generatedAt: new Date().toISOString(), recorderRoot: root,
+    cohortId: manifest.cohortId ?? null, diagnosticOnly: true,
+    finalTestStatus: "sealed payloads were not opened; only outcome-free instrumentation metadata was aggregated",
+    summary, burnInChecklist: {
+      expectedAndRecordedWindows: { expected: summary.expectedWindows, recorded: payloadsPresent },
+      missingOrInvalidSourceFields: summary.missingOrInvalidSourceFields,
+      decisionTimeStaleness: summary.staleAtEvaluation,
+      sequenceGaps: summary.sequenceGaps,
+      shadowReplayMismatches: summary.shadowReplayMismatches,
+      ledgerDiscrepancies: summary.ledgerDiscrepancies,
+      diskUsageBytes,
+      retentionCoverage: { configuredWindows: manifest.retentionWindows ?? null,
+        expectedWindows: summary.expectedWindows, payloadsPresent },
+    }, sealedFinalTest, windows, unavailable };
+}
+
+function cliOptions(argv) {
+  const options = {};
+  for (let index = 0; index < argv.length; index++) {
+    const key = argv[index];
+    if (!key.startsWith("--")) throw new Error(`unexpected positional argument: ${key}`);
+    options[key.slice(2)] = argv[++index];
+  }
+  if (!options.manifest || !options["recorder-root"]) {
+    throw new Error("usage: validate-recorder-cohort.mjs --manifest FILE --recorder-root DIR [--output FILE]");
+  }
+  return options;
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
-  const root = path.resolve(import.meta.dirname, "../..");
-  const directory = path.resolve(process.argv[2] || path.join(root, "data/fastmx-live/live-ticks"));
-  const output = process.argv[3] ? path.resolve(process.argv[3]) : null;
-  const report = validateRecorderCohort(directory);
-  const json = `${JSON.stringify(report, null, 2)}\n`;
-  if (output) { fs.mkdirSync(path.dirname(output), { recursive: true }); fs.writeFileSync(output, json); }
-  process.stdout.write(json);
-  if (!report.summary.files) process.exitCode = 2;
+  try {
+    const options = cliOptions(process.argv.slice(2));
+    const report = validateRecorderCohort({ recorderRoot: options["recorder-root"],
+      manifest: options.manifest,
+      splits: options.splits ? options.splits.split(",").map((value) => value.trim()) : null });
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    if (options.output) { fs.mkdirSync(path.dirname(path.resolve(options.output)), { recursive: true });
+      fs.writeFileSync(path.resolve(options.output), json); }
+    process.stdout.write(json);
+    if (!report.summary.expectedWindows) process.exitCode = 2;
+  } catch (error) {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 2;
+  }
 }

@@ -10,6 +10,7 @@ const windowStart = 1_800_000_000;
 const slug = `btc-updown-5m-${windowStart}`;
 const side = (ask, depth, depthEventId, depthTs) => ({ bestAsk: ask,
   bestBid: +(ask - 0.01).toFixed(2), depthEventId, depthTs, depthReceivedAtMs: depthTs,
+  depthValid: true,
   quoteSourceAtMs: depthTs, quoteReceivedAtMs: depthTs,
   asks: [[ask, depth], [+(ask + 0.01).toFixed(2), depth], [+(ask + 0.02).toFixed(2), depth]],
   bids: [[+(ask - 0.01).toFixed(2), depth], [+(ask - 0.02).toFixed(2), depth],
@@ -34,7 +35,72 @@ const params = { STRATEGY: "wallet3048", W3048_SPEC_VERSION: 3,
   W3048_BETA_TIME_CHAINLINK: 0, W3048_EDGE_BUFFER: 0,
   W3048_MIN_EXPECTED_EDGE_START: 0, W3048_MIN_EXPECTED_EDGE_END: 0,
   W3048_LARGE_EDGE: 1, W3048_CROSS_HEADROOM_TICKS: 1,
-  W3048_MAKER_FILL_ASSUMPTION: "zero" };
+  W3048_MAKER_EXECUTION_POLICY: "strict-no-maker" };
+
+function runShadow(ticks, selectedParams) {
+  const shadow = createShadow(() => {}, () => false);
+  shadow.setParams(selectedParams);
+  setRunning(true);
+  try {
+    for (const tick of ticks) shadow.tick({ slug, windowStart, openBinance: 100,
+      openChainlink: 100, tInto: tick.t, bzPrice: tick.bz, clPrice: tick.cl,
+      binanceAtMs: tick.binanceAtMs, binanceReceivedAtMs: tick.ms,
+      chainlinkAtMs: tick.chainlinkAtMs, chainlinkReceivedAtMs: tick.ms,
+      nowMs: tick.ms, up: tick.up, down: tick.down });
+  } finally {
+    setRunning(false);
+  }
+  return shadow.windows.get(slug);
+}
+
+const comparableExecution = (fills) => fills.map((fill) => ({ oid: fill.oid,
+  fillId: fill.fillId, side: fill.side, shares: fill.shares, usdc: fill.usdc,
+  fee: fill.fee, effPx: fill.effPx, decidedT: fill.decidedT, tInto: fill.tInto,
+  ts: fill.ts, maker: fill.maker, evidence: fill.fillEvidence,
+  verified: fill.fillEvidenceVerified, policy: fill.makerExecutionPolicy,
+  queue: fill.queueAssumption, evidenceIds: fill.evidenceIds }));
+
+for (const scenario of [
+  { policy: "strict-no-maker", crossed: true, expectedShares: 10, evidence: null },
+  { policy: "book-cross-inference", crossed: true, expectedShares: 50,
+    evidence: "book-cross-inference" },
+  { policy: "observed-flow-estimate", queue: "front-of-queue", expectedShares: 50,
+    evidence: "observed-flow-estimate" },
+  { policy: "optimistic-touch", expectedShares: 50, evidence: "optimistic-touch" },
+]) {
+  test(`shadow/replay parity for maker policy ${scenario.policy}`, () => {
+    const ticks = [fixtureTick(4.5, 100, 0.40, 100, `${scenario.policy}-0`),
+      fixtureTick(5, 101, 0.40, 10, `${scenario.policy}-1`),
+      fixtureTick(6, 101, scenario.crossed ? 0.39 : 0.40, 100, `${scenario.policy}-2`)];
+    if (scenario.policy === "observed-flow-estimate") {
+      ticks[2].up.makerEvidence = [{ id: "eligible-sell-1", ts: ticks[2].ms,
+        price: 0.40, shares: 40, aggressorSide: "sell" }];
+    }
+    const selected = { ...params, LATENCY_MS: 0, W3048_MAX_ACTIONS: 1,
+      W3048_COOLDOWN_MS: 10_000, W3048_CROSS_HEADROOM_TICKS: 0,
+      W3048_REST_TIMEOUT_MS: 10_000, W3048_SIM_TOUCH_FILL_PCT: 100,
+      W3048_MAKER_EXECUTION_POLICY: scenario.policy,
+      W3048_MAKER_QUEUE_ALLOCATION: scenario.queue || "none" };
+    const replay = simulateFills({ windowStart, openBinance: 100,
+      openPrice: 100, ticks }, selected);
+    const shadowWindow = runShadow(ticks, selected);
+    const live = shadowWindow.fills;
+    assert.deepEqual(comparableExecution(live), comparableExecution(replay));
+    assert.equal(live.reduce((sum, fill) => sum + fill.shares, 0), scenario.expectedShares);
+    const maker = live.filter((fill) => fill.maker === true);
+    if (scenario.policy === "strict-no-maker") {
+      assert.equal(maker.length, 0);
+      assert.equal(shadowWindow.pendingFills.length, 0,
+        "canceled resting remainder releases its lifecycle reservation");
+    }
+    else {
+      assert.equal(maker.length, 1);
+      assert.equal(maker[0].fillEvidence, scenario.evidence);
+      assert.equal(maker[0].fillEvidenceVerified, false);
+      assert.equal(maker[0].makerExecutionPolicy, scenario.policy);
+    }
+  });
+}
 
 test("shadow and replay use the same last-known book when arrival falls between updates", () => {
   const ticks = [fixtureTick(4.5, 100, 0.40, 100, 1),

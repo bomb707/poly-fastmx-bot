@@ -7,8 +7,10 @@ import { executionFee, fillFee, isFeeFill } from "../../engine/fees.js";
 import { DEFAULT_STRATEGY, getStrategy } from "../../engine/strategies/index.js";
 import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim — apply a merge record to the live ledger
 import { consumeVisibleAsks, consumeVisibleBudget, createExecutionEvidenceLedger,
-  depthEventId, makerFillFromEvidence, takeReservationSlices } from "../../engine/fillsim.js";
+  depthEventId, normalizeMakerExecutionPolicy, restingMakerExecution,
+  takeReservationSlices } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
+import { buildRecorderInstrumentation } from "../../engine/recorder-quality.js";
 import { isRunning } from "./botState.js";
 import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
 import { recordFill, recordSession } from "../sources/db.js";   // MongoDB record store (mode-split collections)
@@ -26,6 +28,20 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     (event) => { try { onEvent({ kind: "circuit_breaker", ...event }); } catch {} },
   );
   let activeSlug = null;           // the currently-ticking window's slug — target for MANUAL buys
+
+  const cohortMemberByStart = new Map();
+  if (config.recorderCohortManifest) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(path.resolve(config.recorderCohortManifest), "utf8"));
+      for (const member of Array.isArray(manifest?.members) ? manifest.members : []) {
+        if (Number.isFinite(Number(member?.windowStart))) {
+          cohortMemberByStart.set(Number(member.windowStart), member);
+        }
+      }
+    } catch (error) {
+      console.warn(`[recorder] cohort manifest unavailable: ${error.message}`);
+    }
+  }
 
   fs.mkdirSync(config.dataDir, { recursive: true });
 
@@ -168,6 +184,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     if (!w.pendingFills?.length) return;
     const keep = [];
     const context = { nowMs, tInto, bzPrice, bzGap, clPrice, clGap, openChainlink };
+    const makerExecutionPolicy = normalizeMakerExecutionPolicy(
+      P.W3048_MAKER_EXECUTION_POLICY, null);
     const rememberArrival = (p) => {
       p.upBook = up;
       p.downBook = down;
@@ -182,7 +200,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         tInto: maker ? at.tInto : p.dueTInto,
         requestedShares: p.originalRequested,
         decisionExpectedPx: Number.isFinite(Number(intent.effPx)) ? Number(intent.effPx) : null,
-        shares: +match.shares.toFixed(4), effPx: +match.avgPx.toFixed(4), usdc: +match.cost.toFixed(4),
+        shares: Number(match.shares), effPx: Number(match.avgPx), usdc: Number(match.cost),
         fee: executionFee(match, !maker),
         levels: (match.levels || [{ price: match.avgPx, shares: match.shares }]).map((level) => ({
           price: Number(level.price), shares: Number(level.shares),
@@ -199,6 +217,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         fill.fillEvidenceVerified = evidenceInfo?.verified === true;
         fill.queueAssumption = evidenceInfo?.queueAssumption || null;
         fill.evidenceIds = evidenceInfo?.evidenceIds || [];
+        fill.makerExecutionPolicy = evidenceInfo?.executionPolicy || makerExecutionPolicy;
       }
       if (at.bzPrice != null) {
         fill.bz = at.bzPrice;
@@ -229,29 +248,16 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         const pool = w.executionEvidence.poolFor(intent.side, book, eventId);
         const dtMs = Math.max(0, nowMs - p.lastMs);
         p.lastMs = nowMs;
-        let match = null;
-        let evidenceInfo = null;
-        if (book?.bestAsk != null && book.bestAsk < intent.limitPx - 1e-9) {
-          const crossed = consumeVisibleAsks(pool, p.remaining, intent.limitPx);
-          if (crossed.shares > 1e-9) match = { shares: crossed.shares,
-            cost: crossed.shares * intent.limitPx, avgPx: intent.limitPx,
-            levels: [{ price: intent.limitPx, shares: crossed.shares }] };
-          evidenceInfo = { evidenceType: "book-cross-inference", verified: false,
-            queueAssumption: "crossed-resting-price", evidenceIds: [eventId] };
-        } else if (book?.bestBid != null && intent.limitPx >= book.bestBid - 1e-9) {
-          evidenceInfo = makerFillFromEvidence({ book, limit: intent.limitPx, remaining: p.remaining,
-            assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"),
-            queueAssumption: String(P.W3048_MAKER_QUEUE_ALLOCATION || "none"),
-            evidenceLedger: w.executionEvidence.makerFlow, evidenceScope: intent.side,
-            restingSinceMs: p.dueMs, throughMs: nowMs, dtMs,
-            touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
-            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
-            previouslyCredited: p.touchFilled, target: p.touchTarget });
-          p.touchFilled += evidenceInfo.shares;
-          if (evidenceInfo.shares > 1e-9) match = { shares: evidenceInfo.shares,
-            cost: evidenceInfo.shares * intent.limitPx, avgPx: intent.limitPx,
-            levels: [{ price: intent.limitPx, shares: evidenceInfo.shares }] };
-        }
+        const evaluated = restingMakerExecution({ policy: makerExecutionPolicy,
+          book, pool, limit: intent.limitPx, remaining: p.remaining,
+          queueAssumption: String(P.W3048_MAKER_QUEUE_ALLOCATION || "none"),
+          evidenceLedger: w.executionEvidence.makerFlow, evidenceScope: intent.side,
+          restingSinceMs: p.dueMs, throughMs: nowMs, dtMs,
+          touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
+          fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
+          previouslyCredited: p.touchFilled, target: p.touchTarget });
+        const match = evaluated.match, evidenceInfo = evaluated.evidence;
+        if (evidenceInfo.evidenceType === "optimistic-touch") p.touchFilled += evidenceInfo.shares;
         if (match) {
           p.remaining -= match.shares;
           immutableFill(p, match, true, evidenceInfo);
@@ -366,20 +372,26 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         upDepthEventId: up.depthEventId ?? null, downDepthEventId: down.depthEventId ?? null,
         up: { bestAsk: up.bestAsk == null ? null : Number(up.bestAsk),
           bestBid: up.bestBid == null ? null : Number(up.bestBid),
-          asks: (up.asks || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
-          bids: (up.bids || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
+          asks: Array.isArray(up.asks)
+            ? up.asks.map((row) => Array.isArray(row) ? [...row] : { ...row }) : null,
+          bids: Array.isArray(up.bids)
+            ? up.bids.map((row) => Array.isArray(row) ? [...row] : { ...row }) : null,
           depthKnown: Array.isArray(up.asks) && Array.isArray(up.bids),
           depthTs: up.depthTs ?? null, depthReceivedAtMs: up.depthReceivedAtMs ?? null,
+          depthValid: up.depthValid === true,
           depthEventId: up.depthEventId ?? null,
           quoteSourceAtMs: up.quoteSourceAtMs ?? null,
           quoteReceivedAtMs: up.quoteReceivedAtMs ?? null,
           makerEvidence: (up.makerEvidence || []).map((event) => ({ ...event })) },
         down: { bestAsk: down.bestAsk == null ? null : Number(down.bestAsk),
           bestBid: down.bestBid == null ? null : Number(down.bestBid),
-          asks: (down.asks || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
-          bids: (down.bids || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
+          asks: Array.isArray(down.asks)
+            ? down.asks.map((row) => Array.isArray(row) ? [...row] : { ...row }) : null,
+          bids: Array.isArray(down.bids)
+            ? down.bids.map((row) => Array.isArray(row) ? [...row] : { ...row }) : null,
           depthKnown: Array.isArray(down.asks) && Array.isArray(down.bids),
           depthTs: down.depthTs ?? null, depthReceivedAtMs: down.depthReceivedAtMs ?? null,
+          depthValid: down.depthValid === true,
           depthEventId: down.depthEventId ?? null,
           quoteSourceAtMs: down.quoteSourceAtMs ?? null,
           quoteReceivedAtMs: down.quoteReceivedAtMs ?? null,
@@ -544,12 +556,23 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         dtMeanMs: d.tickN ? Math.round(d.dtSum / d.tickN) : null, dtMaxMs: Math.round(d.dtMax),
         gate: d.gate, cfg: w.cfgAtOpen || cfgStamp() });
     }
-    // PERSIST the live-tick series → data/live-ticks/<slug>.json (the ground-truth LIVE feed the sim decided on).
-    //   Enables a definitive live-vs-v2 tick-by-tick diff. Fire-and-forget; keep only the most-recent N windows.
+    // Persist replay payloads separately from outcome-free instrumentation.
+    // Final-test payload routing comes only from the predeclared manifest.
     if (config.recordLiveTicks && w.recTicks && w.recTicks.length) {
       try {
         const dir = path.join(config.dataDir, "live-ticks");
-        fs.mkdirSync(dir, { recursive: true });
+        const member = cohortMemberByStart.get(Number(w.windowStart));
+        const payloadRelative = member?.payload || path.join("payloads", `${slug}.json`);
+        const instrumentationRelative = member?.instrumentation
+          || path.join("instrumentation", `${slug}.instrumentation.json`);
+        const payloadFile = path.resolve(dir, payloadRelative);
+        const instrumentationFile = path.resolve(dir, instrumentationRelative);
+        if (!payloadFile.startsWith(`${path.resolve(dir)}${path.sep}`)
+          || !instrumentationFile.startsWith(`${path.resolve(dir)}${path.sep}`)) {
+          throw new Error("recorder manifest path escapes live-ticks root");
+        }
+        fs.mkdirSync(path.dirname(payloadFile), { recursive: true });
+        fs.mkdirSync(path.dirname(instrumentationFile), { recursive: true });
         const payload = { schema: 2, recorder: "shadow-execution-evidence-v2",
           slug, ws: w.windowStart, windowStart: w.windowStart, winSide,
           settlement: { outcome: winSide, recordedAtMs: Date.now() },
@@ -559,13 +582,20 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
           openPrice: w.openChainlink ?? null,
           decisions: (w.recDecisions || []).map((decision) => ({ ...decision })),
           fills: w.fills.map((fill) => ({ ...fill })), ticks: w.recTicks };
-        fs.writeFile(path.join(dir, `${slug}.json`), JSON.stringify(payload), () => {});
-        fs.readdir(dir, (e, files) => { if (e) return;
-          const epoch = (f) => +(f.replace(".json", "").split("-").pop()) || 0;   // sort by WINDOW EPOCH → correct across markets (btc/eth/…), not filename alpha
-          const js = files.filter((f) => f.endsWith(".json")).sort((a, b) => epoch(a) - epoch(b));
-          const keep = config.recordLiveTicksKeep || 50;
-          for (const f of js.slice(0, Math.max(0, js.length - keep))) fs.unlink(path.join(dir, f), () => {});
-        });
+        const instrumentation = buildRecorderInstrumentation(payload, payload.cfg?.params || {});
+        fs.writeFile(payloadFile, JSON.stringify(payload), () => {});
+        fs.writeFile(instrumentationFile, JSON.stringify(instrumentation), () => {});
+        for (const pruneDir of new Set([path.dirname(payloadFile), path.dirname(instrumentationFile)])) {
+          fs.readdir(pruneDir, (e, files) => { if (e) return;
+            const epoch = (file) => Number(file.match(/-(\d+)(?:\.instrumentation)?\.json$/)?.[1]) || 0;
+            const js = files.filter((file) => file.endsWith(".json"))
+              .sort((a, b) => epoch(a) - epoch(b));
+            const keep = config.recordLiveTicksKeep || 50;
+            for (const file of js.slice(0, Math.max(0, js.length - keep))) {
+              fs.unlink(path.join(pruneDir, file), () => {});
+            }
+          });
+        }
       } catch {}
     }
     // Settled windows never tick or trade again, and the diagnostic payload was
@@ -657,6 +687,11 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       && Number(obj.W3048_SPEC_VERSION) !== Number(requested.STRAT.W3048_SPEC_VERSION);
     const clean = Object.fromEntries(Object.entries(obj).filter(([key]) => allowed.has(key)
       && !(walletSpecMismatch && (key.startsWith("W3048_") || key === "LIMIT"))));
+    if (!Object.hasOwn(obj, "W3048_MAKER_EXECUTION_POLICY")
+      && Object.hasOwn(clean, "W3048_MAKER_FILL_ASSUMPTION")) {
+      clean.W3048_MAKER_EXECUTION_POLICY = normalizeMakerExecutionPolicy(
+        null, clean.W3048_MAKER_FILL_ASSUMPTION);
+    }
     const nextLiveParams = { ...(changed ? {} : liveParams), ...clean, STRATEGY: requested.NAME };
     const nextStrat = requested;
     const nextMerged = { ...nextStrat.STRAT, ...nextLiveParams,

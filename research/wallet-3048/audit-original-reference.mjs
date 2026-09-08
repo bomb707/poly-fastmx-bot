@@ -30,11 +30,14 @@ try {
   });
   if (run.status !== 0) throw new Error(run.stderr || `reference audit failed (${run.status})`);
   const report = JSON.parse(run.stdout);
+  const originalResult = { ...report.results[0],
+    name: "original_implicit_time_at_bid_maker" };
   process.stdout.write(`${JSON.stringify({ schema: 1, reference,
     manifest: path.relative(root, manifest), dataDir,
     diagnosticOnly: true,
     warning: "This reproduces the already-inspected reference cohort; it is not a final test.",
-    result: report.results[0],
+    executionWarning: "The original code predates explicit maker policies and credits implicit time-at-bid executions.",
+    result: originalResult,
   }, null, 2)}\n`);
 } finally {
   fs.rmSync(temporary, { recursive: true, force: true });

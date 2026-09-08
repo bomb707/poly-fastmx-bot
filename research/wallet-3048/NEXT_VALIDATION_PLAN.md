@@ -39,18 +39,22 @@ instrumentation fields, never PnL, winner, signal direction, or trading activity
 - exact shadow-versus-replay decisions, fills, inventory, fees, cost, and PnL.
 
 The completeness command and every excluded filename are published. Missing
-public trade/queue evidence does not exclude a window from the primary zero-maker
+public trade/queue evidence does not exclude a window from the primary strict-no-maker
 analysis; it makes the observed-flow scenario unavailable for that window.
 
 ## Frozen baseline
 
 - Simulation only. Automated real-money execution remains code-disabled.
 - Parent sizes remain fixed at 50 and 150 shares.
-- The primary execution result assigns zero maker fills without order-specific
-  evidence. Book-cross inference, observed-flow estimates, and optimistic touch
-  sensitivity remain separately labeled.
-- Observed public sell flow is only an estimate under an explicit
-  front-of-queue allocation and is consumed once. It is never called verified.
+- The primary `strict-no-maker` result assigns no resting executions. An
+  arrival-time taker partial may leave a reserved GTC remainder, but that
+  remainder can only cancel or expire in the primary study.
+- `book-cross-inference` credits an unverified resting execution when a later,
+  identified public depth event crosses through the resting price.
+- `observed-flow-estimate` requires identified, eligible public sell flow and an
+  explicit front-of-queue assumption. The flow is consumed once and the result
+  is never called verified.
+- `optimistic-touch` is a time-at-bid sensitivity, never an observed execution.
 - Fee, latency, arrival-book, liquidity conservation, FIFO reservation,
   expiry, cancellation-race, and final-cutoff rules must be frozen with the
   strategy before the final-test manifest is unsealed.
@@ -68,33 +72,86 @@ latencies. Dependence within windows is preserved in uncertainty estimates.
 Fill-purpose attribution is descriptive and cannot establish that removing a
 repair or hedge would improve profitability.
 
-The final-test filenames, outcomes, fills, PnL, aggregates, and plots remain
-unread and unreported until:
+Final-test payloads are routed under `sealed-final-test/`; outcome-free recorder
+quality metadata is routed under `instrumentation/`. Ordinary validation uses
+the protected final-test membership and payload root, not just the member's
+split string, and never opens a protected payload. Final-test filenames,
+outcomes, decisions, fills, PnL, aggregates, and plots remain unread and
+unreported until:
 
 1. strategy code and fixed 50/150 sizing are frozen by commit;
 2. execution and exclusion assumptions are frozen by commit;
 3. development and validation decisions are documented;
 4. the final-test checksum manifest is created without running strategy replay.
 
-Only then is one exact final command recorded and run. Any subsequent change
-invalidates that final result for confirmatory purposes.
+Only then are payload byte checksums recorded without parsing the payloads, and
+one exact final command is run. Any subsequent change invalidates that final
+result for confirmatory purposes.
 
 ## Review-only collection changes
 
 This correctness pass prepares recorder schema 2, depth event identities,
 source/receive clocks, full-precision quotes and spot values, full L2, decision
-and fill traces, opening references, settlement outcome, and 10,000-window local
+and fill traces, opening references, settlement outcome, outcome-free
+instrumentation files, separate sealed payload routing, and 10,000-window local
 retention. It does not restart PM2 or deploy. Identified public aggressor trades
 and private queue position are not currently collected; observed-flow validation
 therefore remains unavailable until a separately reviewed collector is added.
 
-Run completeness/parity diagnostics with:
+After the recorder changes are reviewed for deployment, predeclare the next UTC
+midnight and all 8,352 chronological members before collection:
+
+```bash
+ANCHOR="$(date -u -d 'tomorrow 00:00' +%FT%TZ)"
+npm run research:wallet3048:build-recorder-manifest -- \
+  --anchor "$ANCHOR" \
+  --output data/fastmx-live/recorder-cohort-manifest.json
+```
+
+Exact simulation-only recorder activation command (prepared, not run here):
+
+```bash
+EXECUTION_MODE=simulation RECORD_LIVE_TICKS=1 RECORD_LIVE_TICKS_KEEP=10000 \
+RECORDER_COHORT_MANIFEST=./data/fastmx-live/recorder-cohort-manifest.json \
+pm2 restart ecosystem.config.cjs --only poly-fastmx-simulation --update-env
+```
+
+After the first complete UTC burn-in day, run the full checklist without reading
+future protected final-test payloads:
 
 ```bash
 npm run research:wallet3048:validate-recorder -- \
-  data/fastmx-live/live-ticks \
-  data/reports/wallet3048-recorder-validation.json
+  --manifest data/fastmx-live/recorder-cohort-manifest.json \
+  --recorder-root data/fastmx-live/live-ticks \
+  --splits burn-in \
+  --output data/reports/wallet3048-burn-in.json
 ```
 
-This command labels output diagnostic and never summarizes sealed final-test
-performance.
+The checklist reports expected/recorded windows, missing or invalid clocks,
+decision-time staleness, sequence gaps, shadow/replay mismatches, ledger
+discrepancies, disk usage, and retention coverage. No window is dropped for PnL
+or trading activity. A material instrumentation defect requires a fix and a new
+complete burn-in before the cohort anchor is accepted.
+
+After strategy and execution assumptions are frozen, checksum the protected
+payload bytes without parsing them:
+
+```bash
+npm run research:wallet3048:seal-final-test -- \
+  --manifest data/fastmx-live/recorder-cohort-manifest.json \
+  --recorder-root data/fastmx-live/live-ticks \
+  --freeze-commit "$(git rev-parse HEAD)"
+```
+
+The only deliberate final-test evaluation command is:
+
+```bash
+npm run research:wallet3048:evaluate-final-test -- \
+  --manifest data/fastmx-live/recorder-cohort-manifest.json \
+  --recorder-root data/fastmx-live/live-ticks \
+  --output data/reports/wallet3048-final-test.json \
+  --confirm-freeze-commit "$(git rev-parse HEAD)" \
+  --confirm-unseal UNSEAL_FINAL_TEST
+```
+
+That final command is documented only; it was not run in this pass.

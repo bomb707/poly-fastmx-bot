@@ -3,7 +3,7 @@
 import { executionFee, fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
 import { walkVisibleAsks, consumeVisibleAsks, consumeVisibleBudget,
-  createExecutionEvidenceLedger, makerFillFromEvidence,
+  createExecutionEvidenceLedger, normalizeMakerExecutionPolicy, restingMakerExecution,
   takeReservationSlices } from "./fillsim.js";
 
 // NOTE (browser-safe): this module is dynamically imported by the dashboard and
@@ -45,6 +45,11 @@ export function simulateFills(d, params, diagnostics = null) {
   if (ticks.length < 2) return [];
   const strat = getStrategy((params || {}).STRATEGY);
   const P = { ...strat.STRAT, ...(params || {}) };
+  const makerExecutionPolicy = normalizeMakerExecutionPolicy(
+    Object.hasOwn(params || {}, "W3048_MAKER_EXECUTION_POLICY")
+      ? params.W3048_MAKER_EXECUTION_POLICY : null,
+    Object.hasOwn(params || {}, "W3048_MAKER_FILL_ASSUMPTION")
+      ? params.W3048_MAKER_FILL_ASSUMPTION : null);
   const staleMs = P.STALE_GAP_MS > 0 ? P.STALE_GAP_MS : STALE_GAP_MS;
   const openBz = d && d.openBinance != null ? d.openBinance : null;
   const openCl = d && d.openPrice != null ? d.openPrice : null;
@@ -127,9 +132,9 @@ export function simulateFills(d, params, diagnostics = null) {
       f.ts = windowStartMs != null ? windowStartMs + fillT * 1000 : fillT * 1000;
       f.requestedShares = requested;
       f.decisionExpectedPx = Number.isFinite(Number(source.effPx)) ? Number(source.effPx) : null;
-      f.shares = +match.shares.toFixed(4);
-      f.effPx = +match.avgPx.toFixed(4);
-      f.usdc = +match.cost.toFixed(4);
+      f.shares = Number(match.shares);
+      f.effPx = Number(match.avgPx);
+      f.usdc = Number(match.cost);
       f.fee = executionFee(match, !maker);
       f.levels = (match.levels || [{ price: match.avgPx, shares: match.shares }]).map((level) => ({
         price: Number(level.price), shares: Number(level.shares),
@@ -142,10 +147,12 @@ export function simulateFills(d, params, diagnostics = null) {
         f.fillEvidenceVerified = evidenceInfo?.verified === true;
         f.queueAssumption = evidenceInfo?.queueAssumption || null;
         f.evidenceIds = evidenceInfo?.evidenceIds || [];
+        f.makerExecutionPolicy = evidenceInfo?.executionPolicy || makerExecutionPolicy;
       }
       f.status = match.shares + 1e-9 < requested ? "partial" : "full";
       f.filledLate = fillT > p.decisionT + 1e-9;
       if (maker) { f.maker = true; f.taker = false; f.exec = "resting"; f.kind = "maker"; }
+      else { f.maker = false; f.taker = true; f.exec = "marketable"; f.kind = "taker"; }
       applyInventory(f);
       fills.push(f);
       return f;
@@ -165,37 +172,19 @@ export function simulateFills(d, params, diagnostics = null) {
         p.lastResolvedEventId = atBook.depthEventId;
         const dtMs = Math.max(0, (throughT - p.lastT) * 1000);
         p.lastT = throughT;
-        let match = null;
-        let evidenceInfo = null;
-        if (atBook.bestAsk != null && atBook.bestAsk < p.rec.limitPx - 1e-9) {
-          const crossed = consumeVisibleAsks(executionEvidence.poolFor(p.rec.side, atBook),
-            p.remaining, p.rec.limitPx);
-          // The order was already resting. A later sell that crosses it trades
-          // at the resting maker's price, not at a newly observed lower ask.
-          if (crossed.shares > 1e-9) match = { shares: crossed.shares,
-            cost: crossed.shares * p.rec.limitPx, avgPx: p.rec.limitPx,
-            levels: [{ price: p.rec.limitPx, shares: crossed.shares }] };
-          evidenceInfo = { evidenceType: "book-cross-inference", verified: false,
-            queueAssumption: "crossed-resting-price", evidenceIds: [atBook.depthEventId] };
-        } else if (atBook.bestBid != null && p.rec.limitPx >= atBook.bestBid - 1e-9) {
-          evidenceInfo = makerFillFromEvidence({ book: atBook, limit: p.rec.limitPx,
-            remaining: p.remaining, assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"),
-            queueAssumption: String(P.W3048_MAKER_QUEUE_ALLOCATION || "none"),
-            evidenceLedger: executionEvidence.makerFlow, evidenceScope: p.rec.side,
-            restingSinceMs: windowStartMs != null ? windowStartMs + p.dueT * 1000 : p.dueT * 1000,
-            throughMs: normalizeTimestamp(currentTick.ms) ?? (windowStartMs != null
-              ? windowStartMs + currentTick.t * 1000 : currentTick.t * 1000),
-            dtMs, touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
-            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
-            previouslyCredited: p.touchFilled, target: p.touchTarget });
-          p.touchFilled += evidenceInfo.shares;
-          if (evidenceInfo.shares > 1e-9) match = {
-            shares: Math.min(evidenceInfo.shares, p.remaining),
-            cost: Math.min(evidenceInfo.shares, p.remaining) * p.rec.limitPx,
-            avgPx: p.rec.limitPx,
-            levels: [{ price: p.rec.limitPx, shares: Math.min(evidenceInfo.shares, p.remaining) }],
-          };
-        }
+        const evaluated = restingMakerExecution({ policy: makerExecutionPolicy,
+          book: atBook, pool: executionEvidence.poolFor(p.rec.side, atBook),
+          limit: p.rec.limitPx, remaining: p.remaining,
+          queueAssumption: String(P.W3048_MAKER_QUEUE_ALLOCATION || "none"),
+          evidenceLedger: executionEvidence.makerFlow, evidenceScope: p.rec.side,
+          restingSinceMs: windowStartMs != null ? windowStartMs + p.dueT * 1000 : p.dueT * 1000,
+          throughMs: normalizeTimestamp(currentTick.ms) ?? (windowStartMs != null
+            ? windowStartMs + currentTick.t * 1000 : currentTick.t * 1000),
+          dtMs, touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
+          fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
+          previouslyCredited: p.touchFilled, target: p.touchTarget });
+        const match = evaluated.match, evidenceInfo = evaluated.evidence;
+        if (evidenceInfo.evidenceType === "optimistic-touch") p.touchFilled += evidenceInfo.shares;
         if (match?.shares > 1e-9) {
           p.remaining -= match.shares;
           emitMatch(p, match, throughT, true, evidenceInfo);

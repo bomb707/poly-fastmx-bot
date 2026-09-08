@@ -95,7 +95,8 @@ test("shadow books due and maker partial fills before the next decision", () => 
     W3048_BETA_CHAINLINK_DISTANCE: 0, W3048_BETA_CLOB: 0,
     W3048_BETA_TIME_CHAINLINK: 0, W3048_EDGE_BUFFER: 0,
     W3048_MIN_EXPECTED_EDGE_START: 0, W3048_MIN_EXPECTED_EDGE_END: 0,
-    W3048_LARGE_EDGE: 1, W3048_MAKER_FILL_ASSUMPTION: "zero" });
+    W3048_LARGE_EDGE: 1,
+    W3048_MAKER_EXECUTION_POLICY: "book-cross-inference" });
   const side = (ask, depth, extra = {}) => ({ bestAsk: ask, bestBid: +(ask - 0.01).toFixed(2),
     asks: [[ask, depth], [+(ask + 0.01).toFixed(2), depth], [+(ask + 0.02).toFixed(2), depth]],
     bids: [[+(ask - 0.01).toFixed(2), depth], [+(ask - 0.02).toFixed(2), depth],

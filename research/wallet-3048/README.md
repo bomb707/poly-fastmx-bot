@@ -32,14 +32,17 @@ npm run research:wallet3048:validate-capital -- data/wallet-3048 data/wallet-304
 npm run research:wallet3048:test
 npm run research:wallet3048:correctness-audit
 npm run research:wallet3048:correctness-audit:original
-npm run research:wallet3048:validate-recorder -- data/fastmx-live/live-ticks data/reports/wallet3048-recorder-validation.json
+npm run research:wallet3048:validate-recorder -- --manifest data/fastmx-live/recorder-cohort-manifest.json --recorder-root data/fastmx-live/live-ticks --splits burn-in --output data/reports/wallet3048-burn-in.json
 ```
 
 The correctness commands are diagnostic. `correctness-audit:original` extracts
 the frozen reference commit into a temporary directory, verifies every cohort
 checksum, and runs the same audit driver against that code. The recorder
-validator refuses to call an old/incomplete file exact-parity-ready and never
-reports sealed final-test performance.
+validator accepts only explicit manifest members, refuses to call an
+old/incomplete file exact-parity-ready, and aggregates only outcome-free
+instrumentation for structurally protected final-test members. The separately
+guarded `research:wallet3048:evaluate-final-test` command is the only command
+that can open their payloads.
 
 One of `BAPI_V4_KEY`, `BAPI_V3_KEY`, `BAPI_KEY`, or `BACKTEST_API_KEY` is required for v4 collection.
 

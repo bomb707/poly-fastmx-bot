@@ -6,6 +6,8 @@ Original comparison commit: `e654426abb9c779ee5dc764df8e805c983f91485`
 
 Focused correctness-pass base: `166f71c1591a612782907b719d6b18d195e32751`
 
+Validation-readiness review base: `4aa5707eae3a7fba426c88ce46437a09b5d87aa7`
+
 Repair specification: wallet3048 v3. Real-money execution remains disabled in
 code. No credentials or execution-mode controls were changed.
 
@@ -53,7 +55,8 @@ code. No credentials or execution-mode controls were changed.
   Chainlink, UP depth, and DOWN depth have separate source-time gates.
 - Recorder schema 2 is prepared to preserve every evaluation, full-precision
   values, full L2, depth identity, source/receive timestamps, decisions, fills,
-  opening references, and settlement outcome. Existing files predate the schema.
+  opening references, and settlement outcome. Available pre-anchor files remain
+  incomplete and are reported separately in `VALIDATION_READINESS_2026-09-08.md`.
 - Replay normalizes epoch milliseconds, epoch seconds, and relative milliseconds
   explicitly. Missing causal source times fail closed by default.
 - Due executions are processed before decisions in both engines. An execution
@@ -63,9 +66,9 @@ code. No credentials or execution-mode controls were changed.
   MongoDB idempotency now uses that fill identity when available.
 - All phases and orders consume a shared pool keyed by identified external depth
   event. Repeated processing or unrelated callbacks do not replenish it.
-- Default unverified maker credit is zero. `touch` remains available only as an
-  explicitly optimistic sensitivity assumption. Explicit observed sell flow can
-  produce a maker fill.
+- The default `strict-no-maker` policy credits no resting execution. Separate
+  policies cover unverified book-cross inference, identified observed-flow
+  estimates under an explicit queue assumption, and optimistic touch sensitivity.
 - Risk is checked over independent pending-order fill subsets with and without
   the proposed order. Existing violations can only admit bounded repairs that do
   not worsen lean or worst-case payout.
@@ -123,18 +126,23 @@ trade/queue events. It is suitable only for sensitivity analysis.
 | Version/assumption | All PnL | Fees | Turnover | Drawdown | Validation PnL | Holdout PnL |
 |---|---:|---:|---:|---:|---:|---:|
 | A. Original `e654426`, implicit time-at-bid maker | -$42.09 | $110.42 | $7,209.47 | $77.57 | -$13.28 | -$31.26 |
-| C. Corrected strict causal, zero unverified maker | $0.00 | $0.00 | $0.00 | $0.00 | $0.00 | $0.00 |
-| D/E. Corrected, timestamps assumed, zero unverified maker | -$233.49 | $121.91 | $4,721.77 | $295.38 | -$95.49 | -$62.51 |
-| D/E. Corrected, timestamps assumed, optimistic touch | -$17.16 | $112.97 | $7,353.71 | $210.44 | -$77.16 | +$147.55 |
+| C. Corrected strict causal, strict no-maker | $0.00 | $0.00 | $0.00 | $0.00 | $0.00 | $0.00 |
+| D/E. Corrected, timestamps assumed, strict no-maker | -$248.67 | $120.95 | $4,613.80 | $307.31 | -$95.49 | -$55.79 |
+| D/E. Historical `zero` setting, accurately relabeled book-cross inference | -$233.49 | $121.91 | $4,721.77 | $295.38 | -$95.49 | -$62.51 |
+| D/E. Corrected, timestamps assumed, optimistic touch | -$17.17 | $112.97 | $7,353.72 | $210.45 | -$77.16 | +$147.55 |
 
-The strict result is no-trade, not break-even evidence: the required source times
-are absent. The large shift between zero-maker and optimistic-touch assumptions
-shows that unverified execution dominates this tiny cohort. Even the optimistic
-result remains negative and is not evidence of achievable profitability.
+The strict-causal result is no-trade, not break-even evidence: the required source
+times are absent. At assumed timestamps, strict no-maker produces 157 taker-only
+fill events and no resting fills. The former `zero-maker` label was inaccurate:
+that implementation credited seven non-verified book-cross-inference fills.
+Observed-flow is unavailable because the cohort has no identified public
+aggressor events or queue data. Even the optimistic result remains negative and
+is not evidence of achievable profitability.
 
 ### Corrected-policy diagnostics
 
-For the timestamp-assumed, zero-unverified-maker run, actual arrival cost was
+For the timestamp-assumed book-cross-inference run formerly labeled
+zero-maker, actual arrival cost was
 `$4,721.77`, versus `$4,815.59` estimated at decision time. The `$93.82` price
 improvement did not overcome settlement selection and fees. Immediate fill
 contribution was `-$169.77`; the seven resting fill events contributed `-$63.72`.
@@ -151,16 +159,16 @@ The 168 filled parents recorded 298 independent pending-fill scenario checks.
 No emitted fixed-size parent was outside the ordinary configured scenario limits.
 This count covers emitted orders, not candidates rejected before emission.
 
-| Zero-maker sensitivity | All PnL | Validation | Holdout |
+| Strict no-maker latency diagnostic | All PnL | Validation | Holdout |
 |---|---:|---:|---:|
-| Fixed 50/150, 520 ms | -$233.49 | -$95.49 | -$62.51 |
-| Incremental 5-150, 520 ms | -$523.20 | -$99.12 | -$75.69 |
-| Evaluate both sides while flat | -$345.73 | -$135.07 | -$69.88 |
-| Fixed, 0 ms latency | +$621.30 | -$56.53 | +$184.06 |
-| Fixed, 1,000 ms latency | -$319.71 | -$112.77 | -$71.65 |
+| Fixed 50/150, 520 ms | -$248.67 | -$95.49 | -$55.79 |
+| Fixed 50/150, 0 ms | +$588.06 | -$47.95 | +$220.14 |
+| Fixed 50/150, 1,000 ms | -$309.45 | -$107.96 | -$66.55 |
 
-These are diagnostic ablations, not tuned alternatives. The large latency swing
-is further evidence that the cohort cannot support a robust profitability claim.
+These are diagnostic latency checks, not tuned alternatives. Incremental sizing
+and alternative flat-side selection were not rerun in this readiness pass. The
+large latency swing is further evidence that the cohort cannot support a robust
+profitability claim.
 
 On filled orders only, the heuristic score's Brier value was `0.1715`, versus
 `0.1718` for the CLOB market-probability feature. That tiny descriptive difference
@@ -196,7 +204,7 @@ and a final holdout that does not influence implementation or tuning.
 3. Follow the chronology predeclared in `NEXT_VALIDATION_PLAN.md` before fitting.
 4. Compare the fixed market-logit baseline with a small training-only regularized
    residual model and report calibration plus net execution economics.
-5. Run zero-maker, observed-flow, and explicitly optimistic execution scenarios at
+5. Run strict-no-maker, book-cross inference, observed-flow, and explicitly optimistic execution scenarios at
    multiple latencies before considering any policy change.
 
 Run `npm run research:wallet3048:correctness-audit` for the full per-window,
@@ -207,5 +215,7 @@ verified before any replay begins.
 Run `npm run research:wallet3048:correctness-audit:original` to extract the
 original comparison commit into a temporary directory and reproduce its reference
 result with the same checksum-verified files. Run
-`npm run research:wallet3048:validate-recorder -- data/fastmx-live/live-ticks`
-for per-window completeness, freshness, reconciliation, and replay parity.
+`npm run research:wallet3048:validate-recorder -- --manifest <manifest> --recorder-root <live-ticks-root>`
+for explicitly declared development/validation completeness, freshness,
+reconciliation, and replay parity. Protected final-test payloads require the
+separate guarded command documented in `NEXT_VALIDATION_PLAN.md`.

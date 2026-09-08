@@ -59,10 +59,15 @@ export function recordDepth(state, tokenId, asks, bids, timestamp) {
   const metadata = timestamp && typeof timestamp === "object" ? timestamp : {
     sourceTs: timestamp, recvTs: timestamp,
   };
-  const sourceTs = Number.isFinite(Number(metadata.sourceTs)) ? Number(metadata.sourceTs) : null;
+  const sourceTs = metadata.sourceTs !== null && metadata.sourceTs !== undefined
+    && !(typeof metadata.sourceTs === "string" && metadata.sourceTs.trim() === "")
+    && Number.isFinite(Number(metadata.sourceTs)) && Number(metadata.sourceTs) > 0
+    ? Number(metadata.sourceTs) : null;
   const recvTs = Number.isFinite(Number(metadata.recvTs)) ? Number(metadata.recvTs) : Date.now();
   const eventId = String(metadata.eventId ?? `${tokenId}:${++state.depthEventSeq}`);
-  const record = { eventId, ts: recvTs, sourceTs, recvTs, asks, bids };
+  const record = { eventId, ts: recvTs, sourceTs, recvTs,
+    valid: metadata.valid !== false, invalidLevelCount: Number(metadata.invalidLevelCount) || 0,
+    asks, bids };
   state.depthByToken.set(tokenId, record);
   let buf = state.depthHistory.get(tokenId);
   if (!buf) { buf = []; state.depthHistory.set(tokenId, buf); }

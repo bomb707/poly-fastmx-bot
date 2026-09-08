@@ -425,7 +425,8 @@ test("backtest gives no time-at-bid maker credit unless optimistic touch mode is
   assert.equal(conservative.reduce((sum, fill) => sum + fill.shares, 0), 10);
   assert.equal(conservative.length, 1);
 
-  const optimistic = simulateFills(input, { ...base, W3048_MAKER_FILL_ASSUMPTION: "touch" });
+  const optimistic = simulateFills(input, { ...base,
+    W3048_MAKER_EXECUTION_POLICY: "optimistic-touch" });
   assert.equal(optimistic.reduce((sum, fill) => sum + fill.shares, 0), 50);
   assert.equal(optimistic.length, 2);
   assert.equal(optimistic[0].status, "partial");
@@ -444,7 +445,7 @@ test("a resting execution implied by the update wins a same-update cancel race",
     ticks: [historical(4.5, 0.4, 100, 100), historical(5, 0.4, 10, 101),
       historical(6, 0.39, 100, 99)] }, {
     ...signalP, W3048_COOLDOWN_MS: 10_000, W3048_CROSS_HEADROOM_TICKS: 0,
-    W3048_MAKER_FILL_ASSUMPTION: "zero",
+    W3048_MAKER_EXECUTION_POLICY: "book-cross-inference",
   });
   assert.equal(fills.reduce((sum, fill) => sum + fill.shares, 0), 50);
   assert.equal(fills.at(-1).maker, true);
@@ -465,7 +466,8 @@ test("an unchanged depth event cannot replenish liquidity between replay phases"
       historical(6, 0.39, 20, 102, "u2"), historical(6.1, 0.39, 20, 102, "u2")] }, {
     ...signalP, W3048_REQUIRE_SOURCE_TIMESTAMPS: true, LATENCY_MS: 0,
     W3048_COOLDOWN_MS: 0, W3048_SAME_SIDE_RETRY_MS: 0,
-    W3048_CROSS_HEADROOM_TICKS: 0, W3048_MAKER_FILL_ASSUMPTION: "zero",
+    W3048_CROSS_HEADROOM_TICKS: 0,
+    W3048_MAKER_EXECUTION_POLICY: "book-cross-inference",
   });
   const eventShares = fills.filter((fill) => fill.tInto >= 6 && fill.tInto <= 6.1)
     .reduce((sum, fill) => sum + fill.shares, 0);
@@ -479,7 +481,8 @@ test("resting fills after timeout or final cutoff are prohibited", () => {
       dnAsk: down.bestAsk, dnBid: down.bestBid, up, down, bz, cl: 100 };
   };
   const common = { ...signalP, W3048_COOLDOWN_MS: 10_000,
-    W3048_CROSS_HEADROOM_TICKS: 0, W3048_MAKER_FILL_ASSUMPTION: "zero" };
+    W3048_CROSS_HEADROOM_TICKS: 0,
+    W3048_MAKER_EXECUTION_POLICY: "book-cross-inference" };
   const expired = simulateFills({ openBinance: 100, openPrice: 100, windowStart: 0,
     ticks: [historical(4.5, 0.4, 100, 100), historical(5, 0.4, 10, 101),
       historical(6, 0.39, 100, 101)] }, { ...common, W3048_REST_TIMEOUT_MS: 500 });

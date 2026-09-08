@@ -2,7 +2,8 @@
 // Run: node src/lib/fillsim.test.mjs
 import { makerTouchFill, latencyFillPrice, futureAsks, stampLatencyDisplay, walkVisibleAsks,
   walkVisibleBudget, createAskPool, consumeVisibleAsks, consumeVisibleBudget,
-  makerFillFromEvidence, createExecutionEvidenceLedger, takeReservationSlices } from "./fillsim.js";
+  makerFillFromEvidence, createExecutionEvidenceLedger, takeReservationSlices,
+  normalizeMakerExecutionPolicy, restingMakerExecution } from "./fillsim.js";
 let pass = 0, fail = 0; const ok = (n, c) => { c ? pass++ : fail++; console.log((c ? "✓" : "✗ FAIL") + " " + n); };
 
 // makerTouchFill — mirrors engine/strategy.js maker-touch block
@@ -54,6 +55,19 @@ const makerSecond = makerFillFromEvidence({ book: evidenceBook, limit: 0.5, rema
 ok("identified eligible maker flow is consumed once across orders", makerFirst.shares === 6
   && makerFirst.evidenceType === "observed-flow-estimate" && makerFirst.verified === false
   && makerSecond.shares === 0);
+ok("legacy zero is accurately identified as book-cross inference",
+  normalizeMakerExecutionPolicy(null, "zero") === "book-cross-inference");
+const strictMaker = restingMakerExecution({ policy: "strict-no-maker",
+  book: { bestAsk: 0.4, bestBid: 0.39, depthEventId: "strict-1" },
+  pool: createAskPool({ asks: [[0.4, 10]] }), limit: 0.5, remaining: 10 });
+ok("strict no-maker rejects a public-book cross", strictMaker.match === null
+  && strictMaker.evidence.executionPolicy === "strict-no-maker");
+const inferredMaker = restingMakerExecution({ policy: "book-cross-inference",
+  book: { bestAsk: 0.4, bestBid: 0.39, depthEventId: "cross-1" },
+  pool: createAskPool({ asks: [[0.4, 10]] }), limit: 0.5, remaining: 10 });
+ok("book-cross inference remains explicitly unverified", inferredMaker.match.shares === 10
+  && inferredMaker.evidence.evidenceType === "book-cross-inference"
+  && inferredMaker.evidence.verified === false);
 
 const reservation = [{ lotId: "a", shares: 5 }, { lotId: "b", shares: 5 }];
 const takenReservation = takeReservationSlices(reservation, 7);

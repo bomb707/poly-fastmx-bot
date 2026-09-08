@@ -35,6 +35,7 @@ module.exports = {
       MONGO_DB: "poly_fastmx",
       RECORD_LIVE_TICKS: "1",
       RECORD_LIVE_TICKS_KEEP: "10000",
+      RECORDER_COHORT_MANIFEST: "./data/fastmx-live/recorder-cohort-manifest.json",
       VERBOSE_LOG: "1",
     },
   }],

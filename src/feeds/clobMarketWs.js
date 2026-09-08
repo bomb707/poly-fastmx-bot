@@ -44,9 +44,11 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
       if (!id) return;
       const snapshot = depthBook(id).snapshot(12);
       if (!snapshot.synchronized) return;
-      const depth = recordDepth(state, id, snapshot.asks, snapshot.bids, { sourceTs, recvTs });
-      const bestBid = snapshot.bids[0]?.[0] ?? null;
-      const bestAsk = snapshot.asks[0]?.[0] ?? null;
+      const depth = recordDepth(state, id, snapshot.valid ? snapshot.asks : null,
+        snapshot.valid ? snapshot.bids : null, { sourceTs, recvTs,
+          valid: snapshot.valid, invalidLevelCount: snapshot.invalidLevelCount });
+      const bestBid = snapshot.valid ? snapshot.bids[0]?.[0] ?? null : null;
+      const bestAsk = snapshot.valid ? snapshot.asks[0]?.[0] ?? null : null;
       state.bbaByToken.set(id, { bestBid, bestAsk, sourceTs, recvTs,
         depthEventId: depth.eventId });
       recordBook(state, id, bestBid, bestAsk, recvTs);
@@ -92,19 +94,32 @@ export function startClobMarketFeed(state, getAssetIds, onBook) {
         if (m?.event_type === "book") {
           const id = String(m.asset_id ?? "");
           if (!id) continue;
-          depthBook(id).replace({ bids: m.bids, asks: m.asks });
+          const book = depthBook(id);
+          book.replace({ bids: m.bids, asks: m.asks });
           const recvTs = Date.now();
           publishDepth(id, sourceTimeMs(m), recvTs);
+          if (!book.valid) {
+            console.warn("[clob] invalid depth snapshot; reconnecting for a clean snapshot");
+            try { ws?.terminate(); } catch { try { ws?.close(); } catch {} }
+          }
           continue;
         }
         if (m?.event_type === "price_change" && Array.isArray(m.price_changes)) {
           const changed = new Set();
+          let invalidDepth = false;
           for (const change of m.price_changes) {
             const id = String(change?.asset_id ?? "");
-            if (id && depthBook(id).apply(change)) changed.add(id);
+            if (!id) continue;
+            const book = depthBook(id);
+            if (book.apply(change) || book.lastApplyInvalid) changed.add(id);
+            if (book.lastApplyInvalid) invalidDepth = true;
           }
           const recvTs = Date.now(), sourceTs = sourceTimeMs(m);
           for (const id of changed) publishDepth(id, sourceTs, recvTs);
+          if (invalidDepth) {
+            console.warn("[clob] invalid depth delta; reconnecting for a clean snapshot");
+            try { ws?.terminate(); } catch { try { ws?.close(); } catch {} }
+          }
           continue;
         }
         // A tick-size change does not invalidate the current aggregated book.
