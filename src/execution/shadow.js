@@ -3,10 +3,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "../config/config.js";
-import { fillFee, isFeeFill } from "../../engine/fees.js";
+import { executionFee, fillFee, isFeeFill } from "../../engine/fees.js";
 import { DEFAULT_STRATEGY, getStrategy } from "../../engine/strategies/index.js";
 import { applyMergeToLedger } from "../../engine/mergesim.js";   // merge-sim — apply a merge record to the live ledger
-import { makerTouchFill, walkVisibleAsks, walkVisibleBudget } from "../../engine/fillsim.js";
+import { createAskPool, consumeVisibleAsks, consumeVisibleBudget,
+  makerFillFromEvidence } from "../../engine/fillsim.js";
 import { STAGES } from "../lib/orderstatus.js";
 import { isRunning } from "./botState.js";
 import { createSessionCircuitBreaker } from "./sessionCircuitBreaker.js";
@@ -52,7 +53,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     if (w.hydrated || w.fills.length || w.seq > 0) return w;
     const seenFills = new Set();
     for (const rec of [...fills].sort((a, b) => (+a.tInto || 0) - (+b.tInto || 0))) {
-      const key = `${rec.oid ?? ""}:${rec.leg ?? ""}:${rec.tInto ?? ""}:${rec.side ?? ""}`;
+      const key = rec.fillId || `${rec.oid ?? ""}:${rec.leg ?? ""}:${rec.tInto ?? ""}:${rec.side ?? ""}:${rec.shares ?? ""}:${rec.usdc ?? ""}:${rec.maker === true}`;
       if (seenFills.has(key)) continue;
       seenFills.add(key);
       if (rec.leg === "merge") applyMergeToLedger(w, rec);
@@ -61,7 +62,8 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         if (rec.side === "Up") { w.upShares += shares; w.upCost += usdc; }
         else if (rec.side === "Down") { w.downShares += shares; w.downCost += usdc; }
         w.cost += usdc;
-        w.fee += fillFee(rec.effPx, shares, isFeeFill(rec));
+        w.fee += Number.isFinite(Number(rec.fee)) ? Number(rec.fee)
+          : fillFee(rec.effPx, shares, isFeeFill(rec));
       }
       w.fills.push(rec);
       w.seq = Math.max(w.seq, +rec.oid || 0);
@@ -92,7 +94,9 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
 
   // Book a taker FILL (record from stepMomTaker) → update aggregate position + emit a circle + persist.
   function bookFill(w, rec) {
-    const fee = fillFee(rec.effPx, rec.shares, isFeeFill(rec));
+    const fee = Number.isFinite(Number(rec.fee)) ? Number(rec.fee)
+      : fillFee(rec.effPx, rec.shares, isFeeFill(rec));
+    rec.fee = fee;
     // snapshot BEFORE this fill (for the property menu's before→after view)
     const posBefore = { upShares: w.upShares, downShares: w.downShares, upCost: w.upCost, downCost: w.downCost, totalCost: w.cost,
                         ifUpWins: w.upShares - w.cost - w.fee, ifDownWins: w.downShares - w.cost - w.fee };
@@ -140,6 +144,7 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     const P = mergedP;
     return {
       strategy: curStrat.NAME,
+      modelProvenance: curStrat.MODEL_PROVENANCE || null,
       latencyMs: P.LATENCY_MS || 0,
       baseOrderShares: P.W3048_SMALL_SIZE,
       largeOrderShares: P.W3048_LARGE_SIZE,
@@ -157,9 +162,116 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
     };
   }
 
+  function resolvePending(w, { strategyTick, up, down, nowMs, tInto, bzPrice,
+    bzGap, clPrice, clGap, openChainlink, P, pools }) {
+    if (!w.pendingFills?.length) return;
+    const keep = [];
+    const immutableFill = (p, match, maker) => {
+      const intent = p.intent || p.rec;
+      const fill = { ...intent, signal: intent.signal ? { ...intent.signal } : undefined,
+        fillId: `${intent.oid}:${++p.fillSeq}`,
+        decidedT: intent.tInto, placedT: intent.tInto,
+        tInto: maker ? tInto : p.dueTInto,
+        requestedShares: p.originalRequested,
+        decisionExpectedPx: Number.isFinite(Number(intent.effPx)) ? Number(intent.effPx) : null,
+        shares: +match.shares.toFixed(4), effPx: +match.avgPx.toFixed(4), usdc: +match.cost.toFixed(4),
+        fee: executionFee(match, !maker),
+        status: match.shares + 1e-9 < p.originalRequested ? "partial" : "full",
+        filledLate: true, maker, taker: !maker,
+        exec: maker ? "resting" : "marketable", kind: maker ? "maker" : "taker", ts: nowMs };
+      if (bzPrice != null) {
+        fill.bz = bzPrice;
+        if (bzGap != null) { fill.bzGap = bzGap; fill.bzGapPct = w.openBinance ? bzGap / w.openBinance * 100 : null; }
+      }
+      if (clPrice != null) {
+        fill.cl = clPrice;
+        if (clGap != null) { fill.clGap = clGap; fill.clGapPct = openChainlink ? clGap / openChainlink * 100 : null; }
+      }
+      bookFill(w, fill);
+      return fill;
+    };
+
+    for (const p of w.pendingFills) {
+      const intent = p.intent || p.rec;
+      if (p.phase === "resting") {
+        if (!(p.remaining > 1e-9)) continue;
+        if (p.lastResolvedMs === nowMs) { keep.push(p); continue; }
+        p.lastResolvedMs = nowMs;
+        const book = intent.side === "Up" ? up : down;
+        const pool = pools[intent.side];
+        const dtMs = Math.max(0, nowMs - p.lastMs);
+        p.lastMs = nowMs;
+        let match = null;
+        if (book?.bestAsk != null && book.bestAsk < intent.limitPx - 1e-9) {
+          const crossed = consumeVisibleAsks(pool, p.remaining, intent.limitPx);
+          if (crossed.shares > 1e-9) match = { shares: crossed.shares,
+            cost: crossed.shares * intent.limitPx, avgPx: intent.limitPx };
+        } else if (book?.bestBid != null && intent.limitPx >= book.bestBid - 1e-9) {
+          const delta = makerFillFromEvidence({ book, limit: intent.limitPx, remaining: p.remaining,
+            assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"), dtMs,
+            touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
+            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
+            previouslyCredited: p.touchFilled, target: p.touchTarget });
+          p.touchFilled += delta;
+          if (delta > 1e-9) match = { shares: delta, cost: delta * intent.limitPx, avgPx: intent.limitPx };
+        }
+        if (match) {
+          p.remaining -= match.shares;
+          immutableFill(p, match, true);
+        }
+        if (!(p.remaining > 1e-9)) continue;
+        const cancel = curStrat.shouldCancelResting?.(w, intent, strategyTick, P, nowMs);
+        if (cancel?.cancel || nowMs > p.expiresMs) {
+          try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED,
+            key: `${w.windowStart}:${intent.oid}`, slug: w.slug, ws: w.windowStart,
+            oid: intent.oid, side: intent.side, leg: intent.leg,
+            note: cancel?.cancel ? `simulated GTC canceled: ${cancel.reason}`
+              : "simulated GTC remainder canceled after timeout", ts: nowMs }); } catch {}
+          continue;
+        }
+        keep.push(p);
+        continue;
+      }
+
+      if (nowMs < p.dueMs) {
+        p.upBook = up;
+        p.downBook = down;
+        keep.push(p);
+        continue;
+      }
+      const book = intent.side === "Up" ? p.upBook : p.downBook;
+      const fixedUsd = intent.amountMode === "usd"
+        || (intent.budgetUsd != null && Number.isFinite(+intent.budgetUsd));
+      const requestedShares = intent.minimumShares ?? intent.shares;
+      const requestedBudgetUsd = fixedUsd ? (+intent.budgetUsd || +intent.usdc || 0) : null;
+      const match = fixedUsd
+        ? consumeVisibleBudget(pools[intent.side], requestedBudgetUsd, intent.limitPx)
+        : consumeVisibleAsks(pools[intent.side], requestedShares, intent.limitPx);
+      if (match.shares > 1e-9) immutableFill(p, match, false);
+      else {
+        try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED,
+          key: `${w.windowStart}:${intent.oid}`, slug: w.slug, ws: w.windowStart,
+          oid: intent.oid, side: intent.side, leg: intent.leg,
+          note: "no observed L2 liquidity at simulated arrival within the signed cap", ts: nowMs }); } catch {}
+      }
+      const remainder = fixedUsd ? 0 : Math.max(0, requestedShares - match.shares);
+      if (String(intent.orderType || "").toUpperCase() === "GTC" && remainder > 1e-9) {
+        p.phase = "resting";
+        p.remaining = remainder;
+        p.touchTarget = remainder;
+        p.touchFilled = 0;
+        p.lastMs = p.dueMs;
+        p.expiresMs = p.dueMs + Math.max(0, Number(intent.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0));
+        keep.push(p);
+      }
+    }
+    w.pendingFills = keep;
+  }
+
   // Called every UI sample tick with the live best bid/ask of the CURRENT window.
   function tick({ slug, windowStart, openBinance,
-    openChainlink, tInto, up, down, bzPrice, binanceAtMs, clPrice, nowMs }) {
+    openChainlink, tInto, up, down, bzPrice, binanceAtMs, binanceReceivedAtMs,
+    clPrice, chainlinkAtMs, chainlinkReceivedAtMs, nowMs }) {
     if (!isRunning()) return;   // bot is STOPPED → no strategy step (no shadow entries, no live orders)
     const w = getW(slug, windowStart, openBinance);
     if (w.settled || !up || !down) return;
@@ -189,19 +301,35 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
       const recTick = { t: +tInto.toFixed(2),
         ua: r2(up.bestAsk), ub: r2(up.bestBid), da: r2(down.bestAsk), db: r2(down.bestBid),
         cl: clPrice != null ? +clPrice.toFixed(2) : null,
-        bz: bzPrice != null ? +bzPrice.toFixed(2) : null };
+        bz: bzPrice != null ? +bzPrice.toFixed(2) : null,
+        bzAtMs: binanceAtMs ?? null, bzReceivedAtMs: binanceReceivedAtMs ?? null,
+        clAtMs: chainlinkAtMs ?? null, clReceivedAtMs: chainlinkReceivedAtMs ?? null,
+        upDepthAtMs: up.depthTs ?? null, downDepthAtMs: down.depthTs ?? null,
+        up: { bestAsk: r2(up.bestAsk), bestBid: r2(up.bestBid),
+          asks: (up.asks || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
+          bids: (up.bids || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
+          depthKnown: Array.isArray(up.asks) && Array.isArray(up.bids), depthTs: up.depthTs ?? null },
+        down: { bestAsk: r2(down.bestAsk), bestBid: r2(down.bestBid),
+          asks: (down.asks || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
+          bids: (down.bids || []).map((row) => Array.isArray(row) ? [...row] : { ...row }),
+          depthKnown: Array.isArray(down.asks) && Array.isArray(down.bids), depthTs: down.depthTs ?? null } };
       const recTicks = w.recTicks = w.recTicks || [], previous = recTicks.at(-1);
       // The diagnostic series records values, not redundant depth-event
       // heartbeats. Preserve every transition plus a one-second coverage mark.
       if (!previous || previous.ua !== recTick.ua || previous.ub !== recTick.ub
         || previous.da !== recTick.da || previous.db !== recTick.db
         || previous.cl !== recTick.cl || previous.bz !== recTick.bz
+        || previous.bzAtMs !== recTick.bzAtMs || previous.clAtMs !== recTick.clAtMs
+        || previous.upDepthAtMs !== recTick.upDepthAtMs || previous.downDepthAtMs !== recTick.downDepthAtMs
         || recTick.t - previous.t >= 1) recTicks.push(recTick);
     }
     const clGapPct = (clGap != null && openChainlink) ? (clGap / openChainlink) * 100 : null;
     const strategyTick = { t: tInto, up, down, bzPrice, clPrice, openBinance: w.openBinance,
-      binanceAtMs,
+      binanceAtMs, chainlinkAtMs,
       openChainlink, bzGap, bzGapPct, clGap, clGapPct };
+    const pools = { Up: createAskPool(up), Down: createAskPool(down) };
+    resolvePending(w, { strategyTick, up, down, nowMs, tInto, bzPrice, bzGap,
+      clPrice, clGap, openChainlink, P, pools });
     const got = curStrat.step(w, strategyTick, P, dtMs, nowMs);
     // Per-tick cadence and gate diagnostics. Guarded so it has no hot-path cost
     // when verbose logging is disabled.
@@ -268,141 +396,17 @@ export function createShadow(onEvent = () => {}, uiActive = () => true) {
         reason: rec.reason, tInto: rec.tInto, reqShares: rec.shares, decPx: rec.effPx,
         limitPx: rec.limitPx, budgetUsd: rec.budgetUsd ?? null,
         mode: (config.executionMode === "live" ? "live" : "sim"), simLatencyMs: (P.LATENCY_MS || 0), ts: nowMs }); } catch {} }
-      if (rec.exec === "marketable") (w.pendingFills = w.pendingFills || []).push(
-        { rec, dueMs: nowMs + simLat, dueTInto: rec.tInto + simLat / 1000, upA: up.bestAsk, dnA: down.bestAsk,
-          upBook: up, dnBook: down, decPx0: rec.effPx,
-          template: { ...rec, signal: rec.signal ? { ...rec.signal } : undefined } });  // snapshot decision book + decision px, track fwd
+      if (rec.exec === "marketable") {
+        const intent = Object.freeze({ ...rec, signal: rec.signal ? { ...rec.signal } : undefined });
+        (w.pendingFills = w.pendingFills || []).push({ rec: intent, intent,
+          originalRequested: rec.minimumShares ?? rec.shares, fillSeq: 0,
+          dueMs: nowMs + simLat, dueTInto: rec.tInto + simLat / 1000,
+          upBook: up, downBook: down, decPx0: rec.effPx });
+      }
       else bookFill(w, rec);
     }
-    // resolve deferred fills now due → fill at the CURRENT (delayed) ask, capped at the order's limit.
-    if (w.pendingFills && w.pendingFills.length) {
-      const keep = [];
-      for (const p of w.pendingFills) {
-        if (p.phase === "resting") {
-          const r = p.rec;
-          const flushMakerAccrual = () => {
-            if (!(p.makerShares > 1e-9)) return;
-            const out = { ...p.template, signal: p.template.signal ? { ...p.template.signal } : undefined,
-              decidedT: p.template.tInto, placedT: p.template.tInto,
-              tInto: p.makerLastTInto ?? tInto,
-              requestedShares: p.makerStartRemaining, shares: +p.makerShares.toFixed(4),
-              effPx: +(p.makerCost / p.makerShares).toFixed(4), usdc: +p.makerCost.toFixed(4),
-              status: p.remaining > 1e-9 ? "partial" : "full", filledLate: true,
-              maker: true, taker: false, exec: "resting", kind: "maker", ts: p.makerLastMs ?? nowMs };
-            bookFill(w, out);
-            p.makerShares = 0;
-            p.makerCost = 0;
-          };
-          const cancel = curStrat.shouldCancelResting?.(w, r, strategyTick, P, nowMs);
-          if (cancel?.cancel) {
-            r.cancelReason = cancel.reason;
-            r.cancelCap = cancel.currentCap ?? null;
-            flushMakerAccrual();
-            try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
-              slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
-              note: `simulated GTC canceled: ${cancel.reason}${cancel.currentCap == null ? "" : ` (cap ${cancel.currentCap})`}`,
-              ts: nowMs }); } catch {}
-            continue;
-          }
-          if (nowMs > p.expiresMs || !(p.remaining > 1e-9)) {
-            flushMakerAccrual();
-            try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
-              slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
-              note: "simulated GTC remainder canceled/repriced after timeout", ts: nowMs }); } catch {}
-            continue;
-          }
-          const arrivalBook = r.side === "Up" ? up : down;
-          const askNow = arrivalBook?.bestAsk;
-          let fill = null;
-          if (askNow != null && askNow < r.limitPx - 1e-9) {
-            const crossed = walkVisibleAsks(arrivalBook, p.remaining, r.limitPx, { allowBbaFallback: false });
-            if (crossed.shares > 1e-9) fill = { shares: crossed.shares,
-              cost: crossed.shares * r.limitPx, avgPx: r.limitPx };
-          } else if (arrivalBook?.bestBid != null && r.limitPx >= arrivalBook.bestBid - 1e-9) {
-            const cumulative = makerTouchFill({ askNow: r.limitPx, limit: r.limitPx, filled: p.touchFilled,
-              target: p.touchTarget, dtMs: Math.max(0, nowMs - p.lastMs),
-              touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
-              fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
-            const delta = Math.max(0, cumulative - p.touchFilled);
-            p.touchFilled = cumulative;
-            if (delta > 1e-9) fill = { shares: Math.min(delta, p.remaining),
-              cost: Math.min(delta, p.remaining) * r.limitPx, avgPx: r.limitPx };
-          }
-          p.lastMs = nowMs;
-          if (fill?.shares > 1e-9) {
-            p.makerShares = (p.makerShares || 0) + fill.shares;
-            p.makerCost = (p.makerCost || 0) + fill.cost;
-            p.makerLastMs = nowMs;
-            p.makerLastTInto = tInto;
-            p.remaining -= fill.shares;
-          }
-          if (p.remaining > 1e-9) keep.push(p);
-          else flushMakerAccrual();
-          continue;
-        }
-        if (nowMs >= p.dueMs) {
-          const r = p.rec;
-          // Fill EXACTLY at decision+LATENCY — do NOT wait for the next tick. Price against the book AS OF the
-          //   deadline (p.upA/p.dnA = the last book ≤ deadline, tracked forward while pending), and stamp the fill
-          //   time at the exact deadline (p.dueTInto). Matches the backview's fill-at-exactly-latency model.
-          const upA = p.upA, dnA = p.dnA;
-          const px0 = (r.side === "Up" ? upA : dnA);   // every leg is a BUY → fill at its own-side ask
-          const fixedUsd = r.amountMode === "usd"
-            || (r.budgetUsd != null && Number.isFinite(+r.budgetUsd));
-          const requestedShares = r.minimumShares ?? r.shares;
-          const requestedBudgetUsd = fixedUsd ? (+r.budgetUsd || +r.usdc || 0) : null;
-          const arrivalBook = r.side === "Up" ? p.upBook : p.dnBook;
-          const fill = fixedUsd
-            ? walkVisibleBudget(arrivalBook, requestedBudgetUsd, r.limitPx)
-            : walkVisibleAsks(arrivalBook, requestedShares, r.limitPx);
-          r.decidedT = r.tInto; r.tInto = p.dueTInto;   // exact fill time = decision + latency (no tick-wait)
-          r.placedT = r.decidedT;                       // SIM: placed (order-fire) time = the decision tick
-          if (fill.shares > 0) {
-            r.requestedShares = requestedShares;
-            if (fixedUsd) r.requestedBudgetUsd = requestedBudgetUsd;
-            r.shares = +fill.shares.toFixed(4); r.effPx = +fill.avgPx.toFixed(4); r.usdc = +fill.cost.toFixed(4);
-            r.status = fixedUsd
-              ? (fill.cost + 1e-9 < requestedBudgetUsd ? "partial" : "full")
-              : (fill.shares + 1e-9 < r.requestedShares ? "partial" : "full");
-            r.filledLate = true; r.ts = nowMs;
-            if (bzPrice != null) { r.bz = bzPrice; if (bzGap != null) { r.bzGap = bzGap; r.bzGapPct = w.openBinance ? (bzGap / w.openBinance) * 100 : null; } } }
-          // VERBOSE: distinguish an actual match from a FAK that reached the
-          // future book after its cap had disappeared. Previously both paths
-          // were labeled `shadow.fill`, which could corrupt forward-analysis
-          // counts even though the ledger and order-status record were correct.
-          if (verboseOn && fill.shares > 0) verbose("shadow.fill", { slug, leg: r.leg, side: r.side,
-            decidedT: r2(r.decidedT), fillT: r2(r.tInto), decPx: r2(p.decPx0), fillPx: r2(r.effPx),
-            shares: r2(r.shares), usdc: r2(r.usdc),
-            slip: (p.decPx0 != null && r.effPx != null) ? r2(r.effPx - p.decPx0) : null, latencyMs: simLat });
-          else if (verboseOn) verbose("shadow.no_fill", { slug, leg: r.leg, side: r.side,
-            decidedT: r2(r.decidedT), arrivalT: r2(r.tInto), decPx: r2(p.decPx0), cap: r2(r.limitPx),
-            arrivalAsk: r2(px0), reason: px0 == null ? "no-ask" : "outside-cap-or-no-depth", latencyMs: simLat });
-           if (fill.shares > 0) bookFill(w, r);
-           else {
-            try { onEvent({ kind: "order_status", stage: STAGES.SKIPPED, key: `${w.windowStart}:${r.oid}`,
-              slug, ws: w.windowStart, oid: r.oid, side: r.side, leg: r.leg,
-              note: px0 == null ? "no ask at simulated match time" : `ask/depth outside cap ${r.limitPx}`,
-              ts: nowMs }); } catch {}
-           }
-          const shareRemainder = fixedUsd ? 0 : Math.max(0, requestedShares - fill.shares);
-          if (String(r.orderType || "").toUpperCase() === "GTC" && shareRemainder > 1e-9) {
-            p.phase = "resting";
-            p.remaining = shareRemainder;
-            p.touchTarget = shareRemainder;
-            p.touchFilled = 0;
-            p.makerStartRemaining = shareRemainder;
-            p.makerShares = 0;
-            p.makerCost = 0;
-            p.lastMs = p.dueMs;
-            p.expiresMs = p.dueMs + Math.max(0, Number(r.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0));
-            keep.push(p);
-          }
-        } else { if (up.bestAsk != null) p.upA = up.bestAsk; if (down.bestAsk != null) p.dnA = down.bestAsk;
-          p.upBook = up; p.dnBook = down; keep.push(p); }   // track full book fwd to the deadline
-      }
-      w.pendingFills = keep;
-    }
-
+    resolvePending(w, { strategyTick, up, down, nowMs, tInto, bzPrice, bzGap,
+      clPrice, clGap, openChainlink, P, pools });
     // broadcast a live snapshot (open order + aggregate position) — THROTTLED: now event-driven (one tick
     // per book update), an un-throttled broadcast would flood every browser with JSON. Always emit on a
     // fill (got.length) so the position is never stale; otherwise at most every ~200ms.

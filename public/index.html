@@ -1350,7 +1350,7 @@ function shadowParams(){
   const nv=(id,def)=>{ const el=document.getElementById(id); const v=el?parseFloat(el.value):NaN; return Number.isFinite(v)?v:def; };   // preserves a legit 0 (unlike `||def`)
   return {
     STRATEGY:"wallet3048",
-    W3048_SPEC_VERSION:2,
+    W3048_SPEC_VERSION:3,
     WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
     LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),
     MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
@@ -3002,7 +3002,15 @@ function updateTopBar(t){
 const GATE_LABELS={
   "w3048-off":["○ off","dim"], "w3048-no-book":["◷ book warmup","dim"],
   "w3048-time":["○ outside active time","dim"], "w3048-action-cap":["○ action cap","warn"],
-  "w3048-no-bba":["◷ BBA warmup","dim"], "w3048-stale-depth":["○ stale depth","warn"],
+  "w3048-no-bba":["◷ BBA warmup","dim"],
+  "w3048-missing-binance-time":["◷ Binance timestamp","warn"],
+  "w3048-missing-chainlink-time":["◷ Chainlink timestamp","warn"],
+  "w3048-missing-up-depth-time":["◷ UP depth timestamp","warn"],
+  "w3048-missing-down-depth-time":["◷ DOWN depth timestamp","warn"],
+  "w3048-stale-binance":["○ stale Binance","warn"],
+  "w3048-stale-chainlink":["○ stale Chainlink","warn"],
+  "w3048-stale-up-depth":["○ stale UP depth","warn"],
+  "w3048-stale-down-depth":["○ stale DOWN depth","warn"],
   "w3048-features":["◷ feature warmup","dim"], "w3048-cooldown":["◷ cooldown","dim"],
   "w3048-pending-cap":["◆ orders pending","warn"],
   "w3048-wait-fast-binance":["○ Binance quiet","dim"],
@@ -3931,7 +3939,7 @@ function sessCfgSummary(r){
 }
 // wallet3048 parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
-  return `<span style="color:#cdb8ff">shadow · wallet3048 v${P.W3048_SPEC_VERSION??2}`
+  return `<span style="color:#cdb8ff">shadow · wallet3048 v${P.W3048_SPEC_VERSION??3}`
     +` · ${P.W3048_SMALL_SIZE??50}/${P.W3048_LARGE_SIZE??150}sh GTC parents`
     +` · active t+${P.W3048_START_S??4}–${P.W3048_STOP_S??270}s`
     +` · Binance ${((P.W3048_MOMENTUM_LOOKBACK_MS??500)/1000).toFixed(1)}s`

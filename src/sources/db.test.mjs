@@ -9,6 +9,9 @@ test("modeled fill persistence identity is stable but does not merge later fills
   assert.notEqual(fillDocId({ ...fill, tInto: 13.52 }), fillDocId(fill));
   assert.notEqual(fillDocId({ ...fill, side: "Down" }), fillDocId(fill));
   assert.equal(fillDocId({ ...fill, tInto: null }), null);
+  assert.equal(fillDocId({ ...fill, fillId: "2:1" }), "100:fill:2:1");
+  assert.notEqual(fillDocId({ ...fill, fillId: "2:1" }), fillDocId({ ...fill, fillId: "2:2" }));
+  assert.equal(fillDocId({ ...fill, fillId: "2:1", tInto: 13.52 }), "100:fill:2:1");
 });
 
 test("restart recovery settles a persisted simulation row using its booked fees", () => {

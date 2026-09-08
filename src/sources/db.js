@@ -61,6 +61,10 @@ export function fillDocId(doc) {
   if (doc?.windowStart == null || doc?.tInto == null) return null;
   const ws = Number(doc?.windowStart), tInto = Number(doc?.tInto);
   if (!Number.isFinite(ws) || !Number.isFinite(tInto)) return null;
+  if (doc?.fillId != null) {
+    const fillId = String(doc.fillId).replace(/[^a-z0-9_.:-]/gi, "_");
+    return `${Math.trunc(ws)}:fill:${fillId}`;
+  }
   const oid = doc?.oid == null ? "none" : String(doc.oid);
   const leg = String(doc?.leg || "entry").replace(/[^a-z0-9_-]/gi, "_");
   const side = String(doc?.side || "none").replace(/[^a-z0-9_-]/gi, "_");

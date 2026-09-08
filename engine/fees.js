@@ -9,7 +9,19 @@ export const PARAMS = {
 export function fillFee(px, shares, isTaker, p = PARAMS) {
   if (!isTaker || !p.FEE_BPS || px == null || shares == null) return 0;
   const sym = p.FEE_USE_MIN ? Math.min(px, 1 - px) : px * (1 - px);
-  return (p.FEE_BPS / 10000) * sym * shares;
+  const raw = (p.FEE_BPS / 10000) * sym * shares;
+  if (!Number.isFinite(raw) || raw < 0.00001) return 0;
+  return Math.round(raw * 100000) / 100000;
+}
+
+/** Fee for one simulated execution, preserving nonlinear per-level pricing. */
+export function executionFee(match, isTaker, p = PARAMS) {
+  if (!isTaker) return 0;
+  if (Array.isArray(match?.levels) && match.levels.length) {
+    return match.levels.reduce((sum, level) => sum
+      + fillFee(level.price, level.shares, true, p), 0);
+  }
+  return fillFee(match?.avgPx, match?.shares, true, p);
 }
 
 export function isTakerFill(fill) {

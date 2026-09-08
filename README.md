@@ -18,6 +18,10 @@ cancel/reprice rules, and bounded inventory risk. It can accumulate both outcome
 legs below a profitable pair cap or retain a directional residual when the
 estimated edge supports it. New decisions stop before the final 30 seconds.
 
+The coefficients are heuristic reconstruction parameters, not a calibrated
+settlement-probability model. The correctness findings and validation limits are
+documented in `research/wallet-3048/CORRECTNESS_AUDIT_2026-09-08.md`.
+
 The implementation is selected unconditionally by the strategy registry.
 Retired strategies are not available through the dashboard, live simulation,
 or backtests.

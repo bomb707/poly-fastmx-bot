@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "frozenAt": "2026-09-08T05:15:00Z",
+  "purpose": "Correctness and execution-sensitivity audit only; not a profitability validation cohort.",
+  "source": "Local V2 coherent L2 cache",
+  "limitations": [
+    "Binance and Chainlink source timestamps are not preserved.",
+    "CLOB trade and queue events needed to verify maker fills are not preserved.",
+    "The 14 windows span only 70 chronological minutes."
+  ],
+  "splits": { "development": 8, "validation": 3, "holdout": 3 },
+  "files": [
+    { "name": "btc-updown-5m-1788839700_v2-l2-120-coherent.json.gz", "sha256": "071e3cabe982f1b5286e94e2c97cecd78e958189901327df74ca3a17cac54486" },
+    { "name": "btc-updown-5m-1788840000_v2-l2-120-coherent.json.gz", "sha256": "716d6eb1df15b3f8f309c32cf4ca05324e6be08871a0ddf46343cf1ca004cc3b" },
+    { "name": "btc-updown-5m-1788840300_v2-l2-120-coherent.json.gz", "sha256": "3ee9036347c520ce36343d407017b98f0c42cccbf0674fa94a909beb75f7d759" },
+    { "name": "btc-updown-5m-1788840600_v2-l2-120-coherent.json.gz", "sha256": "bb3cdcee9730126201c2ff4efae9725cdba4e6961a68785e0ec7614a9091a64a" },
+    { "name": "btc-updown-5m-1788840900_v2-l2-120-coherent.json.gz", "sha256": "5b7ef5f55018248fcd4a831ea3d2f414ba27b7d2cf02b33ea228b6e85bd52f93" },
+    { "name": "btc-updown-5m-1788841200_v2-l2-120-coherent.json.gz", "sha256": "a3b6b19dfb825d6dfcce088013d9b4f2aaa659a540e50b1e49c69770ee1fccb0" },
+    { "name": "btc-updown-5m-1788841500_v2-l2-120-coherent.json.gz", "sha256": "5f66329c3f677550a7670a70f52a6a3a87ffc95bc63d5bf98dbe1a62dfc2ed1a" },
+    { "name": "btc-updown-5m-1788841800_v2-l2-120-coherent.json.gz", "sha256": "7b21288aa33d4240832b4447ae1a2f1c08007b18e1a235b1b66d1c9d9ef998c9" },
+    { "name": "btc-updown-5m-1788842100_v2-l2-120-coherent.json.gz", "sha256": "abb965a2c39423f25db8f88c62e6bc5cf87a758594a67f051bbb8bbc703d61cc" },
+    { "name": "btc-updown-5m-1788842400_v2-l2-120-coherent.json.gz", "sha256": "65aa63e032c0e145dc0033bf435a1210d0dbf644f17216f69786ee6260f1b59a" },
+    { "name": "btc-updown-5m-1788842700_v2-l2-120-coherent.json.gz", "sha256": "0865ea60ea9b9a50d81d48752b039b5a5c59f432c868d095b4b7ee6a7a236ef7" },
+    { "name": "btc-updown-5m-1788843000_v2-l2-120-coherent.json.gz", "sha256": "66c702af25886f91375206134ef57e05ec0b3f17597741af1d027f68d71dfa1d" },
+    { "name": "btc-updown-5m-1788843300_v2-l2-120-coherent.json.gz", "sha256": "1a413314467ab39baa08968144d6a0cf24d0ab7a28e207f58ce1463dfe7eb28e" },
+    { "name": "btc-updown-5m-1788843600_v2-l2-120-coherent.json.gz", "sha256": "af286c69abb38cac1d180d6b381ecca0d20be24022d29f03d79e1a68316c5b9f" }
+  ]
+}

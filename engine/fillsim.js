@@ -75,13 +75,54 @@ export function walkVisibleAsks(book, requested, cap, { allowBbaFallback = true 
     asks.push([Number(book.bestAsk), Number.POSITIVE_INFINITY]);
   }
   let left = Math.max(0, +requested || 0), shares = 0, cost = 0;
+  const levels = [];
   const ceiling = Number.isFinite(+cap) ? +cap : 1;
   for (const [px, size] of asks) {
     if (px > ceiling + EPS || left <= EPS) break;
     const take = Math.min(left, size);
     shares += take; cost += take * px; left -= take;
+    if (take > EPS) levels.push({ price: px, shares: take });
   }
-  return { shares, cost, avgPx: shares > 0 ? cost / shares : null };
+  return { shares, cost, avgPx: shares > 0 ? cost / shares : null, levels,
+    remaining: Math.max(0, left) };
+}
+
+/** Create a mutable, per-update liquidity pool so concurrent simulated orders cannot reuse asks. */
+export function createAskPool(book) {
+  const asks = (Array.isArray(book?.asks) ? book.asks : []).map((row) => [
+    Number(Array.isArray(row) ? row[0] : row?.price),
+    Number(Array.isArray(row) ? row[1] : row?.size),
+  ]).filter(([price, size]) => Number.isFinite(price) && Number.isFinite(size) && size > 0)
+    .sort((a, b) => a[0] - b[0]);
+  return { ...book, asks };
+}
+
+/** Walk and consume a per-update ask pool. */
+export function consumeVisibleAsks(pool, requested, cap) {
+  const match = walkVisibleAsks(pool, requested, cap, { allowBbaFallback: false });
+  let left = match.shares;
+  for (const row of pool?.asks || []) {
+    if (left <= EPS) break;
+    const take = Math.min(left, Number(row[1]) || 0);
+    row[1] -= take;
+    left -= take;
+  }
+  return match;
+}
+
+/**
+ * Credit a resting maker only from explicit sell-flow evidence. `touch` is an
+ * intentionally optimistic sensitivity mode; the production/replay default is
+ * `zero`, which gives no fill merely for spending time at the public bid.
+ */
+export function makerFillFromEvidence({ book, limit, remaining, assumption = "zero",
+  dtMs = 0, touchMs = 1000, fillPct = 0, previouslyCredited = 0, target = remaining }) {
+  const observed = Number(book?.sellFlowAtOrBelow ?? book?.makerSellShares ?? 0);
+  if (Number.isFinite(observed) && observed > 0) return Math.min(Math.max(0, remaining), observed);
+  if (assumption !== "touch") return 0;
+  const cumulative = makerTouchFill({ askNow: limit, limit, filled: previouslyCredited,
+    target, dtMs, touchMs, fillPct });
+  return Math.min(Math.max(0, remaining), Math.max(0, cumulative - previouslyCredited));
 }
 
 /**
@@ -101,15 +142,30 @@ export function walkVisibleBudget(book, budgetUsd, cap, { allowBbaFallback = tru
     asks.push([Number(book.bestAsk), Number.POSITIVE_INFINITY]);
   }
   let left = Math.max(0, +budgetUsd || 0), shares = 0, cost = 0;
+  const levels = [];
   const ceiling = Number.isFinite(+cap) ? +cap : 1;
   for (const [px, size] of asks) {
     if (px > ceiling + EPS || left <= EPS) break;
     const take = Math.min(size, left / px);
     shares += take; cost += take * px; left -= take * px;
+    if (take > EPS) levels.push({ price: px, shares: take });
   }
   // Suppress floating dust so status checks can compare spent with budget.
   if (left <= EPS) left = 0;
-  return { shares, cost, avgPx: shares > 0 ? cost / shares : null, unspent: left };
+  return { shares, cost, avgPx: shares > 0 ? cost / shares : null, levels, unspent: left };
+}
+
+/** Walk a fixed-USDC order and consume the same per-update pool as share orders. */
+export function consumeVisibleBudget(pool, budgetUsd, cap) {
+  const match = walkVisibleBudget(pool, budgetUsd, cap, { allowBbaFallback: false });
+  let left = match.shares;
+  for (const row of pool?.asks || []) {
+    if (left <= EPS) break;
+    const take = Math.min(left, Number(row[1]) || 0);
+    row[1] -= take;
+    left -= take;
+  }
+  return match;
 }
 
 /**

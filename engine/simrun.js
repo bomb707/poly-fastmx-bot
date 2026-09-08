@@ -1,8 +1,9 @@
 // Backtest one window by replaying the registered wallet3048 strategy tick by tick.
 // Pure ESM.
-import { fillFee, isFeeFill } from "./fees.js";
+import { executionFee, fillFee, isFeeFill } from "./fees.js";
 import { getStrategy } from "./strategies/index.js";
-import { makerTouchFill, walkVisibleAsks, walkVisibleBudget } from "./fillsim.js";
+import { walkVisibleAsks, createAskPool, consumeVisibleAsks, consumeVisibleBudget,
+  makerFillFromEvidence } from "./fillsim.js";
 
 // NOTE (browser-safe): this module is dynamically imported by the dashboard and
 // must not import Node-only modules.
@@ -13,6 +14,18 @@ const REF_MS = 120;   // reference tick for fill-speed normalization (matches st
 // just-reconnected tick as a trade opportunity (it would otherwise spawn a spurious huge-dt fill / a fake
 // velocity spike across the gap). Default 6s = config.tradeFreshMs default. Override via P.STALE_GAP_MS.
 const STALE_GAP_MS = 6000;
+
+/** Normalize recorder timestamps without mixing epoch and window-relative clocks. */
+export function normalizeReplayTimestamp(value, windowStartMs = null, windowSec = 300) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 1e11) return n;                    // epoch milliseconds
+  if (n >= 1e9) return n * 1000;              // epoch seconds
+  if (Number.isFinite(windowStartMs) && n >= 0 && n <= Number(windowSec || 300) * 1000 + 60_000) {
+    return windowStartMs + n;                 // window-relative milliseconds
+  }
+  return n;
+}
 
 /**
  * Replay one window through the same wallet3048 step function used by the live simulation.
@@ -38,6 +51,9 @@ export function simulateFills(d, params) {
   if (bk.length < 2) return [];
   const state = {};               // fresh causal strategy state
   const fills = [];
+  const windowStartMs = Number.isFinite(Number(d?.windowStart)) ? Number(d.windowStart) * 1000 : null;
+  const normalizeTimestamp = (value) => normalizeReplayTimestamp(
+    value, windowStartMs, Number(P.WINDOW_SEC || 300));
   // UTC hour-of-day of this window's start — for the strategy's HOUR GATE (V_HOURS). Same value all window.
   const winHour = (d && d.windowStart != null) ? Math.floor((d.windowStart % 86400) / 3600) : null;
   const winDay = (d && d.windowStart != null) ? new Date(d.windowStart * 1000).getUTCDay() : null;   // UTC weekday → WEEKDAY GATE (V_DAYS)
@@ -66,7 +82,10 @@ export function simulateFills(d, params) {
     const bidField = side === "Up" ? tk.upBid : tk.dnBid;
     return { bestAsk: nested?.bestAsk ?? bestAsk ?? asks[0]?.[0] ?? null,
       bestBid: nested?.bestBid ?? bidField ?? bids[0]?.[0] ?? null,
-      asks, bids, depthKnown: asks.length > 0 && bids.length > 0 };
+      asks, bids, depthKnown: asks.length > 0 && bids.length > 0,
+      depthTs: normalizeTimestamp(nested?.depthTs
+        ?? tk[side === "Up" ? "upDepthAtMs" : "downDepthAtMs"] ?? tk.ms),
+      sellFlowAtOrBelow: nested?.sellFlowAtOrBelow ?? null };
   };
   const strategyTickAt = (tk) => {
     const up = bookAt(tk, "Up"), down = bookAt(tk, "Down");
@@ -74,7 +93,8 @@ export function simulateFills(d, params) {
     const bzGap = (bz != null && openBz != null) ? bz - openBz : null;
     const clGap = (cl != null && openCl != null) ? cl - openCl : null;
     return { t: tk.t, up, down, bzPrice: bz, clPrice: cl,
-      binanceAtMs: tk.binanceAtMs ?? tk.bzAtMs ?? tk.ms ?? null,
+      binanceAtMs: normalizeTimestamp(tk.binanceAtMs ?? tk.bzAtMs),
+      chainlinkAtMs: normalizeTimestamp(tk.chainlinkAtMs ?? tk.clAtMs),
       openBinance: openBz, openChainlink: openCl,
       bzGap, bzGapPct: (bzGap != null && openBz) ? bzGap / openBz * 100 : null,
       clGap, clGapPct: (clGap != null && openCl) ? clGap / openCl * 100 : null,
@@ -89,80 +109,70 @@ export function simulateFills(d, params) {
     (state.fills = state.fills || []).push(f);
   };
   const emitMatch = (p, match, fillT, maker = false) => {
-      const f = p.hasFill ? { ...p.template, signal: p.template.signal ? { ...p.template.signal } : undefined } : p.rec;
-      const requested = p.remainingBefore ?? p.requestedShares;
+      const source = p.intent || p.rec;
+      const f = { ...source, signal: source.signal ? { ...source.signal } : undefined };
+      f.fillId = `${source.oid}:${p.fillSeq = (p.fillSeq || 0) + 1}`;
+      const requested = p.originalRequested ?? p.requestedShares ?? source.requestedShares ?? source.shares;
       f.decidedT = p.decisionT;
       f.placedT = p.decisionT;
       f.tInto = fillT;
       f.requestedShares = requested;
+      f.decisionExpectedPx = Number.isFinite(Number(source.effPx)) ? Number(source.effPx) : null;
       f.shares = +match.shares.toFixed(4);
       f.effPx = +match.avgPx.toFixed(4);
       f.usdc = +match.cost.toFixed(4);
+      f.fee = executionFee(match, !maker);
       f.status = match.shares + 1e-9 < requested ? "partial" : "full";
       f.filledLate = fillT > p.decisionT + 1e-9;
       if (maker) { f.maker = true; f.taker = false; f.exec = "resting"; f.kind = "maker"; }
       applyInventory(f);
       fills.push(f);
-      p.hasFill = true;
       return f;
-  };
-  const flushMakerAccrual = (p, fallbackT) => {
-    if (!(p.makerShares > 1e-9)) return null;
-    const shares = p.makerShares;
-    const cost = p.makerCost;
-    p.remainingBefore = p.makerStartRemaining;
-    const out = emitMatch(p, { shares, cost, avgPx: cost / shares }, p.makerLastT ?? fallbackT, true);
-    p.makerShares = 0;
-    p.makerCost = 0;
-    return out;
   };
   const resolveDue = (throughT, currentTick = null) => {
     const keep = [];
+    const poolCache = new Map();
+    const poolFor = (tick, side) => {
+      if (!tick) return null;
+      let pair = poolCache.get(tick);
+      if (!pair) {
+        pair = { Up: createAskPool(bookAt(tick, "Up")), Down: createAskPool(bookAt(tick, "Down")) };
+        poolCache.set(tick, pair);
+      }
+      return pair[side];
+    };
     for (const p of pending) {
       if (p.phase === "resting") {
-        if (!currentTick || throughT > p.expiresT + 1e-9 || !(p.remaining > 1e-9)) {
-          flushMakerAccrual(p, Math.min(throughT, p.expiresT));
-          continue;
-        }
-        const cancel = strat.shouldCancelResting?.(state, p.rec,
-          strategyTickAt(currentTick), P, currentTick.t * 1000);
-        if (cancel?.cancel) {
-          p.rec.cancelReason = cancel.reason;
-          p.rec.cancelCap = cancel.currentCap ?? null;
-          flushMakerAccrual(p, throughT);
-          continue;
-        }
+        if (!currentTick || !(p.remaining > 1e-9)) continue;
         const atBook = bookAt(currentTick, p.rec.side);
         const dtMs = Math.max(0, (throughT - p.lastT) * 1000);
         p.lastT = throughT;
         let match = null;
         if (atBook.bestAsk != null && atBook.bestAsk < p.rec.limitPx - 1e-9) {
-          const crossed = walkVisibleAsks(atBook, p.remaining, p.rec.limitPx, { allowBbaFallback: false });
+          const crossed = consumeVisibleAsks(poolFor(currentTick, p.rec.side), p.remaining, p.rec.limitPx);
           // The order was already resting. A later sell that crosses it trades
           // at the resting maker's price, not at a newly observed lower ask.
           if (crossed.shares > 1e-9) match = { shares: crossed.shares,
             cost: crossed.shares * p.rec.limitPx, avgPx: p.rec.limitPx };
         } else if (atBook.bestBid != null && p.rec.limitPx >= atBook.bestBid - 1e-9) {
-          // A resting buy is filled by sell flow at the bid. The historical L2
-          // feed has no order IDs/trades, so accrue a conservative queue credit
-          // only while this rung is at or better than the public best bid.
-          const cumulative = makerTouchFill({ askNow: p.rec.limitPx, limit: p.rec.limitPx,
-            filled: p.touchFilled, target: p.touchTarget, dtMs,
-            touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
-            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10) });
-          const delta = Math.max(0, cumulative - p.touchFilled);
-          p.touchFilled = cumulative;
+          const delta = makerFillFromEvidence({ book: atBook, limit: p.rec.limitPx,
+            remaining: p.remaining, assumption: String(P.W3048_MAKER_FILL_ASSUMPTION || "zero"),
+            dtMs, touchMs: Number(P.W3048_SIM_TOUCH_MS || 1000),
+            fillPct: Number(P.W3048_SIM_TOUCH_FILL_PCT || 10),
+            previouslyCredited: p.touchFilled, target: p.touchTarget });
+          p.touchFilled += delta;
           if (delta > 1e-9) match = { shares: Math.min(delta, p.remaining),
             cost: Math.min(delta, p.remaining) * p.rec.limitPx, avgPx: p.rec.limitPx };
         }
         if (match?.shares > 1e-9) {
-          p.makerShares = (p.makerShares || 0) + match.shares;
-          p.makerCost = (p.makerCost || 0) + match.cost;
-          p.makerLastT = throughT;
           p.remaining -= match.shares;
+          emitMatch(p, match, throughT, true);
         }
-        if (p.remaining > 1e-9) keep.push(p);
-        else flushMakerAccrual(p, throughT);
+        if (!(p.remaining > 1e-9)) continue;
+        const cancel = strat.shouldCancelResting?.(state, p.rec,
+          strategyTickAt(currentTick), P, currentTick.ms ?? ((d.windowStart || 0) * 1000 + currentTick.t * 1000));
+        if (cancel?.cancel || throughT > p.expiresT + 1e-9) continue;
+        keep.push(p);
         continue;
       }
       if (p.dueT > throughT + 1e-9) { keep.push(p); continue; }
@@ -173,14 +183,15 @@ export function simulateFills(d, params) {
       const requestedShares = f.minimumShares ?? f.shares;
       const requestedBudgetUsd = fixedUsd ? (+f.budgetUsd || +f.usdc || 0) : null;
       const match = fixedUsd
-        ? walkVisibleBudget(arrivalBook, requestedBudgetUsd, f.limitPx, { allowBbaFallback: false })
-        : walkVisibleAsks(arrivalBook, requestedShares, f.limitPx, { allowBbaFallback: false });
+        ? consumeVisibleBudget(poolFor(at, f.side), requestedBudgetUsd, f.limitPx)
+        : consumeVisibleAsks(poolFor(at, f.side), requestedShares, f.limitPx);
       p.requestedShares = requestedShares;
+      p.originalRequested = requestedShares;
       p.decisionT = f.tInto;
-      p.template = { ...f, signal: f.signal ? { ...f.signal } : undefined };
-      if (fixedUsd) f.requestedBudgetUsd = requestedBudgetUsd;
+      p.intent = Object.freeze({ ...f, signal: f.signal ? { ...f.signal } : undefined });
       if (match.shares > 0) {
         const out = emitMatch(p, match, p.dueT, false);
+        if (fixedUsd) out.requestedBudgetUsd = requestedBudgetUsd;
         out.status = fixedUsd
           ? (match.cost + 1e-9 < requestedBudgetUsd ? "partial" : "full")
           : (match.shares + 1e-9 < requestedShares ? "partial" : "full");
@@ -196,9 +207,6 @@ export function simulateFills(d, params) {
         p.remaining = shareRemainder;
         p.touchTarget = shareRemainder;
         p.touchFilled = 0;
-        p.makerStartRemaining = shareRemainder;
-        p.makerShares = 0;
-        p.makerCost = 0;
         p.lastT = p.dueT;
         p.expiresT = p.dueT + Math.max(0, Number(f.restTimeoutMs || P.W3048_REST_TIMEOUT_MS || 0)) / 1000;
         keep.push(p);
@@ -217,7 +225,9 @@ export function simulateFills(d, params) {
     if (gapMs > staleMs) continue;
     const dtMs = gapMs > 0 ? Math.max(1, gapMs) : REF_MS;
     // The strategy derives its deterministic clock from window time.
-    const got = strat.step(state, strategyTickAt(tk), P, dtMs, tk.t * 1000);
+    const clockMs = normalizeTimestamp(tk.ms) ?? (windowStartMs != null
+      ? windowStartMs + tk.t * 1000 : tk.t * 1000);
+    const got = strat.step(state, strategyTickAt(tk), P, dtMs, clockMs);
     for (const f of got) {
       const ai = arrivalIndex[i];
       pending.push({ rec: f, dueT: tk.t + latSec, arrivalTick: bk[ai] });
@@ -251,7 +261,8 @@ export function positionFromFills(fills, winSide, ticks) {
   const upC = usdOf(opens, "Up") - mergedUpCost;   // merged shares' cost leaves the live position
   const dnC = usdOf(opens, "Down") - mergedDnCost;
   const total = upC + dnC;
-  const fee = opens.reduce((t, f) => t + fillFee(f.effPx ?? (f.shares ? f.usdc / f.shares : null), f.shares, isFeeFill(f)), 0) - mergedFee;
+  const fee = opens.reduce((t, f) => t + (Number.isFinite(Number(f.fee)) ? Number(f.fee)
+    : fillFee(f.effPx ?? (f.shares ? f.usdc / f.shares : null), f.shares, isFeeFill(f))), 0) - mergedFee;
   const ifUp = up - total - fee, ifDn = dn - total - fee;   // REMAINING (un-merged) position — decreased by each merge
   const realized = winSide ? merged + (winSide === "Up" ? ifUp : ifDn) : null;   // total = banked + remaining settlement
   return {

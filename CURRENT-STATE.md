@@ -12,7 +12,7 @@ _Updated: 2026-09-08 UTC_
 The active reconstruction uses causal 0.5-second Binance momentum, a prebuilt
 one-cent GTC ladder with 50/150-share parents, FIFO lot caps, pair/loss-cap
 repair, economic cancellation and bounded inventory. The code-level defaults
-and current deployed strategy are versioned with `W3048_SPEC_VERSION=2`.
+and current deployed strategy are versioned with `W3048_SPEC_VERSION=3`.
 
 Retired strategies, their dashboard options, tests, and dedicated research
 artifacts have been removed.

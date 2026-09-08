@@ -79,6 +79,7 @@
     "research:maker:v14:validate": "node research/validate-passive-maker-v14.mjs",
     "research:wallet3048:participation": "node research/wallet-3048/backtest-participation-floor.mjs",
     "research:wallet3048:participation-screen": "node research/wallet-3048/screen-participation-residual.mjs",
+    "research:wallet3048:correctness-audit": "node research/wallet-3048/audit-corrected-baseline.mjs",
     "research:maker:v17:pdf": "node research/generate-v17-window-audit-pdf.mjs"
   },
   "dependencies": {

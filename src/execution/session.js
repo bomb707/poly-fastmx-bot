@@ -4,7 +4,7 @@
 import { config } from "../config/config.js";
 import { fetchWindowHistory } from "../sources/history.js";
 import { simulateFills } from "../../engine/simrun.js";
-import { fillFee, isTakerFill, isFeeFill } from "../../engine/strategy.js";
+import { fillFee, isTakerFill, isFeeFill } from "../../engine/fees.js";
 import { apiHealth, resetApiHealth } from "../util/util.js";
 import { verbose, verboseOn } from "../logging/verbose.js";
 import { writeBacktestManifest } from "../logging/sessionLog.js";
@@ -24,6 +24,8 @@ function runWindowFills(fills, winSide, bal0, applyFee = true, unconstrained = f
   //   MERGE (f.leg==="merge") → reclaim `reclaimUsd` cash, remove `sets` from BOTH sides (PnL-neutral vs settlement).
   const isSell = (f) => !!f.sell;
   const isMerge = (f) => f.leg === "merge";
+  const feeOf = (f, px, shares, scale = 1) => Number.isFinite(Number(f.fee))
+    ? Number(f.fee) * scale : fillFee(px, shares, isFeeFill(f));
   // pass 1 — PEAK intra-window deployment at full size (signed: sells/merges give capital back). Capital
   // recycles, so the real constraint is the running peak. If the bankroll can't cover it, SCALE every fill.
   let dep = 0, peakFull = 0;
@@ -32,8 +34,8 @@ function runWindowFills(fills, winSide, bal0, applyFee = true, unconstrained = f
     const sh = Number(f.shares) || 0; if (sh <= 0) continue;
     const px = f.effPx ?? (sh ? f.usdc / sh : null);
     const usdc = f.usdc ?? (px != null ? px * sh : 0);
-    if (isSell(f)) { dep -= applyFee ? usdc - fillFee(px, sh, isFeeFill(f)) : usdc; }   // sell returns capital
-    else { dep += applyFee ? usdc + fillFee(px, sh, isFeeFill(f)) : usdc; }             // buy deploys capital
+    if (isSell(f)) { dep -= applyFee ? usdc - feeOf(f, px, sh) : usdc; }   // sell returns capital
+    else { dep += applyFee ? usdc + feeOf(f, px, sh) : usdc; }             // buy deploys capital
     peakFull = Math.max(peakFull, dep);
   }
   // TRACKER (unconstrained): never scale — the bot's stats are its REAL activity. Only the SHADOW scales.
@@ -68,7 +70,7 @@ function runWindowFills(fills, winSide, bal0, applyFee = true, unconstrained = f
     const taker = isTakerFill(f);
     if (isSell(f)) {
       // ── SELL (scalp exit): cash in = proceeds − sell fee; remove shares; realize vs matched buy cost ──
-      const fee = applyFee ? fillFee(px, sh, isFeeFill(f)) : (px != null ? Math.max(0, px * sh - usdc) : 0);
+      const fee = applyFee ? feeOf(f, px, sh, scale) : (px != null ? Math.max(0, px * sh - usdc) : 0);
       const cash = usdc - fee;                          // net proceeds
       bal += cash; deployed -= cash; spent -= usdc; fees += fee;
       if (f.side === "Up") held.Up -= sh; else held.Down -= sh;
@@ -82,7 +84,7 @@ function runWindowFills(fills, winSide, bal0, applyFee = true, unconstrained = f
     // SHADOW (applyFee): model the taker fee and ADD it on top of price·shares.
     // BOT (!applyFee): the fee is ALREADY inside usdcSize — show it but DON'T re-add it to cost.
     let fee, cost;
-    if (applyFee) { fee = fillFee(px, sh, isFeeFill(f)); cost = usdc + fee; }
+    if (applyFee) { fee = feeOf(f, px, sh, scale); cost = usdc + fee; }
     else { fee = px != null ? Math.max(0, usdc - px * sh) : 0; cost = usdc; }
     bal -= cost; deployed += cost; spent += usdc; fees += fee;
     if (f.side === "Up") held.Up += sh; else held.Down += sh;

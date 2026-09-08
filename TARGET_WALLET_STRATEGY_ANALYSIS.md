@@ -11,6 +11,11 @@
 > measured facts are not confused with implementation guesses. Gross PnL figures
 > exclude fees and rebates unless explicitly stated.
 
+> **Correctness status (2026-09-08):** this behavioral research does not establish
+> that the reconstructed runtime policy is profitable. The repaired simulator,
+> chronological sensitivity results, and data limitations are documented in
+> [`research/wallet-3048/CORRECTNESS_AUDIT_2026-09-08.md`](research/wallet-3048/CORRECTNESS_AUDIT_2026-09-08.md).
+
 ## 1. Executive conclusion
 
 The target is almost certainly an automated, buy-oriented execution system. The

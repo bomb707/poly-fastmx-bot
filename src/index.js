@@ -426,7 +426,7 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
 if (shadow && _savedCfg.shadowParams && typeof _savedCfg.shadowParams === "object") shadow.setParams(_savedCfg.shadowParams);
 // General strategy-param override for unattended runs (pm2): a JSON blob of
 // current wallet3048 STRAT keys. Unknown/obsolete keys are discarded.
-//   SHADOW_PARAMS_JSON='{"STRATEGY":"wallet3048","W3048_SPEC_VERSION":2,"LATENCY_MS":520}'
+//   SHADOW_PARAMS_JSON='{"STRATEGY":"wallet3048","W3048_SPEC_VERSION":3,"LATENCY_MS":520}'
 if (shadow && process.env.SHADOW_PARAMS_JSON) {
   try {
     const p = JSON.parse(process.env.SHADOW_PARAMS_JSON);
@@ -501,7 +501,8 @@ function driveShadowForWindow(w, nowMs) {
   const a = config.asset;
   const bzSlot = state.binance[a];
   const bz = bzSlot?.value ?? null;
-  const cl = state.chainlink[a]?.value ?? null;   // Polymarket RTDS Chainlink TWAP-60
+  const clSlot = state.chainlink[a];
+  const cl = clSlot?.value ?? null;   // Polymarket RTDS Chainlink TWAP-60
   const tInto = nowMs / 1000 - w.windowStart;   // ms-precision (distinct mid timestamps per book update)
   if (tInto >= 0) {
     ensureBinanceOpen(w);   // Binance open: aggTrades REST (authoritative) + WS provisional fallback after BINANCE_OPEN_FALLBACK_S
@@ -516,7 +517,10 @@ function driveShadowForWindow(w, nowMs) {
   shadow.tick({
     slug: w.slug, windowStart: w.windowStart, openBinance: w.openBinance,
     openChainlink: w.openPrice, tInto,
-    bzPrice: bz, binanceAtMs: bzSlot?.recvTs ?? null, clPrice: cl, nowMs,
+    bzPrice: bz, binanceAtMs: bzSlot?.payloadTs ?? null,
+    binanceReceivedAtMs: bzSlot?.recvTs ?? null,
+    clPrice: cl, chainlinkAtMs: clSlot?.payloadTs ?? null,
+    chainlinkReceivedAtMs: clSlot?.recvTs ?? null, nowMs,
     up: upA ? { bestBid: upA.bestBid, bestAsk: upAsk, asks: upDepth?.asks || null, bids: upDepth?.bids || null, depthTs: upDepth?.ts || null } : null,
     down: dnA ? { bestBid: dnA.bestBid, bestAsk: dnAsk, asks: dnDepth?.asks || null, bids: dnDepth?.bids || null, depthTs: dnDepth?.ts || null } : null,
   });
