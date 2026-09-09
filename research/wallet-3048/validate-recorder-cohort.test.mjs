@@ -44,6 +44,7 @@ function tick(sequence, t, bz, upAsk, firstDepth = 100) {
 function syntheticPayload() {
   const params = { ...STRAT, STRATEGY: "wallet3048", LATENCY_MS: 0,
     W3048_REQUIRE_SOURCE_TIMESTAMPS: true, W3048_RELEASE_GATE: false,
+    W3048_CLOB_VELOCITY_GATE: false,
     W3048_COOLDOWN_MS: 10_000, W3048_MAX_ACTIONS: 1,
     W3048_BETA_MARKET_LOGIT: 0, W3048_BETA_MOMENTUM: 1,
     W3048_BETA_LATEST_UPDATE: 0, W3048_BETA_RELATIVE_LEAD: 0,

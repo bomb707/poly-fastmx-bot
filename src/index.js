@@ -415,18 +415,12 @@ const shadow = (config.shadow || live.isLive()) ? createShadow((e) => {
   else if (e.kind === "shadow_merge") ui.shadowMerge(e);
   else if (e.kind === "shadow_real") ui.shadowReal(e);
   else if (e.kind === "order_status") ui.orderStatus?.(e);   // sim leg stages (decided / sim_filled) → Order Status panel
-  else if (e.kind === "circuit_breaker") {
-    // SESSION DRAWDOWN BREACHED → auto-halt (no more strategy fills). Re-arms when the bot is Started again.
-    console.error(`\n🛑 [CIRCUIT BREAKER] session PnL $${e.sessionRealized} ≤ −$${e.limit} — HALTING the bot. Press Start to re-arm.\n`);
-    setRunning(false);
-    try { ui.circuitBreaker(e); } catch {}
-  }
 }, () => !!(ui && ui.hasClients && ui.hasClients())) : null;   // uiActive → shadow skips the UI-only ladder payload when no browser is watching
 // Restore the last-applied wallet3048 parameters from the config store.
 if (shadow && _savedCfg.shadowParams && typeof _savedCfg.shadowParams === "object") shadow.setParams(_savedCfg.shadowParams);
 // General strategy-param override for unattended runs (pm2): a JSON blob of
 // current wallet3048 STRAT keys. Unknown/obsolete keys are discarded.
-//   SHADOW_PARAMS_JSON='{"STRATEGY":"wallet3048","W3048_SPEC_VERSION":3,"LATENCY_MS":520}'
+//   SHADOW_PARAMS_JSON='{"STRATEGY":"wallet3048","W3048_SPEC_VERSION":5,"LATENCY_MS":520}'
 if (shadow && process.env.SHADOW_PARAMS_JSON) {
   try {
     const p = JSON.parse(process.env.SHADOW_PARAMS_JSON);
@@ -805,7 +799,7 @@ function stopEngine() {
   console.log("[engine] STOPPED — feeds disconnected");
 }
 // the Start/Stop switch (UI buttons → /api/bot/start|stop → setRunning) drives the whole engine
-onRunChange((on) => { if (on) { shadow && shadow.resetBreaker(); startEngine().catch((e) => console.error("[engine] start failed:", e)); } else stopEngine(); });
+onRunChange((on) => { if (on) startEngine().catch((e) => console.error("[engine] start failed:", e)); else stopEngine(); });
 
 // render runs regardless of engine state: TTY → clear-screen TUI; non-TTY → 10s heartbeat line.
 if (process.stdout.isTTY) setInterval(() => render(state, tracker), config.dashboardMs);

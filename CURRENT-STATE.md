@@ -9,10 +9,14 @@ _Updated: 2026-09-08 UTC_
 - Target wallet: `0x3048d65321be3497164cdfc2996f94f98a2e7537`
 - Sole strategy: `wallet3048` in `engine/strategies/wallet3048.js`
 
-The active reconstruction uses causal 0.5-second Binance momentum, a prebuilt
+The active reconstruction uses causal 0.5-second Binance momentum confirmed by
+a three-second ±0.02 CLOB UP-implied midpoint delta, a prebuilt
 one-cent GTC ladder with 50/150-share parents, FIFO lot caps, pair/loss-cap
 repair, economic cancellation and bounded inventory. The code-level defaults
-and current deployed strategy are versioned with `W3048_SPEC_VERSION=3`.
+and current strategy are versioned with `W3048_SPEC_VERSION=5`. Cheap-token
+orders are capped at $0.02, and the latency-aware execution cutoff is t+298s.
+Session-loss, per-window loss, and per-window spend ceilings are removed; the
+strategy retains its share-imbalance, pending-order, and action-count bounds.
 
 The reviewed code defaults to strict no-maker execution. Book-cross inference,
 observed-flow estimates, and optimistic touch are separately labeled simulation

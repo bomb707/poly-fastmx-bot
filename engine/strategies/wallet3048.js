@@ -19,16 +19,15 @@ export const MODEL_PROVENANCE = Object.freeze({
 
 export const STRAT = {
   STRATEGY: NAME,
-  W3048_SPEC_VERSION: 3,
+  W3048_SPEC_VERSION: 5,
   WINDOW_SEC: 300,
   LATENCY_MS: 520,
   LIVE_FILLS: false,
   LIMIT: 0.99,
-  MAX_SESSION_LOSS: 25,
 
   W3048_ON: true,
   W3048_START_S: 4,
-  W3048_STOP_S: 270,
+  W3048_STOP_S: 298,
   W3048_MIN_PRICE: 0.01,
   W3048_MAX_PRICE: 0.99,
   W3048_TICK: 0.01,
@@ -53,9 +52,9 @@ export const STRAT = {
   W3048_CANCEL_CAP_SLACK_TICKS: 0,
   W3048_CANCEL_REVERSAL_MIN_ABS: 0.00002,
 
-  // Fast Binance information is the primary initial release. These CLOB
-  // branches provide secondary fill-probability evidence for later taker
-  // attempts; a patient below-ask rung may rest without a prior depth drop.
+  // Binance direction and the explicit CLOB midpoint delta jointly confirm
+  // ordinary entries. These depth branches separately describe whether the
+  // current book offers representative execution liquidity.
   W3048_RELEASE_GATE: true,
   W3048_EXECUTABLE_RUN_MS: 525,
   W3048_RELEASE_ASK1_MAX: 100,
@@ -90,6 +89,10 @@ export const STRAT = {
   // Fixed causal standardization scales for the report's probability model.
   W3048_MOMENTUM_LOOKBACK_MS: 500,
   W3048_MOMENTUM_MIN_ABS: 0,
+  W3048_CLOB_VELOCITY_GATE: true,
+  W3048_CLOB_VELOCITY_LOOKBACK_MS: 3000,
+  W3048_CLOB_VELOCITY_MIN: 0.02,
+  W3048_CHEAP_TOKEN_MAX_PRICE: 0.02,
   W3048_VOL_LOOKBACK_MS: 30000,
   W3048_MOMENTUM_SCALE: 0.00010,
   W3048_LATEST_UPDATE_SCALE: 0.00005,
@@ -116,12 +119,10 @@ export const STRAT = {
   W3048_PAIR_PROFIT_TARGET: 0.060,
   W3048_INVENTORY_PENALTY_MAX: 0.04,
 
-  // Projected full-parent risk limits tighten into the final active minute.
+  // Projected full-parent inventory imbalance tightens into the final minute.
+  // Dollar loss and per-window spend limits are intentionally not applied.
   W3048_MAX_LEAN_START: 500,
   W3048_MAX_LEAN_END: 350,
-  W3048_LOSS_LIMIT_START: 250,
-  W3048_LOSS_LIMIT_END: 150,
-  W3048_MAX_WINDOW_SPEND: 650,
 };
 
 const EPS = 1e-9;
@@ -210,6 +211,7 @@ function init(state, P = STRAT) {
       lots: { Up: [], Down: [] },
       nextLotSeq: 0,
       history: [],
+      clobHistory: [],
       bookTrace: { Up: [], Down: [] },
       askRun: { Up: null, Down: null },
       fillCursor: 0,
@@ -486,6 +488,17 @@ export function buildFeatures(model, tk, P, clockMs, upBook = bookSnapshot(tk?.u
     ? Math.log(current.cl / Number(tk.openChainlink)) : 0;
   const relativeLead = binanceDisplacement - chainlinkDisplacement;
   const upMicroProbability = clamp(upBook.micro / Math.max(EPS, upBook.micro + downBook.micro), 0.01, 0.99);
+  const clobHistory = model.clobHistory ||= [];
+  // Match the dashboard's UP-implied CLOB midpoint exactly: UP midpoint now
+  // minus the last observed UP midpoint at or before the lookback boundary.
+  const clobUpMidpoint = upBook.mid;
+  const clobRow = { ms: Number(clockMs), value: clobUpMidpoint };
+  if (clobHistory.at(-1)?.ms === clobRow.ms) clobHistory[clobHistory.length - 1] = clobRow;
+  else clobHistory.push(clobRow);
+  while (clobHistory.length && clobHistory[0].ms < Number(clockMs) - 60_000) clobHistory.shift();
+  const priorClob = observationAt(clobHistory,
+    Number(clockMs) - Number(P.W3048_CLOB_VELOCITY_LOOKBACK_MS));
+  const clobVelocity = priorClob ? clobUpMidpoint - priorClob.value : null;
   const clobDepthSignal = clamp((upBook.depthImbalance - downBook.depthImbalance) / 2, -1, 1);
   return {
     momentumFast,
@@ -498,6 +511,8 @@ export function buildFeatures(model, tk, P, clockMs, upBook = bookSnapshot(tk?.u
     chainlinkDisplacement,
     relativeLead,
     clobUpProbability: upMicroProbability,
+    clobUpMidpoint,
+    clobVelocity,
     clobDepthSignal,
     volatility: realizedVol(model.history, P.W3048_VOL_LOOKBACK_MS),
     timeProgress: clamp(Number(tk.t) / Math.max(1, Number(P.W3048_STOP_S)), 0, 1),
@@ -547,8 +562,6 @@ export function evaluateRiskScenarios(model, state, side, size, cap, P, progress
   const reserved = pendingReservations(state);
   const feePerShare = fillFee(cap, 1, true);
   const leanLimit = interpolate(P.W3048_MAX_LEAN_START, P.W3048_MAX_LEAN_END, progress);
-  const lossLimit = interpolate(P.W3048_LOSS_LIMIT_START, P.W3048_LOSS_LIMIT_END, progress);
-  const spendLimit = Number(P.W3048_MAX_WINDOW_SPEND);
   const metrics = (orders, includeProposed) => {
     let up = model.up, down = model.down;
     let totalCost = model.cost + model.fees;
@@ -572,12 +585,9 @@ export function evaluateRiskScenarios(model, state, side, size, cap, P, progress
     const filled = reserved.orders.filter((_, index) => mask & (1 << index));
     const before = metrics(filled, false);
     const after = metrics(filled, true);
-    const beforeWithin = before.lean <= leanLimit + EPS && before.worstCase >= -lossLimit - EPS
-      && before.spend <= spendLimit + EPS;
-    const afterWithin = after.lean <= leanLimit + EPS && after.worstCase >= -lossLimit - EPS
-      && after.spend <= spendLimit + EPS;
-    const boundedRepair = !beforeWithin && after.spend <= spendLimit + EPS
-      && after.lean <= before.lean + EPS && after.worstCase >= before.worstCase - EPS;
+    const beforeWithin = before.lean <= leanLimit + EPS;
+    const afterWithin = after.lean <= leanLimit + EPS;
+    const boundedRepair = !beforeWithin && after.lean <= before.lean + EPS;
     scenarios.push({ mask, filledOids: filled.map((order) => order.oid), before, after,
       afterWithin, boundedRepair, passes: afterWithin || boundedRepair });
   }
@@ -585,7 +595,7 @@ export function evaluateRiskScenarios(model, state, side, size, cap, P, progress
   const lean = Math.max(...scenarios.map((scenario) => scenario.after.lean));
   const spend = Math.max(...scenarios.map((scenario) => scenario.after.spend));
   return { passes: scenarios.every((scenario) => scenario.passes), worstCase, lean,
-    leanLimit, lossLimit, spend, spendLimit, reserved, scenarios };
+    leanLimit, spend, reserved, scenarios };
 }
 
 const riskCheck = evaluateRiskScenarios;
@@ -622,10 +632,14 @@ export function economicCaps(model, state, side, book, fair, size, P, progress, 
   const pairingIntended = matchedShares > EPS && pairCapMaker != null && book.ask <= pairCapMaker + EPS;
   const takerEconomicCap = pairingIntended ? Math.min(signalCapTaker, pairCapTaker) : signalCapTaker;
   const makerEconomicCap = pairingIntended ? Math.min(signalCapMaker, pairCapMaker) : signalCapMaker;
-  const configuredMax = Math.min(Number(P.W3048_MAX_PRICE), Number(P.LIMIT ?? P.W3048_MAX_PRICE));
+  const acquisitionCap = finite(options.acquisitionCap)
+    ? clamp(Number(options.acquisitionCap), Number(P.W3048_MIN_PRICE), Number(P.W3048_MAX_PRICE)) : null;
+  const configuredMax = Math.min(Number(P.W3048_MAX_PRICE), Number(P.LIMIT ?? P.W3048_MAX_PRICE),
+    acquisitionCap ?? Infinity);
   const crossCeiling = book.ask + Number(P.W3048_CROSS_HEADROOM_TICKS) * Number(P.W3048_TICK);
-  const canTake = takerEconomicCap >= book.ask - EPS;
-  const economicCap = canTake ? takerEconomicCap : makerEconomicCap;
+  const canTake = acquisitionCap != null
+    ? book.ask <= acquisitionCap + EPS : takerEconomicCap >= book.ask - EPS;
+  const economicCap = acquisitionCap ?? (canTake ? takerEconomicCap : makerEconomicCap);
   const roleCeiling = canTake ? crossCeiling : book.ask - Number(P.W3048_TICK);
   const cap = floorTick(Math.min(configuredMax, economicCap, roleCeiling), P.W3048_TICK);
   const execution = walkVisibleAsks(book, size, cap, { allowBbaFallback: false });
@@ -646,15 +660,17 @@ export function economicCaps(model, state, side, book, fair, size, P, progress, 
     immediateVwap: execution.avgPx, immediateCost: execution.cost, immediateFees };
 }
 
-function candidateFor(model, state, side, book, release, fair, P, progress, clockMs, fastAligned) {
+function candidateFor(model, state, side, book, release, fair, P, progress, clockMs, directionAligned) {
   const lastFired = model.lastFired[side];
   if (model.lastFiredSide === side && lastFired
     && clockMs - lastFired.ms < Number(P.W3048_SAME_SIDE_RETRY_MS)
     && Math.abs(book.ask - lastFired.ask) < Number(P.W3048_SAME_SIDE_REPRICE) - EPS) return null;
   const small = Number(P.W3048_SMALL_SIZE);
   const large = Number(P.W3048_LARGE_SIZE);
+  const cheapToken = book.ask <= Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) + EPS;
   const evaluate = (size) => {
-    const caps = economicCaps(model, state, side, book, fair, size, P, progress);
+    const caps = economicCaps(model, state, side, book, fair, size, P, progress,
+      cheapToken ? { acquisitionCap: Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) } : {});
     if (caps.cap < Number(P.W3048_MIN_PRICE) - EPS || caps.cap > Number(P.W3048_MAX_PRICE) + EPS) return null;
     const visibleDepth = depthThrough(book.asks, caps.cap);
     const risk = riskCheck(model, state, side, size, caps.cap, P, progress);
@@ -682,7 +698,7 @@ function candidateFor(model, state, side, book, release, fair, P, progress, cloc
       ? (caps.pairingIntended ? pairEdge >= complementMinimum - EPS && directionalRemainderPass
         : riskAdjustedEdge >= complementMinimum - EPS && directionalRemainderPass)
       : expectedEdge >= sameSideMinimum - EPS;
-    if (!economicPass) return null;
+    if (!economicPass && !cheapToken) return null;
     const pairCost = caps.oppositeCost == null ? null
       : caps.oppositeCost + caps.expectedPx + caps.feePerShare;
     const pairWeight = interpolate(P.W3048_PAIR_VALUE_WEIGHT_START,
@@ -698,7 +714,7 @@ function candidateFor(model, state, side, book, release, fair, P, progress, cloc
       + pairWeight * Math.max(0, pairExpectedPnl) / size
       + riskWeight * riskReliefPerShare
       + Number(P.W3048_FILL_PROB_WEIGHT) * liquidityRank;
-    return { side, size, fair, ask: book.ask, ...caps, pairCost, expectedEdge,
+    return { side, size, fair, ask: book.ask, cheapToken, ...caps, pairCost, expectedEdge,
       pairEdge, riskAdjustedEdge, minEdge, utility, worstCaseImprovement,
       directionalExpectedPnl, pairExpectedPnl, expectedPnlSacrifice,
       visibleDepth, risk, release };
@@ -712,8 +728,9 @@ function candidateFor(model, state, side, book, release, fair, P, progress, cloc
     for (let size = minimum; size <= maximum + EPS; size += step) {
       const candidate = evaluate(+size.toFixed(6));
       if (!candidate) continue;
-      if (model.up + model.down > EPS && !candidate.isComplement && !fastAligned) continue;
-      if (!release.passes && candidate.marketable && !fastAligned) continue;
+      if (model.up + model.down > EPS && !candidate.isComplement && !directionAligned
+        && !candidate.cheapToken) continue;
+      if (!release.passes && candidate.marketable && !directionAligned && !candidate.cheapToken) continue;
       candidate.totalUtility = candidate.utility * candidate.size;
       if (!best || candidate.totalUtility > best.totalUtility + EPS) best = candidate;
     }
@@ -721,12 +738,16 @@ function candidateFor(model, state, side, book, release, fair, P, progress, cloc
   }
   const ordinary = evaluate(small);
   if (!ordinary) return null;
-  if (model.up + model.down > EPS && !ordinary.isComplement && !fastAligned) return null;
+  if (model.up + model.down > EPS && !ordinary.isComplement && !directionAligned
+    && !ordinary.cheapToken) return null;
   // A fast Binance move precedes the wallet's taker fill and the resulting L2
   // depth drop. Requiring that drop first would be a causal inversion. Stable
   // taker attempts still need fast-side alignment; below-ask maker intents can
   // rest patiently on their economic cap.
-  if (!release.passes && ordinary.marketable && !fastAligned) return null;
+  if (!release.passes && ordinary.marketable && !directionAligned && !ordinary.cheapToken) return null;
+  // Cheap-token acquisition is always the fixed 50-share parent and never uses
+  // a transient low ask to authorize walking the book above the $0.02 ceiling.
+  if (ordinary.cheapToken) return ordinary;
   // Parent-template selection is based on cents/share edge and executable
   // depth. Risk relief can authorize an otherwise expensive 50-share repair,
   // but must not by itself triple that repair to 150 shares.
@@ -745,7 +766,7 @@ function candidateFor(model, state, side, book, release, fair, P, progress, cloc
 export function shouldCancelResting(state, rec, tk, P = STRAT,
   clockMs = Number(tk?.t) * 1000, options = {}) {
   if (!rec || !["Up", "Down"].includes(rec.side)) return { cancel: false };
-  if (Number(tk?.t) >= Number(P.W3048_STOP_S)) return { cancel: true, reason: "final-30s-cutoff" };
+  if (Number(tk?.t) >= Number(P.W3048_STOP_S)) return { cancel: true, reason: "final-cutoff" };
   const model = init(state, P);
   const upBook = bookSnapshot(tk?.up), downBook = bookSnapshot(tk?.down);
   if (!upBook || !downBook) return { cancel: false, reason: "no-book" };
@@ -759,6 +780,13 @@ export function shouldCancelResting(state, rec, tk, P = STRAT,
   if (directionalIntent && fastSide && fastSide !== rec.side) {
     return { cancel: true, reason: "fast-signal-reversed" };
   }
+  const clobMinimum = Number(P.W3048_CLOB_VELOCITY_MIN);
+  const clobSide = finite(features.clobVelocity) && features.clobVelocity >= clobMinimum - EPS ? "Up"
+    : finite(features.clobVelocity) && features.clobVelocity <= -clobMinimum + EPS ? "Down" : null;
+  if (directionalIntent && P.W3048_CLOB_VELOCITY_GATE !== false
+    && clobSide && clobSide !== rec.side) {
+    return { cancel: true, reason: "clob-signal-reversed" };
+  }
   const fairUp = fairProbability(features, P);
   const sideBook = rec.side === "Up" ? upBook : downBook;
   const fair = rec.side === "Up" ? fairUp : 1 - fairUp;
@@ -767,7 +795,9 @@ export function shouldCancelResting(state, rec, tk, P = STRAT,
   const size = Math.max(EPS, Number(options.remainingShares ?? rec.requestedShares ?? rec.shares));
   const caps = economicCaps(model, state, rec.side, sideBook, fair, size, P, progress,
     { excludeOid: options.excludeOid ?? rec.oid,
-      preferredReservation: options.pairReservation ?? rec.pairReservation });
+      preferredReservation: options.pairReservation ?? rec.pairReservation,
+      acquisitionCap: rec.reason === "w3048-cheap-token"
+        ? Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) : null });
   const slack = Number(P.W3048_CANCEL_CAP_SLACK_TICKS) * Number(P.W3048_TICK);
   const orderPx = Number(rec.limitPx);
   const cancel = !finite(caps.cap) || caps.cap < Number(P.W3048_MIN_PRICE) - EPS
@@ -787,6 +817,14 @@ export function validateParams(P = STRAT) {
   if (!(Number(P.W3048_MOMENTUM_LOOKBACK_MS) >= 250)
     || !(Number(P.W3048_MOMENTUM_LOOKBACK_MS) <= 1000)) {
     throw new Error("wallet3048 fast Binance lookback must be between 250ms and 1000ms");
+  }
+  if (!(Number(P.W3048_CLOB_VELOCITY_LOOKBACK_MS) > 0)
+    || !(Number(P.W3048_CLOB_VELOCITY_MIN) > 0)) {
+    throw new Error("wallet3048 CLOB velocity lookback and delta must be positive");
+  }
+  if (!(Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) >= Number(P.W3048_MIN_PRICE))
+    || Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) > Number(P.W3048_MAX_PRICE)) {
+    throw new Error("wallet3048 cheap-token price must be inside the strategy price range");
   }
   if (!(Number(P.W3048_MAX_PENDING) >= 1)) throw new Error("wallet3048 max pending must be >= 1");
   if (!Number.isFinite(Number(P.W3048_BINANCE_STALE_MS)) || Number(P.W3048_BINANCE_STALE_MS) < 0) {
@@ -859,22 +897,46 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = Number(tk?.t) 
   const fastDirection = fastMagnitude > EPS
     && fastMagnitude >= Number(P.W3048_MOMENTUM_MIN_ABS)
     ? (features.momentumSignal > 0 ? "Up" : "Down") : null;
-  if (!hasPosition && !fastDirection) { state.gateReason = "w3048-wait-fast-binance"; return []; }
+  const clobVelocity = features.clobVelocity;
+  const clobMinimum = Number(P.W3048_CLOB_VELOCITY_MIN);
+  const clobDirection = finite(clobVelocity) && clobVelocity >= clobMinimum - EPS ? "Up"
+    : finite(clobVelocity) && clobVelocity <= -clobMinimum + EPS ? "Down" : null;
+  const clobGate = P.W3048_CLOB_VELOCITY_GATE !== false;
+  const directionalSide = fastDirection && (!clobGate || clobDirection === fastDirection)
+    ? fastDirection : null;
+  const cheapUp = upBook.ask <= Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) + EPS;
+  const cheapDown = downBook.ask <= Number(P.W3048_CHEAP_TOKEN_MAX_PRICE) + EPS;
+  if (!hasPosition && !fastDirection && !cheapUp && !cheapDown) {
+    state.gateReason = "w3048-wait-fast-binance"; return [];
+  }
+  if (!hasPosition && fastDirection && clobGate && !clobDirection && !cheapUp && !cheapDown) {
+    state.gateReason = "w3048-wait-clob-velocity"; return [];
+  }
+  if (!hasPosition && fastDirection && clobGate && clobDirection !== fastDirection
+    && !cheapUp && !cheapDown) {
+    state.gateReason = "w3048-clob-binance-disagree"; return [];
+  }
   const candidates = [
-    (!hasPosition && P.W3048_FLAT_BOTH_SIDES_ABLATION !== true && fastDirection !== "Up") ? null
+    (!hasPosition && !cheapUp && P.W3048_FLAT_BOTH_SIDES_ABLATION !== true
+      && directionalSide !== "Up") ? null
       : candidateFor(model, state, "Up", upBook, upRelease, fairUp, P, progress, clockMs,
-        fastDirection === "Up"),
-    (!hasPosition && P.W3048_FLAT_BOTH_SIDES_ABLATION !== true && fastDirection !== "Down") ? null
+        directionalSide === "Up"),
+    (!hasPosition && !cheapDown && P.W3048_FLAT_BOTH_SIDES_ABLATION !== true
+      && directionalSide !== "Down") ? null
       : candidateFor(model, state, "Down", downBook, downRelease, 1 - fairUp, P, progress, clockMs,
-        fastDirection === "Down"),
-  ].filter(Boolean).sort((a, b) => b.utility - a.utility || b.expectedEdge - a.expectedEdge
+        directionalSide === "Down"),
+  ].filter(Boolean).sort((a, b) => Number(b.cheapToken) - Number(a.cheapToken)
+    || b.utility - a.utility || b.expectedEdge - a.expectedEdge
     || a.cap - b.cap || a.side.localeCompare(b.side));
   const chosen = candidates[0];
-  if (!chosen || chosen.utility <= EPS) { state.gateReason = "w3048-no-economic-candidate"; return []; }
+  if (!chosen || (!chosen.cheapToken && chosen.utility <= EPS)) {
+    state.gateReason = "w3048-no-economic-candidate"; return [];
+  }
 
   const oid = ++state.seq;
   const leg = chosen.isComplement ? "hedge" : "entry";
-  const reason = model.up + model.down <= EPS ? "w3048-initial-release"
+  const reason = chosen.cheapToken ? "w3048-cheap-token"
+    : model.up + model.down <= EPS ? "w3048-initial-release"
     : chosen.isComplement && chosen.pairingIntended ? "w3048-pair-completion"
       : chosen.isComplement ? "w3048-loss-cap-repair" : "w3048-directional-reinforcement";
   const rec = {
@@ -903,6 +965,12 @@ export function step(state, tk, P = STRAT, _dtMs = 120, clockMs = Number(tk?.t) 
       fairSide: +chosen.fair.toFixed(6),
       momentumFast: +features.momentumFast.toFixed(8),
       momentum5s: +features.momentum5s.toFixed(8),
+      clobUpMidpoint: +features.clobUpMidpoint.toFixed(6),
+      clobVelocity: finite(features.clobVelocity) ? +features.clobVelocity.toFixed(6) : null,
+      clobVelocityLookbackMs: Number(P.W3048_CLOB_VELOCITY_LOOKBACK_MS),
+      clobDirection,
+      binanceDirection: fastDirection,
+      cheapToken: chosen.cheapToken,
       latestBinanceUpdate: +features.latestUpdate.toFixed(8),
       relativeLead: +features.relativeLead.toFixed(8),
       chainlinkDistance: +features.chainlinkDisplacement.toFixed(8),

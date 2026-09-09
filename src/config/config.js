@@ -149,9 +149,6 @@ export const config = {
   // strategy's fixed-USD FAK model for apples-to-apples research.
   liveTakerOrderType: String(E("LIVE_TAKER_ORDER_TYPE", "GTC")).trim().toUpperCase() === "FAK" ? "FAK" : "GTC",
   liveGtcCancelRemainderMs: Math.max(0, ENUM("LIVE_GTC_CANCEL_REMAINDER_MS", 0)),
-  // CIRCUIT BREAKER: if the running SESSION realized PnL (real in live, else sim) drops to −this many USDC,
-  // auto-STOP the bot (halts new strategy fills). 0 = off. Re-arms when you Start the bot again. env: MAX_SESSION_LOSS
-  maxSessionLoss: ENUM("MAX_SESSION_LOSS", 0),
   // Polymarket CLOB REST host (order placement) + chain id.
   clobHost: E("CLOB_HOST", "https://clob.polymarket.com").replace(/\/$/, ""),
   clobChainId: ENUM("CLOB_CHAIN_ID", 137),

@@ -115,17 +115,9 @@ function step(agg, r, ws) {
   agg.maxDD = Math.max(agg.maxDD, agg.peakBal - agg.bal);   // peak-to-trough drawdown ($)
   agg.curve.push({ ws, bal: Math.round(agg.bal * 100) / 100, pnl: Math.round(r.pnl * 100) / 100 });
 }
-function finalize(agg, halt = null) {
+function finalize(agg) {
   const r2 = (x) => Math.round(x * 100) / 100;
   return { initial: agg.initial, final: r2(agg.bal), pnl: r2(agg.pnl), realized: r2(agg.realized),
-           // HALT VISIBILITY — a MAX_SESSION_LOSS breach stops the shadow for EVERY remaining window in the
-           // range. Without these fields the result is indistinguishable from "the strategy traded the whole
-           // range and broke even", because the frozen windows silently report $0. Read `haltedWindows` before
-           // interpreting any aggregate below. Set MAX_SESSION_LOSS: 0 to measure strategy edge.
-           halted: !!(halt && halt.halted), haltedAtWindow: halt && halt.at != null ? halt.at : null,
-           haltedAfter: halt && halt.after != null ? halt.after : null,
-           haltedWindows: halt && halt.frozen ? halt.frozen : 0,
-           maxSessionLoss: halt && halt.limit != null ? halt.limit : null,
            roi: agg.initial ? r2(100 * agg.pnl / agg.initial) : null,
            windows: agg.n, wins: agg.wins, losses: agg.losses,
            // win rate = wins / (wins+losses) — windows that actually had a P&L outcome (excludes no-trade / breakeven)
@@ -165,10 +157,6 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
 
   const bot = emptyAgg(initial), sh = emptyAgg(initial);
   const windows = [];
-  const maxSessLoss = +(params && params.MAX_SESSION_LOSS) || 0;
-  let shHalted = false;
-  // Track WHERE the breaker fired and how many windows it froze — see finalize()'s halt block.
-  const halt = { halted: false, at: null, after: 0, frozen: 0, limit: maxSessLoss || null };
   let done = 0, used = 0, miss = 0, errN = 0;
   let lastPartialAt = 0;
   const btRows = [];   // per-window backtest manifest rows (deterministic → diffable across processes)
@@ -209,7 +197,7 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
         asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet: config.wallet,
         apiVersion: config.backtestApiVersion,
         method: "bot real on-chain fills; shadow = FastMX dual momentum plus poly-mom Binance trend regime; settle winners @ $1",
-        params: params ?? null, bot: finalize(bot), shadow: finalize(sh, halt),
+        params: params ?? null, bot: finalize(bot), shadow: finalize(sh),
         health: healthSnap(),
         windows: [],
       });
@@ -245,19 +233,13 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
     const wins = await fetchBatch(batch);
     for (const d of wins) {
       const botFills = (d.buys || []).map((b) => ({ tInto: b.tInto, side: b.side, shares: b.shares, usdc: b.usdc, effPx: b.effPx, taker: b.orderHint?.taker ?? b.taker ?? null }));
-      if (shHalted) halt.frozen++;
-      const simFills = shHalted ? [] : simulateFills({ ticks: d.ticks, openBinance: d.openBinance,
+      const simFills = simulateFills({ ticks: d.ticks, openBinance: d.openBinance,
         openPrice: d.openPrice, windowStart: d.windowStart }, params || {});
 
       const br = runWindowFills(botFills, d.winSide, bot.bal, false, true);
       const sr = runWindowFills(simFills, d.winSide, sh.bal, true, false);
       step(bot, br, d.windowStart);
       step(sh, sr, d.windowStart);
-      if (!shHalted && maxSessLoss > 0 && sh.pnl <= -maxSessLoss) {
-        shHalted = true;
-        halt.halted = true; halt.at = d.windowStart; halt.after = sh.n;
-        console.log(`[session] shadow HALTED at window ${d.windowStart} (session pnl ${sh.pnl.toFixed(2)} <= -${maxSessLoss}) after ${sh.n} windows; every remaining window in the range will report $0`);
-      }
       windows.push({ ws: d.windowStart, slug: d.slug ?? null, winSide: d.winSide, bot: side(br), shadow: side(sr) });
       used++;
       // BACKTEST MANIFEST — deterministic per-window record (no timestamp) so two processes' runs of the same range
@@ -284,8 +266,7 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
     const hdr = `# backtest ${new Date(start * 1000).toISOString()} .. ${new Date(end * 1000).toISOString()}`
       + ` | requested=${slugs.length} used=${used} miss=${miss} err=${errN}`
       + ` | api=${config.backtestApiVersion}`
-      + ` | shadowPnl=${(sh.pnl || 0).toFixed(2)} botPnl=${(bot.pnl || 0).toFixed(2)}`
-      + (halt.halted ? ` | HALTED at ${halt.at} after ${halt.after} windows, ${halt.frozen} frozen` : "");
+      + ` | shadowPnl=${(sh.pnl || 0).toFixed(2)} botPnl=${(bot.pnl || 0).toFixed(2)}`;
     const fp = writeBacktestManifest(`${start}_${end}`, hdr + "\n" + btRows.map((r) => r.line).join("\n") + "\n");
     if (fp) console.log(`[backtest] manifest (${btRows.length} windows) → ${fp}`);
   } catch {}
@@ -294,7 +275,7 @@ export async function runSession(startTs, endTs, initialUSDC, onProgress = () =>
            asset: config.asset, interval: config.interval, windowSec: config.windowSec, wallet: config.wallet,
            apiVersion: config.backtestApiVersion,
            method: "bot real on-chain fills; shadow = FastMX dual momentum plus poly-mom Binance trend regime; settle winners @ $1",
-           params: params ?? null, bot: finalize(bot), shadow: finalize(sh, halt), windows,
+           params: params ?? null, bot: finalize(bot), shadow: finalize(sh), windows,
            health: healthSnap() };
   // Help GC: drop the running aggregators' curve buffers (already copied into finalize()).
   bot.curve = []; sh.curve = [];

@@ -31,6 +31,7 @@ function timestampedTick(t, options) {
 const signalP = {
   ...STRAT,
   LATENCY_MS: 0,
+  W3048_CLOB_VELOCITY_GATE: false,
   W3048_COOLDOWN_MS: 1500,
   W3048_RELEASE_GATE: false,
   W3048_CROSS_HEADROOM_TICKS: 1,
@@ -68,6 +69,79 @@ test("causal features use the corrected 0.5-second Binance momentum and relative
   assert.ok(Math.abs(f.momentumFast - Math.log(101 / 100)) < 1e-12);
   assert.ok(Math.abs(f.relativeLead - (Math.log(101 / 100) - Math.log(100.25 / 100))) < 1e-12);
   assert.ok(fairProbability(f, signalP) > 0.9);
+});
+
+test("three-second CLOB midpoint delta confirms +0.02 Up and -0.02 Down entries", () => {
+  const P = { ...signalP, W3048_CLOB_VELOCITY_GATE: true,
+    W3048_CLOB_VELOCITY_LOOKBACK_MS: 3000, W3048_CLOB_VELOCITY_MIN: 0.02 };
+
+  const upState = {};
+  assert.deepEqual(step(upState, tick(4, { bz: 100, upAsk: 0.40, downAsk: 0.61 }), P, 120, 4000), []);
+  assert.deepEqual(step(upState, tick(6.5, { bz: 100, upAsk: 0.40, downAsk: 0.61 }), P, 120, 6500), []);
+  const [up] = step(upState, tick(7, { bz: 101, upAsk: 0.42, downAsk: 0.59 }), P, 120, 7000);
+  assert.equal(up.side, "Up");
+  assert.equal(up.signal.clobVelocity, 0.02);
+  assert.equal(up.signal.clobDirection, "Up");
+  assert.equal(up.signal.binanceDirection, "Up");
+
+  const downState = {};
+  assert.deepEqual(step(downState, tick(4, { bz: 100, upAsk: 0.60, downAsk: 0.41 }), P, 120, 4000), []);
+  assert.deepEqual(step(downState, tick(6.5, { bz: 100, upAsk: 0.60, downAsk: 0.41 }), P, 120, 6500), []);
+  const [down] = step(downState, tick(7, { bz: 99, upAsk: 0.58, downAsk: 0.43 }), P, 120, 7000);
+  assert.equal(down.side, "Down");
+  assert.equal(down.signal.clobVelocity, -0.02);
+  assert.equal(down.signal.clobDirection, "Down");
+  assert.equal(down.signal.binanceDirection, "Down");
+});
+
+test("ordinary entry waits below the CLOB threshold and rejects Binance disagreement", () => {
+  const P = { ...signalP, W3048_CLOB_VELOCITY_GATE: true,
+    W3048_CLOB_VELOCITY_LOOKBACK_MS: 3000, W3048_CLOB_VELOCITY_MIN: 0.02 };
+  const below = {};
+  step(below, tick(4, { bz: 100, upAsk: 0.40, downAsk: 0.61 }), P, 120, 4000);
+  step(below, tick(6.5, { bz: 100, upAsk: 0.40, downAsk: 0.61 }), P, 120, 6500);
+  assert.deepEqual(step(below,
+    tick(7, { bz: 101, upAsk: 0.419, downAsk: 0.591 }), P, 120, 7000), []);
+  assert.equal(below.gateReason, "w3048-wait-clob-velocity");
+
+  const disagree = {};
+  step(disagree, tick(4, { bz: 100, upAsk: 0.40, downAsk: 0.61 }), P, 120, 4000);
+  step(disagree, tick(6.5, { bz: 100, upAsk: 0.40, downAsk: 0.61 }), P, 120, 6500);
+  assert.deepEqual(step(disagree,
+    tick(7, { bz: 99, upAsk: 0.42, downAsk: 0.59 }), P, 120, 7000), []);
+  assert.equal(disagree.gateReason, "w3048-clob-binance-disagree");
+});
+
+test("a resting directional entry cancels when CLOB velocity reverses by 0.02", () => {
+  const P = { ...signalP, W3048_CLOB_VELOCITY_GATE: true,
+    W3048_CLOB_VELOCITY_LOOKBACK_MS: 3000, W3048_CLOB_VELOCITY_MIN: 0.02 };
+  const state = {};
+  step(state, tick(4, { bz: 100, upAsk: 0.42, downAsk: 0.59 }), P, 120, 4000);
+  step(state, tick(6.5, { bz: 100, upAsk: 0.42, downAsk: 0.59 }), P, 120, 6500);
+  const check = shouldCancelResting(state,
+    { side: "Up", shares: 50, limitPx: 0.40, reason: "w3048-initial-release" },
+    tick(7, { bz: 101, upAsk: 0.40, downAsk: 0.61 }), P, 7000);
+  assert.equal(check.cancel, true);
+  assert.equal(check.reason, "clob-signal-reversed");
+});
+
+test("a $0.01-$0.02 token can be acquired without momentum but never above the $0.02 cap", () => {
+  const P = { ...signalP, W3048_CLOB_VELOCITY_GATE: true,
+    W3048_CHEAP_TOKEN_MAX_PRICE: 0.02 };
+  const state = {};
+  const [order] = step(state,
+    tick(5, { bz: 100, upAsk: 0.01, downAsk: 0.99 }), P, 120, 5000);
+  assert.equal(order.side, "Up");
+  assert.equal(order.shares, 50);
+  assert.equal(order.reason, "w3048-cheap-token");
+  assert.equal(order.limitPx, 0.02);
+  assert.equal(order.signal.cheapToken, true);
+  assert.ok(order.effPx <= 0.02);
+
+  const notCheap = {};
+  assert.deepEqual(step(notCheap,
+    tick(5, { bz: 100, upAsk: 0.03, downAsk: 0.98 }), P, 120, 5000), []);
+  assert.equal(notCheap.gateReason, "w3048-wait-fast-binance");
 });
 
 test("stale Binance source timestamps expire momentum", () => {
@@ -202,14 +276,23 @@ test("pending opposite orders do not grant risk capacity before they fill", () =
   const model = { up: 100, down: 0, cost: 40, fees: 0 };
   const state = { pendingFills: [{ phase: "resting", remaining: 100,
     rec: { oid: 7, side: "Down", shares: 100, limitPx: 0.5 } }] };
-  const P = { ...STRAT, W3048_MAX_LEAN_START: 120, W3048_MAX_LEAN_END: 120,
-    W3048_LOSS_LIMIT_START: 1_000, W3048_LOSS_LIMIT_END: 1_000,
-    W3048_MAX_WINDOW_SPEND: 1_000 };
+  const P = { ...STRAT, W3048_MAX_LEAN_START: 120, W3048_MAX_LEAN_END: 120 };
   const risk = evaluateRiskScenarios(model, state, "Up", 50, 0.4, P, 0);
   assert.equal(risk.passes, false);
   assert.ok(risk.scenarios.some((scenario) => !scenario.afterWithin));
   assert.ok(risk.scenarios.some((scenario) => scenario.filledOids.length === 0
     && scenario.after.lean === 150));
+});
+
+test("dollar loss and per-window spend no longer reject inventory-balanced candidates", () => {
+  const model = { up: 500, down: 500, cost: 5_000, fees: 25 };
+  const P = { ...STRAT, W3048_MAX_LEAN_START: 500, W3048_MAX_LEAN_END: 500 };
+  const risk = evaluateRiskScenarios(model, {}, "Up", 50, 0.99, P, 0);
+  assert.equal(risk.passes, true);
+  assert.ok(risk.worstCase < -250);
+  assert.ok(risk.spend > 650);
+  assert.equal("lossLimit" in risk, false);
+  assert.equal("spendLimit" in risk, false);
 });
 
 test("pending complements reserve confirmed FIFO-matchable inventory once", () => {
@@ -380,16 +463,20 @@ test("a completed hedge rearms the same loop for another entry/cross cycle", () 
   assert.equal(next.reason, "w3048-directional-reinforcement");
 });
 
-test("the final 30 seconds are a hard no-order interval", () => {
+test("orders work until the latency-aware t+298 execution cutoff", () => {
   const state = {};
-  assert.deepEqual(step(state, tick(270.01), signalP, 120, 270010), []);
+  assert.deepEqual(step(state, tick(298.01), signalP, 120, 298010), []);
   assert.equal(state.gateReason, "w3048-time");
 
-  const inFlight = {};
+  const allowed = {};
   const delayed = { ...signalP, LATENCY_MS: 520 };
-  prime(inFlight, delayed);
-  assert.deepEqual(step(inFlight, tick(269.6), delayed, 120, 269600), []);
-  assert.equal(inFlight.gateReason, "w3048-time", "an order may not arrive inside the cutoff");
+  step(allowed, tick(296.9, { bz: 100 }), delayed, 120, 296900);
+  assert.equal(step(allowed, tick(297.4), delayed, 120, 297400).length, 1,
+    "an order whose arrival is before t+298 remains eligible");
+
+  const tooLate = {};
+  assert.deepEqual(step(tooLate, tick(297.49), delayed, 120, 297490), []);
+  assert.equal(tooLate.gateReason, "w3048-time", "an order may not arrive after the cutoff");
 });
 
 test("live inventory advances only from confirmed partial fills and clears on cancel", () => {
@@ -489,8 +576,8 @@ test("resting fills after timeout or final cutoff are prohibited", () => {
   assert.equal(expired.reduce((sum, fill) => sum + fill.shares, 0), 10);
 
   const cutoff = simulateFills({ openBinance: 100, openPrice: 100, windowStart: 0,
-    ticks: [historical(268.5, 0.4, 100, 100), historical(269, 0.4, 10, 101),
-      historical(270.1, 0.39, 100, 101)] }, common);
+    ticks: [historical(296.5, 0.4, 100, 100), historical(297, 0.4, 10, 101),
+      historical(298.1, 0.39, 100, 101)] }, common);
   assert.equal(cutoff.reduce((sum, fill) => sum + fill.shares, 0), 10);
 });
 

@@ -57,14 +57,15 @@ test("an older persisted wallet snapshot cannot pin superseded strategy defaults
     LIMIT: 0.89, W3048_MIN_PRICE: 0.12, W3048_MAX_PRICE: 0.89,
     W3048_MOMENTUM_LOOKBACK_MS: 5000 });
   const migrated = shadow.getParams();
-  assert.equal(migrated.W3048_SPEC_VERSION, 3);
+  assert.equal(migrated.W3048_SPEC_VERSION, 5);
   assert.equal(migrated.W3048_MIN_PRICE, 0.01);
   assert.equal(migrated.W3048_MAX_PRICE, 0.99);
   assert.equal(migrated.W3048_MOMENTUM_LOOKBACK_MS, 500);
   assert.equal(migrated.LIMIT, 0.99);
+  assert.equal("MAX_SESSION_LOSS" in migrated, false);
   assert.equal(migrated.LATENCY_MS, 250, "operator latency remains a valid generic override");
 
-  shadow.setParams({ STRATEGY: "wallet3048", W3048_SPEC_VERSION: 3,
+  shadow.setParams({ STRATEGY: "wallet3048", W3048_SPEC_VERSION: 5,
     W3048_MOMENTUM_LOOKBACK_MS: 750 });
   assert.equal(shadow.getParams().W3048_MOMENTUM_LOOKBACK_MS, 750);
 });
@@ -87,8 +88,9 @@ test("hydration books distinct partial fills once and ignores duplicate fill eve
 test("shadow books due and maker partial fills before the next decision", () => {
   const events = [];
   const shadow = createShadow((event) => events.push(event), () => false);
-  shadow.setParams({ STRATEGY: "wallet3048", W3048_SPEC_VERSION: 3,
+  shadow.setParams({ STRATEGY: "wallet3048", W3048_SPEC_VERSION: 5,
     LATENCY_MS: 100, W3048_REQUIRE_SOURCE_TIMESTAMPS: false,
+    W3048_CLOB_VELOCITY_GATE: false,
     W3048_RELEASE_GATE: false, W3048_COOLDOWN_MS: 10_000,
     W3048_BETA_MARKET_LOGIT: 0, W3048_BETA_MOMENTUM: 1,
     W3048_BETA_LATEST_UPDATE: 0, W3048_BETA_RELATIVE_LEAD: 0,

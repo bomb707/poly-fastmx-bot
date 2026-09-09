@@ -12,11 +12,19 @@ Simulation-only reconstruction of Polymarket wallet
 
 ## Strategy
 
-The wallet3048 reconstruction uses a causal 0.5-second Binance-led fair value,
+The wallet3048 reconstruction uses a causal 0.5-second Binance signal confirmed
+by a three-second ±0.02 CLOB UP-implied midpoint delta,
 prebuilt 50/150-share GTC price rungs, FIFO lot accounting, economic
 cancel/reprice rules, and bounded inventory risk. It can accumulate both outcome
 legs below a profitable pair cap or retain a directional residual when the
-estimated edge supports it. New decisions stop before the final 30 seconds.
+estimated edge supports it. It can also acquire tokens offered at $0.01–$0.02
+with a hard $0.02 execution cap. Orders may execute through t+298s; latency-aware
+decisions stop early enough to arrive by that cutoff.
+
+There is no cumulative session-loss breaker and no per-window dollar loss or
+spend ceiling. Candidate orders remain bounded by the UP/DOWN share-imbalance
+check, fixed parent sizes, pending-order cap, action cap, and available balance
+in session replay.
 
 The primary research execution policy is `strict-no-maker`: arrival-time taker
 partials remain valid, but resting remainders receive no simulated fills.

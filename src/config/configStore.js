@@ -16,7 +16,7 @@ const FILE = process.env.RUNTIME_CONFIG_FILE || path.resolve(HERE, "..", "..", "
 
 let store = {};
 
-const UI_KEYS = new Set(["btVersionInput", "sigSessStopInput", "sigLatencyInput", "verboseInput"]);
+const UI_KEYS = new Set(["btVersionInput", "sigLatencyInput", "verboseInput"]);
 const SHADOW_KEYS = new Set(Object.keys(STRAT));
 
 function sanitizeStore(value) {

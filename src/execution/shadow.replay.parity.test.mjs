@@ -25,8 +25,9 @@ function fixtureTick(t, bz, upAsk, upDepth, event) {
     up, down };
 }
 
-const params = { STRATEGY: "wallet3048", W3048_SPEC_VERSION: 3,
+const params = { STRATEGY: "wallet3048", W3048_SPEC_VERSION: 5,
   LATENCY_MS: 100, W3048_REQUIRE_SOURCE_TIMESTAMPS: true,
+  W3048_CLOB_VELOCITY_GATE: false,
   W3048_RELEASE_GATE: false, W3048_COOLDOWN_MS: 0,
   W3048_SAME_SIDE_RETRY_MS: 0, W3048_MAX_ACTIONS: 2,
   W3048_BETA_MARKET_LOGIT: 0, W3048_BETA_MOMENTUM: 1,
@@ -101,6 +102,29 @@ for (const scenario of [
     }
   });
 }
+
+test("shadow/replay parity includes the +0.02 CLOB-confirmed entry", () => {
+  const ticks = [fixtureTick(4, 100, 0.40, 100, "clob-0"),
+    fixtureTick(6.5, 100, 0.40, 100, "clob-1"),
+    fixtureTick(7, 101, 0.42, 100, "clob-2"),
+    fixtureTick(7.2, 101, 0.42, 100, "clob-3")];
+  const selected = { ...params, W3048_CLOB_VELOCITY_GATE: true,
+    W3048_CLOB_VELOCITY_LOOKBACK_MS: 3000, W3048_CLOB_VELOCITY_MIN: 0.02,
+    W3048_MAX_ACTIONS: 1 };
+  const replayDiagnostics = {};
+  const replay = simulateFills({ windowStart, openBinance: 100,
+    openPrice: 100, ticks }, selected, replayDiagnostics);
+  const shadowWindow = runShadow(ticks, selected);
+  assert.deepEqual(comparableExecution(shadowWindow.fills), comparableExecution(replay));
+  assert.equal(shadowWindow.recDecisions.length, 1);
+  assert.equal(replayDiagnostics.decisions.length, 1);
+  assert.equal(shadowWindow.recDecisions[0].signal.clobVelocity, 0.02);
+  assert.equal(shadowWindow.recDecisions[0].side, "Up");
+  assert.deepEqual(shadowWindow.recDecisions.map((decision) => ({ side: decision.side,
+    reason: decision.reason, signal: decision.signal })),
+  replayDiagnostics.decisions.map((decision) => ({ side: decision.side,
+    reason: decision.reason, signal: decision.signal })));
+});
 
 test("shadow and replay use the same last-known book when arrival falls between updates", () => {
   const ticks = [fixtureTick(4.5, 100, 0.40, 100, 1),

@@ -756,11 +756,7 @@
       </div>
       <div class="scfg-section">
         <span class="scfg-grp">strategy · target wallet 3048</span>
-        <span style="font-size:10px;color:var(--txt2);line-height:1.45">T+4–&lt;270s · causal 0.5s Binance signal · 50/150-share $0.01–$0.99 GTC rungs · 250ms release cadence · lot-aware pair/loss-cap repair · economic cancel/reprice.</span>
-      </div>
-      <div class="scfg-section">
-        <span class="scfg-grp" title="RISK — session-level emergency circuit breaker.">risk</span>
-        <label class="cfgnum" title="SESSION STOP (circuit breaker) — auto-STOP the whole bot if running session PnL drops to −this USDC. Re-arms when you press Start. 0 = off.">sess stop<input id="sigSessStopInput" type="number" min="0" step="5" value="25"></label>
+        <span style="font-size:10px;color:var(--txt2);line-height:1.45">T+4–&lt;298s · 3s CLOB delta ±0.02 with Binance confirmation · 50/150-share GTC parents · cheap-token buys capped at $0.02 · lot-aware pair/loss-cap repair.</span>
       </div>
       <div class="scfg-section">
         <span class="scfg-grp" title="SIMULATION knobs — how the BACKTEST/shadow models fills. No effect on REAL live (live fills come from the actual order book).">simulation</span>
@@ -1342,7 +1338,6 @@ function liveTicksToD(lt){
            openPrice: lt.openCl, winSide: lt.winSide||null, buys: [], _liveFeed: true };
 }
 let showResultBanner=(localStorage.getItem("showResultBanner")!=="0");   // show/hide the WON/lost settlement banner
-let SHADOW_MAX_SESSION_LOSS=(()=>{ const v=parseFloat(localStorage.getItem("shadowMaxSessLoss")); return Number.isFinite(v)&&v>=0?v:0; })();
 let SHADOW_LATENCY_MS=(()=>{ const v=parseFloat(localStorage.getItem("shadowLatencyMs")); return Number.isFinite(v)&&v>=0?v:520; })();
 const realLatByOid={};   // LIVE real fill latency (ms) by shadow order oid — from shadow_real events → shown in the property menu
 // Framework parameters sent to the sole wallet3048 strategy.
@@ -1350,10 +1345,9 @@ function shadowParams(){
   const nv=(id,def)=>{ const el=document.getElementById(id); const v=el?parseFloat(el.value):NaN; return Number.isFinite(v)?v:def; };   // preserves a legit 0 (unlike `||def`)
   return {
     STRATEGY:"wallet3048",
-    W3048_SPEC_VERSION:3,
+    W3048_SPEC_VERSION:5,
     WINDOW_SEC:(typeof WIN!=="undefined"?WIN:300),
     LATENCY_MS:Math.max(0,nv("sigLatencyInput",520)),
-    MAX_SESSION_LOSS:Math.max(0,nv("sigSessStopInput",25)),
   };
 }
 // LIVE shadow fill-status counters for the current window (✓full ◐partial ✗none + fill-rate)
@@ -2028,8 +2022,8 @@ function createGroup(rootEl, kind){
     const base=(useMid?midSrc:bzSrc)||[];
     const arr=base.map(s=>({t:s.t,v:(useMid?s.m:s.bz)})).filter(p=>p.v!=null);
     if(arr.length<2) return [];
-    // wallet3048 uses a fixed 0.5-second Binance lookback. The CLOB midpoint
-    // view remains a three-second diagnostic and is not a strategy gate.
+    // wallet3048 uses a fixed 0.5-second Binance lookback and confirms ordinary
+    // directional entries with this same three-second CLOB midpoint delta.
     const open=state.openBz;
     const L=type==="vel_mid" ? 3 : type==="vel_bz" ? 0.5 : MOM_LB;
     const valAt=t=>{let v=null;for(const p of arr){if(p.t<=t)v=p.v;else break;}return v;};
@@ -3316,12 +3310,6 @@ function setSessFrom(v){
   if(lat) lat.value=String(SHADOW_LATENCY_MS);
   const pushLive=()=>{ try{ return fetch("/api/shadow-params?p="+encodeURIComponent(JSON.stringify(shadowParams()))).catch(()=>null); }catch{ return Promise.resolve(null); } };
   function commitConfig(opts){
-    const ss=document.getElementById("sigSessStopInput");
-    if(ss){
-      SHADOW_MAX_SESSION_LOSS=Math.max(0,+ss.value||0);
-      ss.value=String(SHADOW_MAX_SESSION_LOSS);
-      try{ localStorage.setItem("shadowMaxSessLoss",String(SHADOW_MAX_SESSION_LOSS)); }catch{}
-    }
     if(lat){
       SHADOW_LATENCY_MS=Math.max(0,Math.min(10000,Math.round(+lat.value||0)));
       lat.value=String(SHADOW_LATENCY_MS);
@@ -3377,11 +3365,10 @@ function setSessFrom(v){
     const o=applyBtn.textContent; applyBtn.textContent="applied ✓"; setTimeout(()=>{applyBtn.textContent=o;},800);
   });
   fetch("/api/bot/status").then(r=>r.json()).then(s=>setBotUI(!!s.running)).catch(()=>{});   // reflect state on load
-  // "default" — reset the framework simulation, risk, and diagnostics controls.
+  // "default" — reset the framework simulation and diagnostics controls.
   const calBtn=document.getElementById("momDefaultBtn");
   if(calBtn) calBtn.addEventListener("click",()=>{
     const V=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=String(v); };
-    V("sigSessStopInput",25);
     V("sigLatencyInput",520);
     const verbose=document.getElementById("verboseInput"); if(verbose) verbose.checked=false;
     document.getElementById("verboseInput")?.dispatchEvent(new Event("change"));
@@ -3534,7 +3521,7 @@ refreshExecBadge();
 }
 { // ── DURABLE CONFIG round-trip — every Apply saves the sidebar's control values server-side (data/runtime-config.json);
   //   on load we restore them so the dashboard reflects the persisted config (server file = source of truth). ──
-  const CFG_IDS=["btVersionInput","sigSessStopInput","sigLatencyInput","verboseInput"];
+  const CFG_IDS=["btVersionInput","sigLatencyInput","verboseInput"];
   const gather=()=>{ const o={}; for(const id of CFG_IDS){ const el=document.getElementById(id); if(!el) continue; o[id]=(el.type==="checkbox")?!!el.checked:el.value; } return o; };
   window.persistUiConfig=()=>{ try{ fetch("/api/ui-config?ui="+encodeURIComponent(JSON.stringify(gather()))).catch(()=>{}); }catch{} };
   (async()=>{   // restore on load — apply saved values then commit so they flow into the live holders
@@ -3569,9 +3556,6 @@ function applyMarket(m){
     if(!show){ DISABLE_TRACKER=true; const vm=document.getElementById('viewMode'); if(vm) vm.value='shadow'; try{ applyViewMode(); }catch{}
       const tc=document.getElementById('sSession-t')?.closest('.card'); if(tc) tc.style.display='none'; }   // hide tracker Session card
   }
-  // circuit-breaker: seed the field from the env boot value (MAX_SESSION_LOSS) only if the user hasn't set one
-  if(m.maxSessionLoss!=null && localStorage.getItem("shadowMaxSessLoss")==null){ SHADOW_MAX_SESSION_LOSS=+m.maxSessionLoss||0;
-    const ss=document.getElementById("sigSessStopInput"); if(ss) ss.value=SHADOW_MAX_SESSION_LOSS; }
   if(m.asset && m.interval) MARKET_PREFIX=`${m.asset}-updown-${m.interval}`;
   if(m.windowSec) WIN=Number(m.windowSec)||WIN;
   if(m.wallet){ TRACK_WALLET=String(m.wallet).toLowerCase();
@@ -3892,21 +3876,11 @@ async function sessRun(){
     sessRunning=false; clearInterval(sessTimer); sessSetRunningUi(false);
     if(!r || r.error){ $s("sessStatus").textContent="error: "+((r&&r.error)||"no result"); return; }
     $s("sessCfg").innerHTML=sessCfgSummary(r)+(P&&typeof sessShadowCfg==="function"?`<br>${sessShadowCfg(P)}`:"");
-    $s("sessStatus").innerHTML=`${r.windowsUsed} windows used / ${r.windowsRequested} in range · ${new Date(r.start*1000).toLocaleString()} → ${new Date(r.end*1000).toLocaleString()}`+sessHaltNote(r.shadow);
+    $s("sessStatus").innerHTML=`${r.windowsUsed} windows used / ${r.windowsRequested} in range · ${new Date(r.start*1000).toLocaleString()} → ${new Date(r.end*1000).toLocaleString()}`;
     $s("sessCards").innerHTML=(SHOW_TRACKER?sessCard("Tracker","t",r.bot):"")+(r.shadow?sessCard("Shadow","s",r.shadow):"");
     drawSessCurve(r);
     sessPage=0; renderSessWindows(r);
   };
-  // A MAX_SESSION_LOSS breach freezes the shadow for EVERY remaining window in the range; those windows then
-  // report $0 and are indistinguishable from "traded and broke even". Say so loudly instead of hiding it.
-  function sessHaltNote(sh){
-    if(!sh || !sh.halted) return "";
-    const frozen = sh.haltedWindows||0, after = sh.haltedAfter||0;
-    return `<br><span style="color:#ffb454;font-weight:800">⚠ SHADOW HALTED</span>`
-      +` after <b>${after}</b> traded window${after===1?"":"s"} — session loss cap $${sh.maxSessionLoss} was breached,`
-      +` so <b>${frozen}</b> later window${frozen===1?"":"s"} were frozen and report $0.`
-      +` Aggregates below cover only the first ${after}. Set the session-stop field to 0 to measure the strategy.`;
-  }
   window._sessResolve=render;
   window._sessPartial=onSessPartial;
   // Server returns immediately {started,runId}; the full result arrives over WS (session_result / session_partial).
@@ -3939,10 +3913,11 @@ function sessCfgSummary(r){
 }
 // wallet3048 parameters the simulation/live strategy ran on.
 function sessShadowCfg(P){
-  return `<span style="color:#cdb8ff">shadow · wallet3048 v${P.W3048_SPEC_VERSION??3}`
+  return `<span style="color:#cdb8ff">shadow · wallet3048 v${P.W3048_SPEC_VERSION??5}`
     +` · ${P.W3048_SMALL_SIZE??50}/${P.W3048_LARGE_SIZE??150}sh GTC parents`
-    +` · active t+${P.W3048_START_S??4}–${P.W3048_STOP_S??270}s`
+    +` · active t+${P.W3048_START_S??4}–${P.W3048_STOP_S??298}s`
     +` · Binance ${((P.W3048_MOMENTUM_LOOKBACK_MS??500)/1000).toFixed(1)}s`
+    +` · CLOB Δ${Number(P.W3048_CLOB_VELOCITY_MIN??0.02).toFixed(2)}/${((P.W3048_CLOB_VELOCITY_LOOKBACK_MS??3000)/1000).toFixed(0)}s`
     +` · price ${Number(P.W3048_MIN_PRICE??0.01).toFixed(2)}–${Number(P.W3048_MAX_PRICE??0.99).toFixed(2)}`
     +` · pair target ${Number(P.W3048_PAIR_PROFIT_TARGET??0.06).toFixed(3)}`
     +` · cooldown ${P.W3048_COOLDOWN_MS??250}ms · latency ${P.LATENCY_MS||0}ms</span>`; }
