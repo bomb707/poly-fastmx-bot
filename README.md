@@ -16,6 +16,13 @@ For the full implemented decision logic, execution workflow, and September 7–9
 entry-accuracy and round-P&L results, see
 [Wallet3048 strategy algorithm](WALLET3048_STRATEGY_ALGORITHM.md).
 
+For the reviewed proposal to derive quantities from settlement payoffs and staged
+execution, see [Inventory optimization specification](WALLET3048_INVENTORY_OPTIMIZATION_SPEC.md).
+That document is a proposed design; it has not been implemented in v5.
+
+For verification and calibration against September 3–10 BAPI market data, see
+[BAPI calibration results](WALLET3048_BAPI_CALIBRATION_2026-09-03_10.md).
+
 The wallet3048 reconstruction uses a causal 0.5-second Binance signal confirmed
 by a three-second ±0.02 CLOB UP-implied midpoint delta,
 prebuilt 50/150-share GTC price rungs, FIFO lot accounting, economic
