@@ -1,4 +1,4 @@
-// db.js — MongoDB recording for the shadow strategy's fills + A/B session records.
+// db.js — MongoDB fills plus local and MongoDB session records.
 //
 // Collections are SPLIT BY EXECUTION MODE (isLive()): sim-live writes/reads the *_sim collections,
 // real-live the *_real collections — a process is fixed to one mode for its whole life (EXECUTION_MODE).
@@ -9,6 +9,9 @@
 // Connection: MONGO_URI (default local shared with the other bots), DB: MONGO_DB (default poly_wallet3048 — this
 //   bot's OWN database, kept separate from other projects' data even though they share the mongod instance).
 import { MongoClient } from "mongodb";
+import path from "node:path";
+import { config } from "../config/config.js";
+import { createSessionStore, mergeSessionRows } from "./session-store.js";
 import { isLive } from "../lib/executor.js";
 
 const URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017";
@@ -91,15 +94,44 @@ export async function fillsOfWindow(windowStart) {
 }
 /** Fire-and-forget UPSERT of one window's A/B session doc, keyed by windowStart. Recorded as `status:"pending"`
  *  when the window closes, then overwritten with the resolved winner/PnL once Polymarket settles. Never throws. */
-export function recordSession(doc) { sessionsCol().then((c) => c.updateOne({ windowStart: doc.windowStart }, { $set: doc }, { upsert: true })).catch(() => {}); }
+const sessionStores = new Map();
+function localSessions() {
+  const directory = path.resolve(config.dataDir, `sessions-${mode()}`);
+  if (!sessionStores.has(directory)) sessionStores.set(directory, createSessionStore(directory));
+  return sessionStores.get(directory);
+}
 
-/** Read closed rows that survived a process restart while still awaiting venue resolution. */
+// The local copy is committed before the optional MongoDB mirror, so a missing
+// database cannot discard completed rounds or pending settlement records.
+export function recordSession(doc) {
+  let row = doc;
+  try { row = localSessions().write(doc); }
+  catch (error) { console.error(`[session ledger] Local write failed: ${error.message}`); }
+  sessionsCol().then((c) => c.updateOne({ windowStart: row.windowStart }, { $set: row }, { upsert: true })).catch(() => {});
+}
+
+export async function readSessionRows(since = 0) {
+  let local, localError;
+  try { local = localSessions().read(since); } catch (error) { localError = error; }
+  try {
+    const remote = await (await sessionsCol()).find({ windowStart: { $gte: since } }).toArray();
+    return mergeSessionRows(remote, local || []);
+  } catch (error) {
+    if (localError) throw new Error("Session ledger is unavailable");
+    return mergeSessionRows(local);
+  }
+}
+
+/** Read closed rows awaiting resolution, including those recorded without MongoDB. */
 export async function pendingSessionsBefore(windowStart, limit = 50) {
   try {
-    const c = await sessionsCol();
-    return await c.find({ status: "pending", windowStart: { $lt: Number(windowStart) } })
-      .sort({ windowStart: 1 }).limit(Math.max(1, Number(limit) || 50)).toArray();
-  } catch { return []; }
+    const rows = await readSessionRows();
+    return rows.filter((row) => row.status === "pending" && row.windowStart < Number(windowStart))
+      .slice(0, Math.max(1, Number(limit) || 50));
+  } catch (error) {
+    console.error(`[session ledger] Pending recovery failed: ${error.message}`);
+    return [];
+  }
 }
 
 const r4 = (value) => Math.round((Number(value) || 0) * 1e4) / 1e4;
@@ -125,18 +157,14 @@ export function resolvePendingSessionDoc(doc, winSide, ts = Math.floor(Date.now(
   return out;
 }
 
-/** Atomically finalize one still-pending row. Returns null if another path won the race. */
+/** Finalize a pending local row before mirroring it; repeated recovery is a no-op. */
 export async function finalizePendingSession(doc, winSide, ts = Math.floor(Date.now() / 1000)) {
   const resolved = resolvePendingSessionDoc(doc, winSide, ts);
   if (!resolved) return null;
-  try {
-    const c = await sessionsCol();
-    const { _id, ...set } = resolved;
-    const filter = _id != null ? { _id, status: "pending" }
-      : { windowStart: resolved.windowStart, status: "pending" };
-    const result = await c.updateOne(filter, { $set: set });
-    return result.modifiedCount === 1 ? resolved : null;
-  } catch { return null; }
+  const current = localSessions().read(doc.windowStart).find((row) => row.windowStart === doc.windowStart);
+  if (current && current.status !== "pending") return null;
+  recordSession(resolved);
+  return resolved;
 }
 
 /** Fire-and-forget: persist one Order-Status lifecycle event (so the panel can reload it after refresh / later).

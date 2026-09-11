@@ -50,6 +50,13 @@ The implementation is selected unconditionally by the strategy registry.
 Retired strategies are not available through the dashboard, live simulation,
 or backtests.
 
+Session P&L totals settled rounds within the selected history range; it excludes
+an unresolved round. Session records are saved under `DATA_DIR/sessions-sim/`
+and mirrored to MongoDB, so totals remain available when MongoDB is offline.
+For older rounds whose database writes failed, preview recovery from recorded
+simulation fills with `node scripts/recover-session-ledger.mjs`, then add
+`--write` to save the recovered summaries. Recovery does not rerun the strategy.
+
 ## Feeds
 
 | Feed | Use |

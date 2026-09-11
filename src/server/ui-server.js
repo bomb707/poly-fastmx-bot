@@ -30,7 +30,7 @@ import { setVerbose, isVerbose } from "../logging/verbose.js";
 import { handleAuth, isAuthed, warnPassword, authRequired } from "./auth.js";
 import { config, ASSETS, INTERVALS, setBacktestApiVersion } from "../config/config.js";
 import { patchConfigStore, getConfigStore } from "../config/configStore.js";
-import { fillsCol, sessionsCol, recordOrderStatus, orderStatusOf } from "../sources/db.js";   // MongoDB record store (mode-split: reads THIS process's sim/real collections)
+import { fillsCol, readSessionRows, recordOrderStatus, orderStatusOf } from "../sources/db.js";   // MongoDB record store (mode-split: reads THIS process's sim/real collections)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "..", "public");
@@ -481,7 +481,7 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
         .catch((e) => { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: String(e && e.message || e) })); });
       return;
     }
-    // Cumulative LIVE PnL from the A/B ledger (data/shadow-ab.jsonl) — seeds the foot "Session" cards.
+    // Cumulative settled PnL from the durable local/MongoDB session ledger — seeds the foot "Session" cards.
     if (url === "/api/session-live") {
       // count from this boot by default (window count starts at 0 when the bot starts); a later user
       // Reset (?since=) raises the floor further. All-time is never shown unless explicitly asked.
@@ -489,14 +489,14 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       const since = reqSince > 0 ? reqSince : sessionFloorSec();   // honor the client's persisted Reset floor (survives restarts); else the persisted session start
       (async () => {
         let bot = 0, shadow = 0, real = 0, nb = 0, ns = 0, nr = 0; const slugs = [];
-        try {
-          const rows = await (await sessionsCol()).find({ windowStart: { $gte: since } }).toArray();
+        {
+          const rows = await readSessionRows(since);
           for (const a of rows) {
             if (a.sim && a.sim.pnl != null) { shadow += a.sim.pnl; ns++; if (a.slug) slugs.push(a.slug); }
             if (a.real && a.real.pnl != null) { real += a.real.pnl; nr++; }   // REAL on-chain PnL (honest)
             if (a.bot && a.bot.pnl != null) { bot += a.bot.pnl; nb++; }
           }
-        } catch {}
+        }
         const r2 = (x) => Math.round(x * 100) / 100;
         res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-cache" });
         res.end(JSON.stringify({ bot: r2(bot), shadow: r2(shadow), real: r2(real), nb, ns, nr, slugs, since, botStart: sessionFloorSec() }));
@@ -509,13 +509,13 @@ export function startUiServer(port, getSnapshotBuys, setMarket, getShadowCurrent
       const since = reqSince > 0 ? reqSince : sessionFloorSec();   // honor the client's persisted Reset floor (survives restarts); else the persisted session start
       (async () => {
       const windows = [];
-      try {
-        const rows = await (await sessionsCol()).find({ windowStart: { $gte: since } }).toArray();
+      {
+        const rows = await readSessionRows(since);
         for (const a of rows) {
           if (!a.sim) continue;
           windows.push({ slug: a.slug, ws: a.windowStart, winSide: a.winSide, status: a.status || (a.winSide ? "resolved" : "pending"), ts: a.ts, sim: a.sim, real: a.real || null, bot: a.bot || null, pnlErr: a.pnlErr });
         }
-      } catch {}
+      }
       // DEDUP by windowStart — a restart re-settles already-resolved windows and appends a duplicate
       // (usually EMPTY: 0 fills / $0) entry, which doubled the rows and inflated the window count + diluted
       // the mean/win-rate. Keep ONE entry per window: the most-active (max nFills; tie → larger |pnl|, then latest ts).

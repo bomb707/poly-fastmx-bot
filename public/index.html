@@ -1709,8 +1709,8 @@ function createGroup(rootEl, kind){
                 showCircles:(localStorage.getItem("showCircles_"+kind)!=="0"),      // show order/fill circles (default on)
                 orderInfo:new Map() };
   let winSide=null;
-  // running SESSION PnL for THIS group: cumulative realized PnL of windows resolved since load.
-  let sessPnl=0, sessN=0;
+  // Settled SESSION PnL for this group, using the selected server-side history range.
+  let sessPnl=0, sessN=0, sessError=false;
 
   // ── draw price chart (Up or Down) ──
   function draw(svgId,series,buys,color,resId,side){
@@ -2281,11 +2281,13 @@ function createGroup(rootEl, kind){
   }
   function renderSession(){ const e=$("sSession"); if(!e) return;
     $("sSessN").textContent=sessN?("· "+sessN+"w"):"";
-    e.textContent=sessN?sgn(sessPnl,2):"—"; e.className="v mono "+(sessN?cls(sessPnl):"");
-    const c=e.closest(".card"); c.classList.toggle("win",sessN&&sessPnl>0); c.classList.toggle("lose",sessN&&sessPnl<0); }
+    e.textContent=sessError?"unavailable":sgn(sessPnl,2); e.className="v mono "+(!sessError&&sessN?cls(sessPnl):"");
+    e.title=sessError?"Session P&L could not be loaded. Retrying automatically.":
+      `Settled session P&L across ${sessN} rounds. The current unresolved round is excluded.`;
+    const c=e.closest(".card"); c.classList.toggle("win",!sessError&&sessN&&sessPnl>0); c.classList.toggle("lose",!sessError&&sessN&&sessPnl<0); }
   // SESSION card = cumulative LIVE PnL from the persisted A/B ledger (absolute set, polled — so
   // both groups read one authoritative source and update consistently when each window ends).
-  function setSession(pnl,n){ const np=Number(pnl)||0, nn=Number(n)||0; const changed=(np!==sessPnl)||(nn!==sessN);
+  function setSession(pnl,n,error=false){ sessError=error; const np=Number(pnl)||0, nn=Number(n)||0; const changed=(np!==sessPnl)||(nn!==sessN);
     sessPnl=np; sessN=nn; renderSession();
     if(changed){ const c=$("sSession")?.closest(".card"); if(c){ c.classList.remove("sflash"); void c.offsetWidth; c.classList.add("sflash"); } } }
   function resetSession(){ setSession(0,0); }
@@ -3644,19 +3646,22 @@ function saveSessLive(){ try{ localStorage.setItem(SESS_KEY, JSON.stringify(sess
 // floored at bot-boot and raised by Reset — so tracker (bot) and shadow are directly comparable.
 let botSess={pnl:0,n:0}, shadowSess={pnl:0,n:0};
 function renderSessCards(){ T.setSession(botSess.pnl, botSess.n); S.setSession(shadowSess.pnl, shadowSess.n); }
-// RELIABLE updater: poll the existing /api/window for recently-ended windows and record each as
-// soon as it's RESOLVED (winSide present) — bot PnL from real fills. LIVE only. Robust to
-// missed/late resolution ws-events; back-fills any gaps. (No pm2 restart needed.)
+// Refresh authoritative session totals even when a chart is browsing an older
+// round. Session accounting is independent of chart navigation.
 let sessSyncing=false;
 async function syncRecentSession(){
-  if(sessSyncing || T.mode!=="live") return;
+  if(sessSyncing) return;
   sessSyncing=true;
   // BOTH bot + shadow cumulative PnL from the A/B ledger, floored at bot-boot, raised by Reset (since=resetTs).
-  try{ const r=await fetch("/api/session-live?since="+(sessLive.resetTs||0)).then(x=>x.json());
+  try{ const response=await fetch("/api/session-live?since="+(sessLive.resetTs||0),{cache:"no-store"});
+    if(!response.ok) throw new Error("Session request failed");
+    const r=await response.json();
+    if(r.error || !Number.isFinite(r.shadow) || !Number.isFinite(r.ns)) throw new Error("Invalid session totals");
     if(r){ if(r.bot!=null) botSess={pnl:r.bot, n:r.nb||0};   // TRACKER session = real on-chain (bot)
       if(r.shadow!=null) shadowSess={pnl:r.shadow, n:r.ns||0};   // SHADOW session = SIMULATION (sim)
       renderSessCards(); }
-  }catch{} finally { sessSyncing=false; }
+  }catch{ T.setSession(botSess.pnl,botSess.n,true); S.setSession(shadowSess.pnl,shadowSess.n,true); }
+  finally { sessSyncing=false; }
 }
 renderSessCards();
 syncRecentSession();
